@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator v1.2
+Spotify Playlist Creator v1.3
 </title>
 
 <style>
@@ -22,7 +22,6 @@ padding:30px;
 
 h1{
 color:#1DB954;
-margin-bottom:5px;
 }
 
 #versionBox{
@@ -86,7 +85,7 @@ Spotify Playlist Creator
 </h1>
 
 <div id="versionBox">
-Versión v1.2
+Versión v1.3
 </div>
 
 <input
@@ -125,7 +124,7 @@ Esperando conexión
 
 <script>
 
-const APP_VERSION="v1.2";
+const APP_VERSION="v1.3";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -155,14 +154,7 @@ function msg(t){
 log.innerHTML +=
 "\n"+t;
 
-log.scrollTop=
-log.scrollHeight;
-
 }
-
-msg(
-APP_VERSION
-);
 
 function clearStorage(){
 
@@ -194,11 +186,7 @@ const chars=
 
 let r="";
 
-for(
-let i=0;
-i<n;
-i++
-){
+for(let i=0;i<n;i++){
 
 r+=chars[
 Math.floor(
@@ -240,9 +228,7 @@ async function loginSpotify(){
 clearStorage();
 
 const verifier=
-randomString(
-64
-);
+randomString(64);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -250,38 +236,30 @@ verifier
 );
 
 const c=
-await challenge(
-verifier
-);
+await challenge(verifier);
 
 const params=
 new URLSearchParams({
 
-client_id:
-CLIENT_ID,
+client_id:CLIENT_ID,
 
-response_type:
-"code",
+response_type:"code",
 
-redirect_uri:
-REDIRECT_URI,
+redirect_uri:REDIRECT_URI,
 
-scope:
-SCOPES,
+scope:SCOPES,
 
 show_dialog:true,
 
-code_challenge_method:
-"S256",
+code_challenge_method:"S256",
 
-code_challenge:
-c
+code_challenge:c
 
 });
 
 window.location.href=
 "https://accounts.spotify.com/authorize?"+
-params.toString();
+params;
 
 }
 
@@ -304,23 +282,19 @@ localStorage.getItem(
 const body=
 new URLSearchParams({
 
-client_id:
-CLIENT_ID,
+client_id:CLIENT_ID,
 
-grant_type:
-"authorization_code",
+grant_type:"authorization_code",
 
 code,
 
-redirect_uri:
-REDIRECT_URI,
+redirect_uri:REDIRECT_URI,
 
-code_verifier:
-verifier
+code_verifier:verifier
 
 });
 
-const res=
+const r=
 await fetch(
 "https://accounts.spotify.com/api/token",
 {
@@ -335,11 +309,11 @@ body
 }
 );
 
-const data=
-await res.json();
+const d=
+await r.json();
 
 accessToken=
-data.access_token;
+d.access_token;
 
 localStorage.setItem(
 "spotify_token",
@@ -370,7 +344,7 @@ await r.json();
 
 return d.tracks
 ?.items?.[0]
-?.uri || null;
+?.uri||null;
 
 }
 
@@ -382,28 +356,9 @@ msg(
 APP_VERSION
 );
 
-const meRes=
-await fetch(
-"https://api.spotify.com/v1/me",
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const me=
-await meRes.json();
-
-msg(
-`Usuario:
-${me.display_name}`
-);
-
 const playlistRes=
 await fetch(
-`https://api.spotify.com/v1/users/${me.id}/playlists`,
+"https://api.spotify.com/v1/me/playlists",
 {
 method:"POST",
 
@@ -424,7 +379,7 @@ document.getElementById(
 "playlistName"
 ).value,
 
-public:true
+public:false
 
 })
 
@@ -451,13 +406,11 @@ if(
 !playlistRes.ok
 ){
 
-msg(
-"Spotify rechazó playlist"
-);
-
 return;
 
 }
+
+let uris=[];
 
 const songs=
 document
@@ -470,16 +423,10 @@ document
 x=>x.trim()
 );
 
-let uris=[];
-
-for(
-const s of songs
-){
+for(const s of songs){
 
 const uri=
-await searchSong(
-s
-);
+await searchSong(s);
 
 if(uri){
 
@@ -494,15 +441,7 @@ msg(
 ${uris.length}`
 );
 
-if(
-uris.length===0
-){
-
-return;
-
-}
-
-const addRes=
+const add=
 await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 {
@@ -527,11 +466,11 @@ uris
 
 msg(
 `HTTP canciones:
-${addRes.status}`
+${add.status}`
 );
 
 const result=
-await addRes.text();
+await add.text();
 
 msg(
 result
@@ -544,5 +483,4 @@ getToken();
 </script>
 
 </body>
-
 </html>
