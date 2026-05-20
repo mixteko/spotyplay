@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v4.4</title>
+<title>Spotify Playlist Creator AI v4.5</title>
 
 <style>
 body{
@@ -90,22 +90,19 @@ overflow:auto;
 
 <h1>Spotify Playlist Creator AI</h1>
 
-<div>Versión v4.4</div>
+<div>Versión v4.5</div>
 
 <div class="statusBox">
 
-<div id="spotifyStatus"
-class="status red">
+<div id="spotifyStatus" class="status red">
 Spotify 🔴
 </div>
 
-<div id="deepseekStatus"
-class="status red">
+<div id="deepseekStatus" class="status red">
 DeepSeek 🔴
 </div>
 
-<div id="playlistStatus"
-class="status red">
+<div id="playlistStatus" class="status red">
 Playlist 🔴
 </div>
 
@@ -207,7 +204,8 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML += "\n"+t;
+log.innerHTML +=
+"\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -216,17 +214,9 @@ log.scrollHeight;
 
 function refreshApp(){
 
-document.getElementById(
-"promptAI"
-).value="";
-
-document.getElementById(
-"songs"
-).value="";
-
-document.getElementById(
-"playlistName"
-).value="";
+promptAI.value="";
+songs.value="";
+playlistName.value="";
 
 log.innerHTML=
 "Refrescado";
@@ -237,9 +227,7 @@ function saveDeepSeek(){
 
 localStorage.setItem(
 "deepseek_key",
-document.getElementById(
-"deepseekKey"
-).value.trim()
+deepseekKey.value.trim()
 );
 
 updateStatus();
@@ -250,25 +238,19 @@ msg(
 
 }
 
-document.getElementById(
-"deepseekKey"
-).value=
+deepseekKey.value=
 localStorage.getItem(
 "deepseek_key"
 )||"";
 
 function updateStatus(){
 
-document.getElementById(
-"spotifyStatus"
-).className=
+spotifyStatus.className=
 accessToken?
 "status green":
 "status red";
 
-document.getElementById(
-"spotifyStatus"
-).innerHTML=
+spotifyStatus.innerHTML=
 accessToken?
 "Spotify 🟢":
 "Spotify 🔴";
@@ -278,16 +260,12 @@ localStorage.getItem(
 "deepseek_key"
 );
 
-document.getElementById(
-"deepseekStatus"
-).className=
+deepseekStatus.className=
 d?
 "status green":
 "status red";
 
-document.getElementById(
-"deepseekStatus"
-).innerHTML=
+deepseekStatus.innerHTML=
 d?
 "DeepSeek 🟢":
 "DeepSeek 🔴";
@@ -296,7 +274,8 @@ d?
 
 function cleanSong(song){
 
-return song
+song=song
+
 .replace(/^\d+\./,"")
 .replace(/\*\*/g,"")
 .replace(/\*/g,"")
@@ -305,7 +284,35 @@ return song
 .replace(/ft.*$/i,"")
 .replace(/prod.*$/i,"")
 .replace(/•/g,"")
+.replace(/["']/g,"")
 .trim();
+
+const lower=
+song.toLowerCase();
+
+if(
+lower.includes(
+"aquí tienes"
+)
+)return "";
+
+if(
+lower.includes(
+"exactamente"
+)
+)return "";
+
+if(
+lower.includes(
+"canciones"
+)
+)return "";
+
+if(
+!song.includes("-")
+)return "";
+
+return song;
 
 }
 
@@ -327,9 +334,7 @@ return;
 }
 
 const count=
-document.getElementById(
-"songCount"
-).value;
+songCount.value;
 
 const r=
 await fetch(
@@ -355,20 +360,17 @@ role:"user",
 
 content:
 `
-Genera EXACTAMENTE
-${count}
-
-canciones
+Genera EXACTAMENTE ${count}
 
 SOLO:
 
 ARTISTA - CANCION
 
+Sin comentarios
+
 Tema:
 
-${document.getElementById(
-"promptAI"
-).value}
+${promptAI.value}
 
 ${more?"No repetir":""}
 `
@@ -383,9 +385,7 @@ ${more?"No repetir":""}
 const d=
 await r.json();
 
-document.getElementById(
-"songs"
-).value=
+songs.value=
 d.choices?.[0]
 ?.message
 ?.content||
@@ -401,6 +401,9 @@ async function searchSong(song){
 
 song=
 cleanSong(song);
+
+if(!song)
+return null;
 
 let artist="";
 let track="";
@@ -430,7 +433,10 @@ song
 
 ];
 
-for(const q of queries){
+for(
+const q
+of queries
+){
 
 try{
 
@@ -450,7 +456,14 @@ await r.json();
 
 const item=
 d.tracks
-?.items?.[0];
+?.items
+?.find(
+x=>
+x.name &&
+x.artists?.length
+)
+||
+d.tracks?.items?.[0];
 
 if(item){
 
@@ -460,8 +473,7 @@ ${song}`
 );
 
 msg(
-`URI:
-${item.uri}`
+item.uri
 );
 
 return item.uri;
@@ -494,13 +506,6 @@ return;
 
 }
 
-const name=
-document.getElementById(
-"playlistName"
-).value.trim()
-||
-"Playlist";
-
 msg(
 "Creando playlist..."
 );
@@ -520,8 +525,14 @@ Authorization:
 
 body:
 JSON.stringify({
-name,
+
+name:
+playlistName.value.trim()
+||
+"Playlist",
+
 public:false
+
 })
 
 }
@@ -530,32 +541,31 @@ public:false
 const playlist=
 await p.json();
 
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
-);
+const raw=
+songs.value
+.split("\n");
 
 let uris=[];
 
-for(const s of songs){
+for(
+const s
+of raw
+){
 
-const uri=
-await searchSong(
+const clean=
+cleanSong(
 s
 );
 
-if(uri){
+if(!clean)
+continue;
 
-msg(
-`Agregar:
-${uri}`
+const uri=
+await searchSong(
+clean
 );
+
+if(uri){
 
 uris.push(
 uri.trim()
@@ -565,17 +575,15 @@ uri.trim()
 
 }
 
+uris=[
+...new Set(
+uris
+)
+];
+
 msg(
 `Encontradas:
 ${uris.length}`
-);
-
-msg(
-JSON.stringify(
-uris,
-null,
-2
-)
 );
 
 if(
@@ -589,10 +597,6 @@ msg(
 return;
 
 }
-
-msg(
-"Agregando canciones..."
-);
 
 const add=
 await fetch(
@@ -609,14 +613,7 @@ Authorization:
 
 body:
 JSON.stringify({
-
-uris:[
-...new Set(
 uris
-)
-
-]
-
 })
 
 }
@@ -637,14 +634,10 @@ if(
 result.snapshot_id
 ){
 
-document.getElementById(
-"playlistStatus"
-).className=
+playlistStatus.className=
 "status green";
 
-document.getElementById(
-"playlistStatus"
-).innerHTML=
+playlistStatus.innerHTML=
 "Playlist 🟢";
 
 msg(
@@ -715,21 +708,15 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
-
 response_type:
 "code",
-
 redirect_uri:
 REDIRECT_URI,
-
 scope:
 SCOPES,
-
 show_dialog:true,
-
 code_challenge_method:
 "S256",
-
 code_challenge:c
 
 });
@@ -778,14 +765,11 @@ await fetch(
 "https://accounts.spotify.com/api/token",
 {
 method:"POST",
-
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
-
 body
-
 }
 );
 
@@ -828,5 +812,4 @@ getToken();
 </script>
 
 </body>
-
 </html>
