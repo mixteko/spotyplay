@@ -48,8 +48,10 @@ padding:15px;
 background:#1a1a1a;
 border-radius:10px;
 white-space:pre-wrap;
+font-family:monospace;
 }
 </style>
+
 </head>
 
 <body>
@@ -62,9 +64,9 @@ placeholder="Nombre playlist">
 
 <textarea
 id="songs"
-placeholder="Bruce Springsteen - Born to Run
+placeholder="Michael Jackson - Billie Jean
 Queen - Bohemian Rhapsody
-Michael Jackson - Billie Jean">
+Ray Charles - Hit the Road Jack">
 </textarea>
 
 <button class="green"
@@ -79,7 +81,7 @@ Limpiar sesión
 
 <button class="blue"
 onclick="createPlaylist()">
-Crear Playlist
+Crear playlist
 </button>
 
 <div id="log">
@@ -109,7 +111,7 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML+=
+log.innerHTML +=
 "\n"+t;
 
 }
@@ -197,13 +199,13 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
+show_dialog:true,
+
 code_challenge_method:
 "S256",
 
 code_challenge:
-c,
-
-show_dialog:true
+c
 
 });
 
@@ -290,9 +292,31 @@ async function searchSong(song){
 
 try{
 
+let query=song;
+
+if(song.includes("-")){
+
+const p=
+song.split("-");
+
+const artist=
+p[0].trim();
+
+const track=
+p.slice(1)
+.join("-")
+.trim();
+
+query=
+`track:${track} artist:${artist}`;
+
+}
+
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(
+query
+)}&type=track&limit=1`,
 {
 headers:{
 Authorization:
@@ -340,7 +364,7 @@ x=>x.trim()
 );
 
 msg(
-"Creando playlist"
+"Creando playlist..."
 );
 
 const playlistRes=
@@ -373,17 +397,11 @@ msg(
 "Playlist creada"
 );
 
-msg(
-"Buscando canciones..."
-);
-
 const results=
 await Promise.all(
-
 songs.map(
-s=>searchSong(s)
+x=>searchSong(x)
 )
-
 );
 
 const uris=
@@ -392,10 +410,23 @@ x=>x
 );
 
 msg(
-`Encontradas:
+`Canciones encontradas:
 ${uris.length}`
 );
 
+for(
+let i=0;
+i<uris.length;
+i+=100
+){
+
+const batch=
+uris.slice(
+i,
+i+100
+);
+
+const add=
 await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 {
@@ -411,11 +442,22 @@ Authorization:
 
 body:
 JSON.stringify({
-uris
+uris:batch
 })
 
 }
 );
+
+const result=
+await add.json();
+
+msg(
+JSON.stringify(
+result
+)
+);
+
+}
 
 msg(
 "Playlist finalizada"
