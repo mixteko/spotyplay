@@ -3,53 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v4.7</title>
+<title>Spotify Playlist Creator AI v4.8</title>
 
 <style>
 body{
 margin:0;
-font-family:Arial;
-background:linear-gradient(135deg,#050505,#121212,#1DB954);
-padding:30px;
+font-family:Arial,sans-serif;
+background:linear-gradient(135deg,#0b0b0b,#121212,#1DB954);
 color:white;
+padding:24px;
 }
 
 .card{
 max-width:1100px;
 margin:auto;
 background:#111;
-padding:30px;
-border-radius:25px;
+padding:24px;
+border-radius:22px;
 }
 
-.statusBox{
+.statusWrap{
 display:flex;
 gap:10px;
 flex-wrap:wrap;
-margin-bottom:20px;
+margin-bottom:15px;
 }
 
 .status{
-padding:12px 18px;
-border-radius:15px;
+padding:10px 14px;
+border-radius:12px;
 font-weight:bold;
 }
 
-.green{
+.ok{
 background:#1DB954;
 color:black;
 }
 
-.red{
-background:#e53935;
+.off{
+background:#c62828;
 }
 
 input,textarea,select,button{
 width:100%;
 padding:14px;
-margin-top:12px;
+margin-top:10px;
 border:none;
-border-radius:15px;
+border-radius:14px;
+box-sizing:border-box;
 }
 
 input,textarea,select{
@@ -62,24 +63,24 @@ height:220px;
 resize:vertical;
 }
 
-.buttons{
+.row{
 display:flex;
 gap:10px;
 flex-wrap:wrap;
 }
 
-.buttons button{
+.row button{
 flex:1;
 }
 
 #log{
-margin-top:20px;
+margin-top:18px;
 background:black;
-padding:20px;
-border-radius:20px;
-white-space:pre-wrap;
-max-height:360px;
+padding:18px;
+border-radius:16px;
+max-height:320px;
 overflow:auto;
+white-space:pre-wrap;
 }
 </style>
 </head>
@@ -89,20 +90,22 @@ overflow:auto;
 <div class="card">
 
 <h1>Spotify Playlist Creator AI</h1>
+<div>Versión v4.8</div>
 
-<div>Versión v4.7</div>
+<div class="statusWrap">
 
-<div class="statusBox">
-
-<div id="spotifyStatus" class="status red">
+<div id="spotifyStatus"
+class="status off">
 Spotify 🔴
 </div>
 
-<div id="deepseekStatus" class="status red">
+<div id="deepseekStatus"
+class="status off">
 DeepSeek 🔴
 </div>
 
-<div id="playlistStatus" class="status red">
+<div id="playlistStatus"
+class="status off">
 Playlist 🔴
 </div>
 
@@ -112,31 +115,33 @@ Playlist 🔴
 Conectar Spotify
 </button>
 
-<input id="deepseekKey"
+<input
+id="deepseekKey"
 placeholder="DeepSeek API Key">
 
 <button onclick="saveDeepSeek()">
 Guardar DeepSeek
 </button>
 
-<textarea id="promptAI"
+<textarea
+id="promptAI"
 placeholder="Kpop relajante">
 </textarea>
 
 <select id="songCount">
 
-<option value="10">10</option>
-<option value="20">20</option>
-<option value="40">40</option>
-<option value="50">50</option>
-<option value="60">60</option>
-<option value="80">80</option>
-<option value="100">100</option>
-<option value="200">200</option>
+<option>10</option>
+<option>20</option>
+<option>40</option>
+<option>50</option>
+<option>60</option>
+<option>80</option>
+<option>100</option>
+<option>200</option>
 
 </select>
 
-<div class="buttons">
+<div class="row">
 
 <button onclick="generateDeepSeek()">
 Generar Lista
@@ -152,12 +157,13 @@ Refrescar
 
 </div>
 
-<input id="playlistName"
+<input
+id="playlistName"
 placeholder="Nombre playlist">
 
 <textarea id="songs"></textarea>
 
-<div class="buttons">
+<div class="row">
 
 <button onclick="createPlaylist()">
 Crear Playlist
@@ -243,8 +249,8 @@ function updateStatus(){
 
 spotifyStatus.className=
 accessToken?
-"status green":
-"status red";
+"status ok":
+"status off";
 
 spotifyStatus.innerHTML=
 accessToken?
@@ -258,8 +264,8 @@ localStorage.getItem(
 
 deepseekStatus.className=
 d?
-"status green":
-"status red";
+"status ok":
+"status off";
 
 deepseekStatus.innerHTML=
 d?
@@ -268,48 +274,42 @@ d?
 
 }
 
-function cleanSong(song){
+function cleanSong(line){
 
-song=song
-.normalize("NFKD")
+line=line
+.normalize("NFKC")
 .replace(/[\u2018\u2019]/g,"'")
 .replace(/[\u201C\u201D]/g,'"')
+.replace(/[\u2013\u2014\u2212]/g,"-")
 .replace(/^\d+\./,"")
 .replace(/\*\*/g,"")
 .replace(/\*/g,"")
 .replace(/\(.*?\)/g,"")
-.replace(/feat.*$/i,"")
-.replace(/ft.*$/i,"")
-.replace(/prod.*$/i,"")
 .replace(/•/g,"")
 .trim();
 
-const lower=
-song.toLowerCase();
+const low=
+line.toLowerCase();
 
 if(
-lower.includes(
+low.includes(
 "aquí tienes"
 )
 )return "";
 
 if(
-lower.includes(
+low.includes(
 "exactamente"
 )
 )return "";
 
 if(
-lower.includes(
+low.includes(
 "canciones"
 )
 )return "";
 
-if(
-!song.includes("-")
-)return "";
-
-return song;
+return line;
 
 }
 
@@ -354,13 +354,11 @@ model:"deepseek-chat",
 messages:[
 {
 role:"user",
-
 content:
 `
-Genera EXACTAMENTE
-${count}
+Genera EXACTAMENTE ${count} canciones.
 
-SOLO:
+Solo:
 
 ARTISTA - CANCION
 
@@ -393,52 +391,11 @@ msg(
 
 }
 
-async function searchSong(song){
-
-song=
-cleanSong(song);
-
-if(!song)
-return null;
-
-let artist="";
-let track="";
-
-if(song.includes("-")){
-
-const p=
-song.split("-");
-
-artist=
-p[0]
-.trim()
-.toLowerCase();
-
-track=
-p
-.slice(1)
-.join("-")
-.trim()
-.toLowerCase();
-
-}
-
-const queries=[
-
-`${artist} ${track}`,
-`${track} ${artist}`,
-track,
-song
-
-];
-
-for(const q of queries){
-
-try{
+async function spotifySearch(q){
 
 const r=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=20`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=10`,
 {
 headers:{
 Authorization:
@@ -450,60 +407,75 @@ Authorization:
 const d=
 await r.json();
 
-const items=
-d.tracks?.items || [];
+return d.tracks?.items||[];
 
-for(const item of items){
+}
 
-const spotifyTrack=
-item.name
-.toLowerCase();
+async function searchSong(song){
 
-const spotifyArtists=
-item.artists
-.map(
-x=>x.name.toLowerCase()
-)
-.join(" ");
+song=
+cleanSong(song);
 
-const artistOk=
-spotifyArtists.includes(
-artist
+if(!song)
+return null;
+
+const normalized=
+song.replace(
+/[–—]/g,
+"-"
 );
 
-const trackOk=
+let queries=[
+normalized
+];
 
-spotifyTrack.includes(
+if(
+normalized.includes("-")
+){
+
+const p=
+normalized.split("-");
+
+const artist=
+p[0].trim();
+
+const track=
+p.slice(1)
+.join("-")
+.trim();
+
+queries.push(
+`${artist} ${track}`
+);
+
+queries.push(
+`${track} ${artist}`
+);
+
+queries.push(
 track
-)
+);
 
-||
+}
 
-track.includes(
-spotifyTrack
+for(
+const q
+of queries
+){
 
+try{
+
+const items=
+await spotifySearch(
+q
 );
 
 if(
-artistOk &&
-trackOk
+items.length
 ){
 
 msg(
 `OK:
-${song}`
-);
-
-return item.uri;
-
-}
-
-}
-
-if(items.length){
-
-msg(
-`Coincidencia:
 ${song}`
 );
 
@@ -541,6 +513,11 @@ msg(
 "Creando playlist..."
 );
 
+const name=
+playlistName.value.trim()
+||
+"Playlist";
+
 const p=
 await fetch(
 "https://api.spotify.com/v1/me/playlists",
@@ -556,14 +533,8 @@ Authorization:
 
 body:
 JSON.stringify({
-
-name:
-playlistName.value.trim()
-||
-"Playlist",
-
+name,
 public:false
-
 })
 
 }
@@ -572,28 +543,33 @@ public:false
 const playlist=
 await p.json();
 
-const raw=
+const lines=
 songs.value
-.split("\n");
+.split("\n")
+.map(
+cleanSong
+)
+.filter(
+x=>x
+);
 
 let uris=[];
 
-for(const s of raw){
-
-const clean=
-cleanSong(s);
-
-if(!clean)
-continue;
+for(
+const s
+of lines
+){
 
 const uri=
 await searchSong(
-clean
+s
 );
 
 if(uri){
 
-uris.push(uri);
+uris.push(
+uri
+);
 
 }
 
@@ -646,18 +622,12 @@ uris
 const result=
 await add.json();
 
-msg(
-JSON.stringify(
-result,
-null,
-2
-)
-);
-
-if(result.snapshot_id){
+if(
+result.snapshot_id
+){
 
 playlistStatus.className=
-"status green";
+"status ok";
 
 playlistStatus.innerHTML=
 "Playlist 🟢";
@@ -668,6 +638,16 @@ msg(
 
 window.open(
 playlist.external_urls.spotify
+);
+
+}else{
+
+msg(
+JSON.stringify(
+result,
+null,
+2
+)
 );
 
 }
@@ -728,15 +708,21 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
+
 response_type:
 "code",
+
 redirect_uri:
 REDIRECT_URI,
+
 scope:
 SCOPES,
+
 show_dialog:true,
+
 code_challenge_method:
 "S256",
+
 code_challenge:c
 
 });
@@ -785,16 +771,23 @@ await fetch(
 "https://accounts.spotify.com/api/token",
 {
 method:"POST",
+
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
+
 body
+
 }
 );
 
 const d=
 await r.json();
+
+if(
+d.access_token
+){
 
 accessToken=
 d.access_token;
@@ -812,6 +805,8 @@ msg(
 
 }
 
+}
+
 function changeUser(){
 
 window.open(
@@ -826,6 +821,7 @@ location.reload();
 }
 
 updateStatus();
+
 getToken();
 
 </script>
