@@ -2,10 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
 <title>Spotify Playlist Creator</title>
 
 <style>
+
 body{
 background:#121212;
 color:white;
@@ -26,40 +29,54 @@ color:white;
 }
 
 textarea{
-height:240px;
+height:250px;
 }
 
 button{
 padding:12px;
-margin-right:10px;
-margin-top:10px;
+margin:10px 10px 0 0;
 border:none;
 border-radius:10px;
 cursor:pointer;
 color:white;
 }
 
-.green{background:#1DB954;}
-.orange{background:#ff9800;}
-.blue{background:#2196F3;}
-.red{background:#e53935;}
+.green{
+background:#1DB954;
+}
+
+.orange{
+background:#ff9800;
+}
+
+.blue{
+background:#2196F3;
+}
+
+.red{
+background:#e53935;
+}
 
 #log{
 margin-top:20px;
 padding:15px;
 background:#1a1a1a;
 border-radius:10px;
-white-space:pre-wrap;
 font-family:monospace;
+white-space:pre-wrap;
 max-height:420px;
 overflow:auto;
 }
+
 </style>
+
 </head>
 
 <body>
 
-<h1>Spotify Playlist Creator</h1>
+<h1>
+Spotify Playlist Creator
+</h1>
 
 <input
 id="playlistName"
@@ -71,23 +88,27 @@ placeholder="Queen - Bohemian Rhapsody
 Michael Jackson - Billie Jean">
 </textarea>
 
-<button class="green"
+<button
+class="green"
 onclick="loginSpotify()">
 Conectar Spotify
 </button>
 
-<button class="orange"
+<button
+class="orange"
 onclick="clearStorage()">
 Borrar almacenamiento
 </button>
 
-<button class="blue"
+<button
+class="blue"
 onclick="createPlaylist()">
-Crear Playlist
+Crear playlist
 </button>
 
-<button class="red"
-onclick="resetSpotify()">
+<button
+class="red"
+onclick="logoutSpotify()">
 Reiniciar permisos
 </button>
 
@@ -103,8 +124,7 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=
-[
+const SCOPES=[
 "user-read-private",
 "playlist-modify-private",
 "playlist-modify-public",
@@ -123,7 +143,8 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML += "\n"+t;
+log.innerHTML +=
+"\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -139,12 +160,12 @@ sessionStorage.clear();
 accessToken="";
 
 msg(
-"Storage eliminado"
+"Storage limpiado"
 );
 
 }
 
-function resetSpotify(){
+function logoutSpotify(){
 
 clearStorage();
 
@@ -166,11 +187,16 @@ const chars=
 
 let r="";
 
-for(let i=0;i<n;i++){
+for(
+let i=0;
+i<n;
+i++
+){
 
 r+=chars[
 Math.floor(
-Math.random()*chars.length
+Math.random()*
+chars.length
 )
 ];
 
@@ -183,7 +209,8 @@ return r;
 async function challenge(v){
 
 const data=
-new TextEncoder().encode(v);
+new TextEncoder()
+.encode(v);
 
 const hash=
 await crypto.subtle.digest(
@@ -206,7 +233,9 @@ async function loginSpotify(){
 clearStorage();
 
 const verifier=
-randomString(64);
+randomString(
+64
+);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -214,7 +243,9 @@ verifier
 );
 
 const c=
-await challenge(verifier);
+await challenge(
+verifier
+);
 
 const params=
 new URLSearchParams({
@@ -231,12 +262,14 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
-show_dialog:true,
+show_dialog:
+true,
 
 code_challenge_method:
 "S256",
 
-code_challenge:c
+code_challenge:
+c
 
 });
 
@@ -251,7 +284,9 @@ async function getToken(){
 const code=
 new URLSearchParams(
 location.search
-).get("code");
+).get(
+"code"
+);
 
 if(!code)return;
 
@@ -263,7 +298,8 @@ localStorage.getItem(
 const body=
 new URLSearchParams({
 
-client_id:CLIENT_ID,
+client_id:
+CLIENT_ID,
 
 grant_type:
 "authorization_code",
@@ -328,7 +364,7 @@ await res.json();
 
 return data.tracks
 ?.items?.[0]
-?.uri||null;
+?.uri || null;
 
 }
 
@@ -336,20 +372,32 @@ async function createPlaylist(){
 
 log.innerHTML="";
 
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
+msg(
+"Obteniendo usuario..."
 );
 
-const playlistRes=
+const meRes=
 await fetch(
-"https://api.spotify.com/v1/me/playlists",
+"https://api.spotify.com/v1/me",
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const me=
+await meRes.json();
+
+msg(
+`Usuario:
+${me.display_name}`
+);
+
+const createRes=
+await fetch(
+`https://api.spotify.com/v1/users/${me.id}/playlists`,
 {
 method:"POST",
 
@@ -378,10 +426,21 @@ public:false
 );
 
 const playlist=
-await playlistRes.json();
+await createRes.json();
 
 msg(
 "Playlist creada"
+);
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.filter(
+x=>x.trim()
 );
 
 let uris=[];
@@ -389,7 +448,9 @@ let uris=[];
 for(const s of songs){
 
 const uri=
-await searchSong(s);
+await searchSong(
+s
+);
 
 if(uri){
 
@@ -443,10 +504,12 @@ null,
 )
 );
 
-if(result.snapshot_id){
+if(
+result.snapshot_id
+){
 
 msg(
-"Canciones agregadas correctamente"
+"Canciones agregadas"
 );
 
 }
@@ -458,4 +521,5 @@ getToken();
 </script>
 
 </body>
+
 </html>
