@@ -2,9 +2,12 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator AI v3.3</title>
+<title>
+Spotify Playlist Creator AI v3.4
+</title>
 
 <style>
 
@@ -60,13 +63,18 @@ color:black;
 
 input,
 textarea,
-select,
 button{
+
 width:100%;
+
 padding:14px;
+
 margin-top:12px;
+
 border:none;
+
 border-radius:15px;
+
 }
 
 textarea{
@@ -75,8 +83,7 @@ background:#222;
 color:white;
 }
 
-input,
-select{
+input{
 background:#222;
 color:white;
 }
@@ -121,7 +128,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div>
-Versión v3.3
+Versión v3.4
 </div>
 
 <div class="statusBox">
@@ -135,10 +142,10 @@ Spotify 🔴
 </div>
 
 <div
-id="geminiStatus"
+id="deepseekStatus"
 class="status red">
 
-Gemini 🔴
+DeepSeek 🔴
 
 </div>
 
@@ -161,32 +168,16 @@ Playlist 🔴
 </div>
 
 <input
-id="geminiKey"
-placeholder="Gemini API Key">
+id="deepseekKey"
+placeholder="DeepSeek API Key">
 
 <button
 class="green"
-onclick="saveGemini()">
+onclick="saveDeepSeek()">
 
-Guardar Gemini
+Guardar DeepSeek
 
 </button>
-
-<select id="mode">
-
-<option value="auto">
-Automático
-</option>
-
-<option value="gemini">
-Gemini
-</option>
-
-<option value="local">
-IA Local
-</option>
-
-</select>
 
 <textarea
 id="promptAI"
@@ -197,15 +188,15 @@ placeholder="Rock carretera USA">
 
 <button
 class="orange"
-onclick="generateSongs()">
+onclick="generateDeepSeek()">
 
-Generar
+Generar DeepSeek
 
 </button>
 
 <button
 class="orange"
-onclick="generateSongs(true)">
+onclick="useLocal(true)">
 
 Buscar más
 
@@ -278,6 +269,8 @@ localStorage.getItem(
 "spotify_token"
 )||"";
 
+let rotate=0;
+
 const log=
 document.getElementById(
 "log"
@@ -293,30 +286,6 @@ log.scrollHeight;
 
 }
 
-function saveGemini(){
-
-localStorage.setItem(
-"gemini_key",
-document.getElementById(
-"geminiKey"
-).value
-);
-
-updateStatus();
-
-msg(
-"Gemini guardada"
-);
-
-}
-
-document.getElementById(
-"geminiKey"
-).value=
-localStorage.getItem(
-"gemini_key"
-)||"";
-
 const localAI={
 
 rock:[
@@ -325,14 +294,16 @@ rock:[
 "Eagles - Hotel California",
 "Boston - More Than a Feeling",
 "Tom Petty - Free Fallin'",
-"Bruce Springsteen - Born to Run"
+"Bruce Springsteen - Born to Run",
+"Kansas - Carry On Wayward Son"
 ],
 
 gym:[
 "Survivor - Eye of the Tiger",
-"Europe - Final Countdown",
 "Bon Jovi - Livin on a Prayer",
-"Queen - We Will Rock You"
+"Europe - Final Countdown",
+"Queen - We Will Rock You",
+"ACDC - Thunderstruck"
 ],
 
 mex:[
@@ -344,7 +315,66 @@ mex:[
 
 };
 
-let rotate=0;
+function saveDeepSeek(){
+
+localStorage.setItem(
+"deepseek_key",
+document.getElementById(
+"deepseekKey"
+).value.trim()
+);
+
+updateStatus();
+
+msg(
+"DeepSeek guardada"
+);
+
+}
+
+document.getElementById(
+"deepseekKey"
+).value=
+localStorage.getItem(
+"deepseek_key"
+)||"";
+
+function updateStatus(){
+
+document.getElementById(
+"spotifyStatus"
+).className=
+accessToken ?
+"status green":
+"status red";
+
+document.getElementById(
+"spotifyStatus"
+).innerHTML=
+accessToken ?
+"Spotify 🟢":
+"Spotify 🔴";
+
+const d=
+localStorage.getItem(
+"deepseek_key"
+);
+
+document.getElementById(
+"deepseekStatus"
+).className=
+d ?
+"status green":
+"status red";
+
+document.getElementById(
+"deepseekStatus"
+).innerHTML=
+d ?
+"DeepSeek 🟢":
+"DeepSeek 🔴";
+
+}
 
 function localGenerate(){
 
@@ -402,38 +432,6 @@ base.length
 
 }
 
-async function generateSongs(){
-
-const mode=
-document.getElementById(
-"mode"
-).value;
-
-if(
-mode==="local"
-){
-
-useLocal();
-
-return;
-
-}
-
-try{
-
-throw new Error(
-"429"
-);
-
-}
-catch{
-
-useLocal();
-
-}
-
-}
-
 function useLocal(){
 
 const songs=
@@ -462,6 +460,122 @@ msg(
 
 }
 
+async function generateDeepSeek(){
+
+const key=
+localStorage.getItem(
+"deepseek_key"
+);
+
+if(!key){
+
+msg(
+"Guardar DeepSeek"
+);
+
+return;
+
+}
+
+msg(
+"Generando..."
+);
+
+try{
+
+const r=
+await fetch(
+"https://api.deepseek.com/chat/completions",
+{
+method:"POST",
+
+headers:{
+
+Authorization:
+`Bearer ${key}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+
+model:
+"deepseek-chat",
+
+messages:[
+{
+role:"user",
+
+content:
+`
+Genera 20 canciones
+
+Formato:
+
+ARTISTA - CANCION
+
+Tema:
+
+${document.getElementById(
+"promptAI"
+).value}
+
+Sin numeración
+`
+}
+]
+
+})
+
+}
+);
+
+const d=
+await r.json();
+
+const text=
+d.choices?.[0]
+?.message
+?.content;
+
+if(!text){
+
+useLocal();
+
+return;
+
+}
+
+document.getElementById(
+"songs"
+).value=
+text
+.replace(
+/^\d+\./gm,
+""
+)
+.trim();
+
+msg(
+"DeepSeek lista"
+);
+
+}
+catch(e){
+
+msg(
+e.message
+);
+
+useLocal();
+
+}
+
+}
+
 async function searchSong(song){
 
 const r=
@@ -478,17 +592,13 @@ Authorization:
 const d=
 await r.json();
 
-return d.tracks
-?.items?.[0]
-?.uri||null;
+return d.tracks?.items?.[0]?.uri || null;
 
 }
 
 async function createPlaylist(){
 
-if(
-!accessToken
-){
+if(!accessToken){
 
 msg(
 "Spotify no conectado"
@@ -497,10 +607,6 @@ msg(
 return;
 
 }
-
-msg(
-"Creando playlist..."
-);
 
 const p=
 await fetch(
@@ -511,10 +617,8 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
-
 "Content-Type":
 "application/json"
-
 },
 
 body:
@@ -524,7 +628,6 @@ name:
 document.getElementById(
 "playlistName"
 ).value ||
-
 "Playlist AI",
 
 public:false
@@ -557,11 +660,6 @@ const s
 of songs
 ){
 
-msg(
-`Buscar:
-${s}`
-);
-
 const uri=
 await searchSong(
 s
@@ -585,10 +683,8 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
-
 "Content-Type":
 "application/json"
-
 },
 
 body:
@@ -613,98 +709,9 @@ document.getElementById(
 ).innerHTML=
 "Playlist 🟢";
 
-saveHistory(
-playlist.name
-);
-
 msg(
 "Playlist creada"
 );
-
-}
-
-function saveHistory(name){
-
-let h=
-JSON.parse(
-localStorage.getItem(
-"history"
-)||"[]"
-);
-
-h.unshift(
-name
-);
-
-h=
-h.slice(
-0,
-10
-);
-
-localStorage.setItem(
-"history",
-JSON.stringify(
-h
-)
-);
-
-renderHistory();
-
-}
-
-function renderHistory(){
-
-const h=
-JSON.parse(
-localStorage.getItem(
-"history"
-)||"[]"
-);
-
-document.getElementById(
-"history"
-).innerHTML=
-h.join(
-"<br>"
-);
-
-}
-
-function updateStatus(){
-
-document.getElementById(
-"spotifyStatus"
-).className=
-accessToken ?
-"status green":
-"status red";
-
-document.getElementById(
-"spotifyStatus"
-).innerHTML=
-accessToken ?
-"Spotify 🟢":
-"Spotify 🔴";
-
-const g=
-localStorage.getItem(
-"gemini_key"
-);
-
-document.getElementById(
-"geminiStatus"
-).className=
-g ?
-"status green":
-"status red";
-
-document.getElementById(
-"geminiStatus"
-).innerHTML=
-g ?
-"Gemini 🟢":
-"Gemini 🔴";
 
 }
 
@@ -834,12 +841,10 @@ await fetch(
 "https://accounts.spotify.com/api/token",
 {
 method:"POST",
-
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
-
 body
 }
 );
@@ -863,7 +868,18 @@ msg(
 
 }
 
-renderHistory();
+function changeUser(){
+
+window.open(
+"https://www.spotify.com/logout/",
+"_blank"
+);
+
+localStorage.clear();
+
+location.reload();
+
+}
 
 updateStatus();
 
