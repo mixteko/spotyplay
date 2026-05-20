@@ -15,7 +15,9 @@ margin:auto;
 padding:30px;
 }
 
-h1{color:#1DB954;}
+h1{
+color:#1DB954;
+}
 
 input,textarea{
 width:100%;
@@ -108,10 +110,9 @@ const REDIRECT_URI=
 
 const SCOPES=
 [
+"user-read-private",
 "playlist-modify-private",
-"playlist-modify-public",
-"playlist-read-private",
-"user-read-private"
+"playlist-modify-public"
 ].join(" ");
 
 let accessToken=
@@ -126,7 +127,8 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML += "\n"+t;
+log.innerHTML +=
+"\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -213,19 +215,25 @@ verifier
 const params=
 new URLSearchParams({
 
-client_id:CLIENT_ID,
+client_id:
+CLIENT_ID,
 
-response_type:"code",
+response_type:
+"code",
 
-redirect_uri:REDIRECT_URI,
+redirect_uri:
+REDIRECT_URI,
 
-scope:SCOPES,
+scope:
+SCOPES,
 
 show_dialog:true,
 
-code_challenge_method:"S256",
+code_challenge_method:
+"S256",
 
-code_challenge:c
+code_challenge:
+c
 
 });
 
@@ -254,15 +262,19 @@ localStorage.getItem(
 const body=
 new URLSearchParams({
 
-client_id:CLIENT_ID,
+client_id:
+CLIENT_ID,
 
-grant_type:"authorization_code",
+grant_type:
+"authorization_code",
 
 code,
 
-redirect_uri:REDIRECT_URI,
+redirect_uri:
+REDIRECT_URI,
 
-code_verifier:verifier
+code_verifier:
+verifier
 
 });
 
@@ -296,21 +308,40 @@ msg(
 
 }
 
-async function searchSong(song){
+async function api(url,opt={}){
 
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1&market=MX`,
+url,
 {
+...opt,
+
 headers:{
+
 Authorization:
-`Bearer ${accessToken}`
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
 }
+
 }
 );
 
 const data=
 await res.json();
+
+return data;
+
+}
+
+async function searchSong(song){
+
+const data=
+await api(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`
+);
 
 return data.tracks
 ?.items?.[0]
@@ -322,15 +353,48 @@ async function createPlaylist(){
 
 log.innerHTML="";
 
-if(!accessToken){
-
 msg(
-"Conecta Spotify primero"
+"Obteniendo usuario..."
 );
 
-return;
+const me=
+await api(
+"https://api.spotify.com/v1/me"
+);
+
+msg(
+`Usuario:
+${me.display_name}`
+);
+
+msg(
+"Creando playlist..."
+);
+
+const playlist=
+await api(
+`https://api.spotify.com/v1/users/${me.id}/playlists`,
+{
+method:"POST",
+
+body:
+JSON.stringify({
+
+name:
+document.getElementById(
+"playlistName"
+).value,
+
+public:false
+
+})
 
 }
+);
+
+msg(
+"Playlist creada"
+);
 
 const songs=
 document
@@ -341,60 +405,6 @@ document
 .split("\n")
 .filter(
 x=>x.trim()
-);
-
-const playlistName=
-document
-.getElementById(
-"playlistName"
-)
-.value;
-
-msg(
-"Creando playlist..."
-);
-
-const playlistRes=
-await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-name:playlistName,
-public:false
-})
-
-}
-);
-
-const playlist=
-await playlistRes.json();
-
-if(!playlist.id){
-
-msg(
-JSON.stringify(
-playlist,
-null,
-2
-)
-);
-
-return;
-
-}
-
-msg(
-"Playlist creada"
 );
 
 let uris=[];
@@ -424,57 +434,35 @@ msg(
 ${uris.length}`
 );
 
-for(
-let i=0;
-i<uris.length;
-i+=100
-){
-
-const batch=
-uris.slice(
-i,
-i+100
-);
-
-const add=
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-uris:batch
-})
-
-}
-);
-
-const result=
-await add.json();
-
-msg(
-JSON.stringify(
-result,
-null,
-2
-)
-);
-
-if(result.error){
+if(!uris.length){
 
 return;
 
 }
 
+const add=
+await api(
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+{
+method:"POST",
+
+body:
+JSON.stringify({
+uris
+})
+
 }
+);
+
+msg(
+JSON.stringify(
+add,
+null,
+2
+)
+);
+
+if(add.snapshot_id){
 
 msg(
 "Playlist finalizada"
@@ -484,6 +472,8 @@ window.open(
 playlist.external_urls.spotify,
 "_blank"
 );
+
+}
 
 }
 
