@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator AI v3.5
+Spotify Playlist Creator AI v3.6
 </title>
 
 <style>
@@ -63,6 +63,7 @@ color:black;
 
 input,
 textarea,
+select,
 button{
 
 width:100%;
@@ -74,7 +75,8 @@ border-radius:15px;
 }
 
 input,
-textarea{
+textarea,
+select{
 background:#222;
 color:white;
 }
@@ -117,7 +119,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div>
-Versión v3.5
+Versión v3.6
 </div>
 
 <div class="statusBox">
@@ -145,6 +147,36 @@ class="status red">
 Playlist 🔴
 
 </div>
+
+</div>
+
+<!-- BOTONES ARRIBA -->
+
+<div class="buttons">
+
+<button
+class="green"
+onclick="loginSpotify()">
+
+Conectar Spotify
+
+</button>
+
+<button
+class="orange"
+onclick="changeUser()">
+
+Cambiar cuenta
+
+</button>
+
+<button
+class="green"
+onclick="createPlaylist()">
+
+Crear Playlist
+
+</button>
 
 </div>
 
@@ -177,6 +209,19 @@ id="promptAI"
 placeholder="Rock carretera USA">
 </textarea>
 
+<select id="songCount">
+
+<option value="10">10 canciones</option>
+<option value="20">20 canciones</option>
+<option value="40">40 canciones</option>
+<option value="50">50 canciones</option>
+<option value="60">60 canciones</option>
+<option value="80">80 canciones</option>
+<option value="100">100 canciones</option>
+<option value="200">200 canciones</option>
+
+</select>
+
 <div class="buttons">
 
 <button
@@ -204,34 +249,6 @@ placeholder="Nombre playlist">
 <textarea
 id="songs">
 </textarea>
-
-<div class="buttons">
-
-<button
-class="green"
-onclick="loginSpotify()">
-
-Conectar Spotify
-
-</button>
-
-<button
-class="orange"
-onclick="changeUser()">
-
-Cambiar cuenta
-
-</button>
-
-<button
-class="green"
-onclick="createPlaylist()">
-
-Crear Playlist
-
-</button>
-
-</div>
 
 <div id="log">
 Esperando conexión
@@ -282,11 +299,11 @@ document.getElementById(
 ).value.trim()
 );
 
+updateStatus();
+
 msg(
 "DeepSeek guardada"
 );
-
-updateStatus();
 
 }
 
@@ -297,139 +314,6 @@ localStorage.getItem(
 "deepseek_key"
 )||"";
 
-function updateStatus(){
-
-document.getElementById(
-"spotifyStatus"
-).className=
-accessToken ?
-"status green":
-"status red";
-
-document.getElementById(
-"spotifyStatus"
-).innerHTML=
-accessToken ?
-"Spotify 🟢":
-"Spotify 🔴";
-
-}
-
-async function testDeepSeek(){
-
-const key=
-localStorage.getItem(
-"deepseek_key"
-);
-
-if(!key){
-
-msg(
-"Guardar API"
-);
-
-return;
-
-}
-
-const box=
-document.getElementById(
-"deepseekStatus"
-);
-
-box.className=
-"status orange";
-
-box.innerHTML=
-"DeepSeek 🟡";
-
-try{
-
-const r=
-await fetch(
-"https://api.deepseek.com/chat/completions",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${key}`,
-
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-model:
-"deepseek-chat",
-
-messages:[
-{
-role:"user",
-content:
-"Responde OK"
-}
-]
-
-})
-
-}
-);
-
-const d=
-await r.json();
-
-if(
-d.choices
-){
-
-box.className=
-"status green";
-
-box.innerHTML=
-"DeepSeek 🟢";
-
-msg(
-"DeepSeek conectada"
-);
-
-}else{
-
-box.className=
-"status red";
-
-box.innerHTML=
-"DeepSeek 🔴";
-
-msg(
-JSON.stringify(
-d,
-null,
-2
-)
-);
-
-}
-
-}
-catch(e){
-
-box.className=
-"status red";
-
-box.innerHTML=
-"DeepSeek 🔴";
-
-msg(
-e.message
-);
-
-}
-
-}
-
 async function generateDeepSeek(more=false){
 
 const key=
@@ -437,15 +321,10 @@ localStorage.getItem(
 "deepseek_key"
 );
 
-if(!key){
-
-msg(
-"Guardar API"
-);
-
-return;
-
-}
+const count=
+document.getElementById(
+"songCount"
+).value;
 
 msg(
 more ?
@@ -480,7 +359,7 @@ role:"user",
 
 content:
 `
-Genera 20 canciones.
+Genera EXACTAMENTE ${count} canciones
 
 Formato:
 
@@ -511,15 +390,12 @@ Sin numeración
 const d=
 await r.json();
 
-const text=
-d.choices?.[0]
-?.message
-?.content;
-
 document.getElementById(
 "songs"
 ).value=
-text || "";
+d.choices?.[0]
+?.message
+?.content || "";
 
 msg(
 "Lista generada"
@@ -527,322 +403,10 @@ msg(
 
 }
 
-async function searchSong(song){
-
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const d=
-await r.json();
-
-return d.tracks
-?.items?.[0]
-?.uri||null;
-
-}
-
-async function createPlaylist(){
-
-if(!accessToken){
-
-msg(
-"Spotify no conectado"
-);
-
-return;
-
-}
-
-msg(
-"Creando playlist..."
-);
-
-const p=
-await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-name:
-document.getElementById(
-"playlistName"
-).value ||
-"Playlist DeepSeek",
-
-public:false
-
-})
-
-}
-);
-
-const playlist=
-await p.json();
-
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split(
-"\n"
-)
-.filter(
-x=>x.trim()
-);
-
-let uris=[];
-
-for(
-const s
-of songs
-){
-
-const uri=
-await searchSong(
-s
-);
-
-if(uri){
-
-uris.push(
-uri
-);
-
-}
-
-}
-
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-uris
-})
-
-}
-);
-
-document.getElementById(
-"playlistStatus"
-).className=
-"status green";
-
-document.getElementById(
-"playlistStatus"
-).innerHTML=
-"Playlist 🟢";
-
-window.open(
-playlist.external_urls.spotify
-);
-
-msg(
-"Playlist creada"
-);
-
-}
-
-function randomString(n){
-
-return [...Array(n)]
-.map(
-()=>Math.random()
-.toString(36)[2]
-)
-.join("");
-
-}
-
-async function challenge(v){
-
-const d=
-new TextEncoder()
-.encode(v);
-
-const h=
-await crypto.subtle.digest(
-"SHA-256",
-d
-);
-
-return btoa(
-String.fromCharCode(
-...new Uint8Array(h)
-))
-.replace(/\+/g,"-")
-.replace(/\//g,"_")
-.replace(/=/g,"");
-
-}
-
-async function loginSpotify(){
-
-const verifier=
-randomString(
-64
-);
-
-localStorage.setItem(
-"spotify_verifier",
-verifier
-);
-
-const c=
-await challenge(
-verifier
-);
-
-const p=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-response_type:
-"code",
-
-redirect_uri:
-REDIRECT_URI,
-
-scope:
-SCOPES,
-
-show_dialog:true,
-
-code_challenge_method:
-"S256",
-
-code_challenge:c
-
-});
-
-window.location=
-"https://accounts.spotify.com/authorize?"+
-p;
-
-}
-
-async function getToken(){
-
-const code=
-new URLSearchParams(
-location.search
-).get(
-"code"
-);
-
-if(!code){
-
 updateStatus();
-
-return;
-
-}
-
-const verifier=
-localStorage.getItem(
-"spotify_verifier"
-);
-
-const body=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-grant_type:
-"authorization_code",
-
-code,
-
-redirect_uri:
-REDIRECT_URI,
-
-code_verifier:
-verifier
-
-});
-
-const r=
-await fetch(
-"https://accounts.spotify.com/api/token",
-{
-method:"POST",
-headers:{
-"Content-Type":
-"application/x-www-form-urlencoded"
-},
-body
-}
-);
-
-const d=
-await r.json();
-
-accessToken=
-d.access_token;
-
-localStorage.setItem(
-"spotify_token",
-accessToken
-);
-
-updateStatus();
-
-msg(
-"Spotify conectado"
-);
-
-}
-
-function changeUser(){
-
-window.open(
-"https://www.spotify.com/logout/",
-"_blank"
-);
-
-localStorage.clear();
-
-location.reload();
-
-}
-
-updateStatus();
-
-getToken();
 
 </script>
 
 </body>
+
 </html>
