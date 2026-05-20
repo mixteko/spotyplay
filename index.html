@@ -3,13 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v4.8</title>
+<title>Spotify Playlist Creator AI v4.9</title>
 
 <style>
+
 body{
 margin:0;
 font-family:Arial,sans-serif;
-background:linear-gradient(135deg,#0b0b0b,#121212,#1DB954);
+background:linear-gradient(
+135deg,
+#0a0a0a,
+#121212,
+#1DB954
+);
+
 color:white;
 padding:24px;
 }
@@ -26,11 +33,11 @@ border-radius:22px;
 display:flex;
 gap:10px;
 flex-wrap:wrap;
-margin-bottom:15px;
+margin-bottom:18px;
 }
 
 .status{
-padding:10px 14px;
+padding:10px 16px;
 border-radius:12px;
 font-weight:bold;
 }
@@ -41,10 +48,13 @@ color:black;
 }
 
 .off{
-background:#c62828;
+background:#d32f2f;
 }
 
-input,textarea,select,button{
+input,
+textarea,
+select,
+button{
 width:100%;
 padding:14px;
 margin-top:10px;
@@ -53,7 +63,9 @@ border-radius:14px;
 box-sizing:border-box;
 }
 
-input,textarea,select{
+input,
+textarea,
+select{
 background:#222;
 color:white;
 }
@@ -74,39 +86,55 @@ flex:1;
 }
 
 #log{
-margin-top:18px;
+margin-top:20px;
 background:black;
-padding:18px;
+padding:20px;
 border-radius:16px;
-max-height:320px;
-overflow:auto;
 white-space:pre-wrap;
+max-height:350px;
+overflow:auto;
 }
+
 </style>
+
 </head>
 
 <body>
 
 <div class="card">
 
-<h1>Spotify Playlist Creator AI</h1>
-<div>Versión v4.8</div>
+<h1>
+Spotify Playlist Creator AI
+</h1>
+
+<div>
+Versión v4.9
+</div>
 
 <div class="statusWrap">
 
-<div id="spotifyStatus"
+<div
+id="spotifyStatus"
 class="status off">
+
 Spotify 🔴
+
 </div>
 
-<div id="deepseekStatus"
+<div
+id="deepseekStatus"
 class="status off">
+
 DeepSeek 🔴
+
 </div>
 
-<div id="playlistStatus"
+<div
+id="playlistStatus"
 class="status off">
+
 Playlist 🔴
+
 </div>
 
 </div>
@@ -125,19 +153,19 @@ Guardar DeepSeek
 
 <textarea
 id="promptAI"
-placeholder="Kpop relajante">
+placeholder="Rock latino">
 </textarea>
 
 <select id="songCount">
 
-<option>10</option>
-<option>20</option>
-<option>40</option>
-<option>50</option>
-<option>60</option>
-<option>80</option>
-<option>100</option>
-<option>200</option>
+<option value="10">10</option>
+<option value="20">20</option>
+<option value="40">40</option>
+<option value="50">50</option>
+<option value="60">60</option>
+<option value="80">80</option>
+<option value="100">100</option>
+<option value="200">200</option>
 
 </select>
 
@@ -190,9 +218,13 @@ const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
 const SCOPES=[
+
 "user-read-private",
+
 "playlist-modify-private",
+
 "playlist-modify-public"
+
 ].join(" ");
 
 let accessToken=
@@ -220,6 +252,7 @@ function refreshApp(){
 promptAI.value="";
 songs.value="";
 playlistName.value="";
+
 log.innerHTML=
 "Refrescado";
 
@@ -274,22 +307,58 @@ d?
 
 }
 
-function cleanSong(line){
+function cleanSong(song){
 
-line=line
-.normalize("NFKC")
-.replace(/[\u2018\u2019]/g,"'")
-.replace(/[\u201C\u201D]/g,'"')
-.replace(/[\u2013\u2014\u2212]/g,"-")
-.replace(/^\d+\./,"")
-.replace(/\*\*/g,"")
-.replace(/\*/g,"")
-.replace(/\(.*?\)/g,"")
-.replace(/•/g,"")
+song=song
+
+.normalize(
+"NFKC"
+)
+
+.replace(
+/[\u2018\u2019]/g,
+"'"
+)
+
+.replace(
+/[\u201C\u201D]/g,
+'"'
+)
+
+.replace(
+/[\u2013\u2014\u2212]/g,
+"-"
+)
+
+.replace(
+/^\d+\./,
+""
+)
+
+.replace(
+/\*\*/g,
+""
+)
+
+.replace(
+/\*/g,
+""
+)
+
+.replace(
+/\(.*?\)/g,
+""
+)
+
+.replace(
+/•/g,
+""
+)
+
 .trim();
 
 const low=
-line.toLowerCase();
+song.toLowerCase();
 
 if(
 low.includes(
@@ -309,7 +378,7 @@ low.includes(
 )
 )return "";
 
-return line;
+return song;
 
 }
 
@@ -342,23 +411,30 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${key}`,
+
 "Content-Type":
 "application/json"
+
 },
 
 body:
 JSON.stringify({
 
-model:"deepseek-chat",
+model:
+"deepseek-chat",
 
 messages:[
 {
 role:"user",
+
 content:
 `
-Genera EXACTAMENTE ${count} canciones.
+Genera EXACTAMENTE
+${count}
 
-Solo:
+canciones
+
+SOLO:
 
 ARTISTA - CANCION
 
@@ -366,7 +442,10 @@ Tema:
 
 ${promptAI.value}
 
-${more?"No repetir":""}
+${more?
+"No repetir":
+""
+}
 `
 }
 ]
@@ -395,7 +474,7 @@ async function spotifySearch(q){
 
 const r=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=10`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=20`,
 {
 headers:{
 Authorization:
@@ -419,44 +498,44 @@ cleanSong(song);
 if(!song)
 return null;
 
-const normalized=
+song=
 song.replace(
 /[–—]/g,
 "-"
 );
 
-let queries=[
-normalized
-];
+let artist="";
+let track="";
 
-if(
-normalized.includes("-")
-){
+if(song.includes("-")){
 
 const p=
-normalized.split("-");
+song.split("-");
 
-const artist=
-p[0].trim();
+artist=
+p[0]
+.trim()
+.toLowerCase();
 
-const track=
+track=
 p.slice(1)
 .join("-")
-.trim();
-
-queries.push(
-`${artist} ${track}`
-);
-
-queries.push(
-`${track} ${artist}`
-);
-
-queries.push(
-track
-);
+.trim()
+.toLowerCase();
 
 }
+
+const queries=[
+
+`${artist} ${track}`,
+
+`${track} ${artist}`,
+
+song,
+
+track
+
+];
 
 for(
 const q
@@ -470,12 +549,78 @@ await spotifySearch(
 q
 );
 
+for(
+const item
+of items
+){
+
+const spotifyTrack=
+item.name
+.toLowerCase();
+
+const spotifyArtists=
+item.artists
+.map(
+x=>x.name.toLowerCase()
+)
+.join(" ");
+
+const artistOk=
+
+artist===""
+
+||
+
+spotifyArtists.includes(
+artist
+)
+
+||
+
+artist.includes(
+spotifyArtists
+
+);
+
+const trackOk=
+
+track===""
+
+||
+
+spotifyTrack.includes(
+track
+)
+
+||
+
+track.includes(
+spotifyTrack
+
+);
+
+if(
+artistOk &&
+trackOk
+){
+
+msg(
+`OK:
+${song}`
+);
+
+return item.uri;
+
+}
+
+}
+
 if(
 items.length
 ){
 
 msg(
-`OK:
+`Coincidencia:
 ${song}`
 );
 
@@ -527,14 +672,18 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
+
 "Content-Type":
 "application/json"
+
 },
 
 body:
 JSON.stringify({
+
 name,
 public:false
+
 })
 
 }
@@ -607,8 +756,10 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
+
 "Content-Type":
 "application/json"
+
 },
 
 body:
@@ -621,6 +772,14 @@ uris
 
 const result=
 await add.json();
+
+msg(
+JSON.stringify(
+result,
+null,
+2
+)
+);
 
 if(
 result.snapshot_id
@@ -638,16 +797,6 @@ msg(
 
 window.open(
 playlist.external_urls.spotify
-);
-
-}else{
-
-msg(
-JSON.stringify(
-result,
-null,
-2
-)
 );
 
 }
@@ -690,7 +839,9 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(64);
+randomString(
+64
+);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -756,11 +907,15 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
+
 grant_type:
 "authorization_code",
+
 code,
+
 redirect_uri:
 REDIRECT_URI,
+
 code_verifier:
 verifier
 
