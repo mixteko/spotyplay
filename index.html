@@ -6,7 +6,6 @@
 <title>Spotify Playlist Creator</title>
 
 <style>
-
 body{
 background:#121212;
 color:white;
@@ -21,8 +20,7 @@ color:#1DB954;
 margin-bottom:20px;
 }
 
-input,
-textarea{
+input,textarea{
 width:100%;
 padding:12px;
 margin:10px 0;
@@ -48,21 +46,10 @@ cursor:pointer;
 color:white;
 }
 
-.green{
-background:#1DB954;
-}
-
-.orange{
-background:#ff9800;
-}
-
-.blue{
-background:#2196F3;
-}
-
-.red{
-background:#e53935;
-}
+.green{background:#1DB954;}
+.orange{background:#ff9800;}
+.blue{background:#2196F3;}
+.red{background:#e53935;}
 
 #log{
 margin-top:20px;
@@ -74,9 +61,7 @@ font-family:monospace;
 max-height:350px;
 overflow:auto;
 }
-
 </style>
-
 </head>
 
 <body>
@@ -126,8 +111,7 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=
-[
+const SCOPES=[
 "playlist-modify-private",
 "playlist-modify-public",
 "playlist-read-private",
@@ -156,18 +140,6 @@ log.scrollHeight;
 
 function clearStorage(){
 
-localStorage.removeItem(
-"spotify_token"
-);
-
-localStorage.removeItem(
-"spotify_verifier"
-);
-
-localStorage.removeItem(
-"spotify_refresh"
-);
-
 localStorage.clear();
 
 sessionStorage.clear();
@@ -180,10 +152,6 @@ msg(
 "Almacenamiento eliminado"
 );
 
-msg(
-"Spotify desconectado"
-);
-
 location.reload();
 
 }
@@ -193,7 +161,7 @@ function resetSpotify(){
 clearStorage();
 
 msg(
-"Vuelve a conectar Spotify"
+"Permisos reiniciados"
 );
 
 }
@@ -244,8 +212,6 @@ String.fromCharCode(
 }
 
 async function loginSpotify(){
-
-resetSpotify();
 
 const verifier=
 randomString(64);
@@ -400,12 +366,12 @@ p.slice(1)
 .trim();
 
 query=
-`${track} ${artist}`;
+`track:"${track}" artist:"${artist}"`;
 
 }
 
 msg(
-`Buscar:
+`Buscando:
 ${query}`
 );
 
@@ -413,7 +379,7 @@ const res=
 await fetch(
 `https://api.spotify.com/v1/search?q=${encodeURIComponent(
 query
-)}&type=track&limit=5`,
+)}&type=track&market=MX&limit=10`,
 {
 headers:{
 Authorization:
@@ -431,16 +397,23 @@ data.tracks.items &&
 data.tracks.items.length
 ){
 
+const found=
+data.tracks.items[0];
+
 msg(
 `Encontrada:
-${data.tracks.items[0].name}`
+${found.name}
+- ${found.artists[0].name}`
 );
 
-return data.tracks
-.items[0]
-.uri;
+return found.uri;
 
 }
+
+msg(
+`No encontrada:
+${song}`
+);
 
 return null;
 
@@ -460,10 +433,6 @@ async function createPlaylist(){
 
 log.innerHTML="";
 
-msg(
-"Creando playlist..."
-);
-
 const songs=
 document
 .getElementById(
@@ -475,6 +444,18 @@ document
 x=>x.trim()
 );
 
+const playlistName=
+document
+.getElementById(
+"playlistName"
+)
+.value
+.trim();
+
+msg(
+"Creando playlist..."
+);
+
 const playlistRes=
 await fetch(
 "https://api.spotify.com/v1/me/playlists",
@@ -484,7 +465,6 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
-
 "Content-Type":
 "application/json"
 },
@@ -493,9 +473,7 @@ body:
 JSON.stringify({
 
 name:
-document.getElementById(
-"playlistName"
-).value,
+playlistName,
 
 public:false
 
@@ -552,7 +530,6 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
-
 "Content-Type":
 "application/json"
 },
