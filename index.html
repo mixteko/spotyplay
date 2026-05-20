@@ -38,7 +38,7 @@ font-size:15px;
 }
 
 textarea{
-height:240px;
+height:250px;
 resize:vertical;
 }
 
@@ -90,9 +90,9 @@ placeholder="Nombre playlist">
 
 <textarea
 id="songs"
-placeholder="Michael Jackson - Billie Jean
+placeholder="Bruce Springsteen - Born to Run
 Queen - Bohemian Rhapsody
-Bad Bunny - Tití Me Preguntó">
+Michael Jackson - Billie Jean">
 </textarea>
 
 <div class="btns">
@@ -167,9 +167,7 @@ log.scrollHeight;
 }
 
 function clearLog(){
-
 log.innerHTML="";
-
 }
 
 function clearSession(){
@@ -234,13 +232,6 @@ String.fromCharCode(
 
 async function loginSpotify(){
 
-clearLog();
-
-addLog(
-"Iniciando login",
-"info"
-);
-
 const verifier=
 randomString(64);
 
@@ -269,8 +260,7 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
-show_dialog:
-true,
+show_dialog:true,
 
 code_challenge_method:
 "S256",
@@ -326,11 +316,6 @@ addLog(
 return;
 
 }
-
-addLog(
-"Intercambiando token",
-"info"
-);
 
 const verifier=
 localStorage.getItem(
@@ -420,9 +405,7 @@ Authorization:
 `Bearer ${accessToken}`,
 
 "Content-Type":
-"application/json",
-
-...(opt.headers||{})
+"application/json"
 
 }
 
@@ -446,19 +429,63 @@ return data;
 
 async function searchSong(song){
 
-const q=
-encodeURIComponent(
-song
+try{
+
+let query=song;
+
+if(song.includes("-")){
+
+const p=
+song.split("-");
+
+const artist=
+p[0].trim();
+
+const track=
+p.slice(1)
+.join("-")
+.trim();
+
+query=
+`track:"${track}" artist:"${artist}"`;
+
+}
+
+const res=
+await fetch(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(
+query
+)}&type=track&limit=5`,
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
 );
 
 const data=
-await spotifyFetch(
-`https://api.spotify.com/v1/search?q=${q}&type=track&limit=3`
-);
+await res.json();
+
+if(
+data.tracks &&
+data.tracks.items &&
+data.tracks.items.length
+){
 
 return data.tracks
-?.items?.[0]
-?.uri || null;
+.items[0]
+.uri;
+
+}
+
+return null;
+
+}catch(e){
+
+return null;
+
+}
 
 }
 
@@ -502,7 +529,7 @@ return;
 if(!name){
 
 addLog(
-"Escribe nombre playlist",
+"Escribe nombre",
 "warn"
 );
 
@@ -543,15 +570,28 @@ let uris=[];
 for(let i=0;i<songs.length;i++){
 
 addLog(
-`Buscando:
+`Buscando ${i+1}/${songs.length}
+
 ${songs[i]}`,
 "info"
 );
 
 const uri=
-await searchSong(
+await Promise.race([
+
+searchSong(
 songs[i]
-);
+),
+
+new Promise(
+r=>
+setTimeout(
+()=>r(null),
+5000
+)
+)
+
+]);
 
 if(uri){
 
@@ -584,9 +624,16 @@ return;
 
 }
 
-addLog(
-`Agregando ${uris.length}`,
-"info"
+for(
+let i=0;
+i<uris.length;
+i+=100
+){
+
+const batch=
+uris.slice(
+i,
+i+100
 );
 
 await spotifyFetch(
@@ -596,14 +643,19 @@ method:"POST",
 
 body:
 JSON.stringify({
-uris
+uris:batch
 })
 
 }
 );
 
+}
+
 addLog(
-"Playlist finalizada",
+`Playlist terminada
+
+Canciones agregadas:
+${uris.length}`,
 "ok"
 );
 
