@@ -5,7 +5,7 @@
 <meta name="viewport"
 content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator AI v3.1</title>
+<title>Spotify Playlist Creator AI v3.2</title>
 
 <style>
 
@@ -20,8 +20,8 @@ linear-gradient(
 #1DB954
 );
 
-color:white;
 padding:30px;
+color:white;
 }
 
 .card{
@@ -60,7 +60,6 @@ color:black;
 
 input,
 textarea,
-select,
 button{
 
 width:100%;
@@ -68,7 +67,6 @@ padding:14px;
 margin-top:12px;
 border:none;
 border-radius:15px;
-
 }
 
 textarea{
@@ -77,15 +75,9 @@ background:#222;
 color:white;
 }
 
-input,
-select{
+input{
 background:#222;
 color:white;
-}
-
-button{
-cursor:pointer;
-font-weight:bold;
 }
 
 .buttons{
@@ -108,13 +100,6 @@ max-height:300px;
 overflow:auto;
 }
 
-#history{
-margin-top:20px;
-background:#1a1a1a;
-padding:20px;
-border-radius:20px;
-}
-
 </style>
 
 </head>
@@ -128,7 +113,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div>
-Versión v3.1
+Versión v3.2
 </div>
 
 <div class="statusBox">
@@ -158,16 +143,6 @@ Playlist 🔴
 </div>
 
 </div>
-
-<select id="mode">
-
-<option value="local">
-
-IA Local
-
-</option>
-
-</select>
 
 <textarea
 id="promptAI"
@@ -234,10 +209,6 @@ Crear Playlist
 Esperando conexión
 </div>
 
-<div id="history">
-Sin historial
-</div>
-
 </div>
 
 <script>
@@ -274,9 +245,8 @@ log.scrollHeight;
 
 }
 
-let localDB={
+const rock=[
 
-rock:[
 "Queen - Bohemian Rhapsody",
 "Journey - Faithfully",
 "Eagles - Hotel California",
@@ -284,95 +254,84 @@ rock:[
 "Tom Petty - Free Fallin'",
 "Bruce Springsteen - Born to Run",
 "Foreigner - I Want to Know",
-"Kansas - Carry on Wayward Son"
-],
+"Kansas - Carry On Wayward Son"
 
-gym:[
+];
+
+const gym=[
+
 "Survivor - Eye of the Tiger",
-"Bon Jovi - Livin on a Prayer",
 "Europe - Final Countdown",
+"Bon Jovi - Livin on a Prayer",
 "Queen - We Will Rock You",
-"ACDC - Thunderstruck",
-"Van Halen - Jump"
-],
+"ACDC - Thunderstruck"
 
-mex:[
+];
+
+const mex=[
+
 "Carin León - Primera Cita",
 "Grupo Firme - Ya Supérame",
 "Peso Pluma - Ella Baila Sola",
-"Nodal - Adiós Amor",
-"Julión Álvarez - Te Hubieras Ido Antes"
-]
+"Christian Nodal - Adiós Amor"
 
-};
+];
 
 let rotate=0;
 
-function localGenerate(){
+function generateSongs(){
 
-const p=
+rotate++;
+
+let prompt=
 document.getElementById(
 "promptAI"
 ).value
 .toLowerCase();
 
-let base=
-localDB.rock;
+let list=rock;
 
 if(
-p.includes(
+prompt.includes(
 "gym"
 )
 ){
 
-base=
-localDB.gym;
+list=gym;
 
 }
 
 if(
-p.includes(
+prompt.includes(
 "mex"
 )
 ||
-p.includes(
+prompt.includes(
 "regional"
 )
 ){
 
-base=
-localDB.mex;
+list=mex;
 
 }
 
-rotate++;
-
-return [
-...base.slice(
-rotate
+const result=[
+...list.slice(
+rotate%
+list.length
 ),
-...base.slice(
+...list.slice(
 0,
-rotate
+rotate%
+list.length
 )
 ];
-
-}
-
-function generateSongs(){
-
-const songs=
-localGenerate();
 
 document.getElementById(
 "songs"
 ).value=
-songs.join(
+result.join(
 "\n"
-);
-
-msg(
-"IA local generó canciones"
 );
 
 document.getElementById(
@@ -385,219 +344,27 @@ document.getElementById(
 ).innerHTML=
 "IA Local 🟢";
 
-}
-
-async function searchSong(song){
-
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const d=
-await r.json();
-
-return d.tracks
-?.items?.[0]
-?.uri||null;
-
-}
-
-async function createPlaylist(){
-
-if(
-!accessToken
-){
-
 msg(
-"Spotify no conectado"
-);
-
-return;
-
-}
-
-msg(
-"Creando playlist..."
-);
-
-const p=
-await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-
-name:
-document.getElementById(
-"playlistName"
-).value ||
-
-"Playlist AI",
-
-public:false
-
-})
-
-}
-);
-
-const playlist=
-await p.json();
-
-let songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split(
-"\n"
-)
-.filter(
-x=>x.trim()
-);
-
-let uris=[];
-
-for(
-const s
-of songs
-){
-
-msg(
-`Buscar:
-${s}`
-);
-
-let uri=
-await searchSong(
-s
-);
-
-if(uri){
-
-uris.push(
-uri
+"Lista generada"
 );
 
 }
 
-}
-
-msg(
-`Encontradas:
-${uris.length}`
-);
-
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-uris
-})
-
-}
-);
-
-window.open(
-playlist.external_urls.spotify
-);
+function updateSpotify(){
 
 document.getElementById(
-"playlistStatus"
+"spotifyStatus"
 ).className=
-"status green";
+accessToken ?
+"status green":
+"status red";
 
 document.getElementById(
-"playlistStatus"
+"spotifyStatus"
 ).innerHTML=
-"Playlist 🟢";
-
-saveHistory(
-playlist.name
-);
-
-msg(
-"Playlist creada"
-);
-
-}
-
-function saveHistory(name){
-
-let h=
-JSON.parse(
-localStorage.getItem(
-"history"
-)||"[]"
-);
-
-h.unshift(
-name
-);
-
-h=
-h.slice(
-0,
-10
-);
-
-localStorage.setItem(
-"history",
-JSON.stringify(
-h
-)
-);
-
-renderHistory();
-
-}
-
-function renderHistory(){
-
-let h=
-JSON.parse(
-localStorage.getItem(
-"history"
-)||"[]"
-);
-
-document.getElementById(
-"history"
-).innerHTML=
-h.join(
-"<br>"
-);
+accessToken ?
+"Spotify 🟢":
+"Spotify 🔴";
 
 }
 
@@ -681,6 +448,81 @@ p;
 
 }
 
+async function getToken(){
+
+const code=
+new URLSearchParams(
+location.search
+).get(
+"code"
+);
+
+if(!code){
+
+updateSpotify();
+
+return;
+
+}
+
+const verifier=
+localStorage.getItem(
+"spotify_verifier"
+);
+
+const body=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+grant_type:
+"authorization_code",
+
+code,
+
+redirect_uri:
+REDIRECT_URI,
+
+code_verifier:
+verifier
+
+});
+
+const r=
+await fetch(
+"https://accounts.spotify.com/api/token",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body
+}
+);
+
+const d=
+await r.json();
+
+accessToken=
+d.access_token;
+
+localStorage.setItem(
+"spotify_token",
+accessToken
+);
+
+updateSpotify();
+
+msg(
+"Spotify conectado"
+);
+
+}
+
 function changeUser(){
 
 window.open(
@@ -694,7 +536,9 @@ location.reload();
 
 }
 
-renderHistory();
+updateSpotify();
+
+getToken();
 
 </script>
 
