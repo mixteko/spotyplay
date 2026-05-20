@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator v1.3
+Spotify Playlist Creator v1.4
 </title>
 
 <style>
@@ -85,7 +85,7 @@ Spotify Playlist Creator
 </h1>
 
 <div id="versionBox">
-Versión v1.3
+Versión v1.4
 </div>
 
 <input
@@ -124,7 +124,7 @@ Esperando conexión
 
 <script>
 
-const APP_VERSION="v1.3";
+const APP_VERSION="v1.4";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -162,8 +162,6 @@ localStorage.clear();
 
 sessionStorage.clear();
 
-accessToken="";
-
 location.reload();
 
 }
@@ -176,153 +174,6 @@ window.open(
 );
 
 clearStorage();
-
-}
-
-function randomString(n){
-
-const chars=
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-let r="";
-
-for(let i=0;i<n;i++){
-
-r+=chars[
-Math.floor(
-Math.random()*
-chars.length
-)
-];
-
-}
-
-return r;
-
-}
-
-async function challenge(v){
-
-const data=
-new TextEncoder()
-.encode(v);
-
-const hash=
-await crypto.subtle.digest(
-"SHA-256",
-data
-);
-
-return btoa(
-String.fromCharCode(
-...new Uint8Array(hash)
-))
-.replace(/\+/g,"-")
-.replace(/\//g,"_")
-.replace(/=/g,"");
-
-}
-
-async function loginSpotify(){
-
-clearStorage();
-
-const verifier=
-randomString(64);
-
-localStorage.setItem(
-"spotify_verifier",
-verifier
-);
-
-const c=
-await challenge(verifier);
-
-const params=
-new URLSearchParams({
-
-client_id:CLIENT_ID,
-
-response_type:"code",
-
-redirect_uri:REDIRECT_URI,
-
-scope:SCOPES,
-
-show_dialog:true,
-
-code_challenge_method:"S256",
-
-code_challenge:c
-
-});
-
-window.location.href=
-"https://accounts.spotify.com/authorize?"+
-params;
-
-}
-
-async function getToken(){
-
-const code=
-new URLSearchParams(
-location.search
-).get(
-"code"
-);
-
-if(!code)return;
-
-const verifier=
-localStorage.getItem(
-"spotify_verifier"
-);
-
-const body=
-new URLSearchParams({
-
-client_id:CLIENT_ID,
-
-grant_type:"authorization_code",
-
-code,
-
-redirect_uri:REDIRECT_URI,
-
-code_verifier:verifier
-
-});
-
-const r=
-await fetch(
-"https://accounts.spotify.com/api/token",
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/x-www-form-urlencoded"
-},
-
-body
-}
-);
-
-const d=
-await r.json();
-
-accessToken=
-d.access_token;
-
-localStorage.setItem(
-"spotify_token",
-accessToken
-);
-
-msg(
-"Spotify conectado"
-);
 
 }
 
@@ -386,29 +237,13 @@ public:false
 }
 );
 
-msg(
-`HTTP playlist:
-${playlistRes.status}`
-);
-
 const playlist=
 await playlistRes.json();
 
 msg(
-JSON.stringify(
-playlist,
-null,
-2
-)
+`HTTP playlist:
+${playlistRes.status}`
 );
-
-if(
-!playlistRes.ok
-){
-
-return;
-
-}
 
 let uris=[];
 
@@ -423,7 +258,9 @@ document
 x=>x.trim()
 );
 
-for(const s of songs){
+for(
+const s of songs
+){
 
 const uri=
 await searchSong(s);
@@ -443,7 +280,7 @@ ${uris.length}`
 
 const add=
 await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
 {
 method:"POST",
 
@@ -478,9 +315,8 @@ result
 
 }
 
-getToken();
-
 </script>
 
 </body>
+
 </html>
