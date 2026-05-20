@@ -90,7 +90,7 @@ overflow:auto;
 
 <h1>Spotify Playlist Creator AI</h1>
 
-<div>Versión v4.0</div>
+<div>Versión v4.1</div>
 
 <div class="statusBox">
 
@@ -290,6 +290,28 @@ d?
 
 }
 
+function normalizeLine(line){
+
+line=line
+.replace(/^\d+\./,"")
+.replace(/\*\*/g,"")
+.replace(/\*/g,"")
+.replace(/\(.*?\)/g,"")
+.replace(/•/g,"")
+.trim();
+
+if(
+!line.includes("-")
+){
+
+return null;
+
+}
+
+return line;
+
+}
+
 async function generateDeepSeek(more=false){
 
 const key=
@@ -329,11 +351,14 @@ content:
 `
 Genera EXACTAMENTE
 ${count}
+
 canciones
 
-Formato:
+SOLO formato:
 
 ARTISTA - CANCION
+
+Sin comentarios
 
 Tema:
 
@@ -358,67 +383,50 @@ more?
 const d=
 await r.json();
 
+const raw=
+d.choices?.[0]
+?.message
+?.content||
+"";
+
+let lines=
+raw
+.split("\n")
+.map(
+normalizeLine
+)
+.filter(
+x=>x
+);
+
 document.getElementById(
 "songs"
 ).value=
-d.choices?.[0]
-?.message
-?.content||"";
+lines.join("\n");
 
 msg(
-"Lista creada"
+"Lista generada"
 );
-
-}
-
-function cleanSong(song){
-
-return song
-
-.replace(
-/^\d+\./,
-""
-)
-
-.replace(
-/\*\*/g,
-""
-)
-
-.replace(
-/\*/g,
-""
-)
-
-.replace(
-/•/g,
-""
-)
-
-.replace(
-/"/g,
-""
-)
-
-.trim();
 
 }
 
 async function searchSong(song){
 
 song=
-cleanSong(song);
+normalizeLine(song);
+
+if(!song){
+
+return null;
+
+}
 
 let artist="";
 let track="";
 
-if(
-song.includes(
-"-"
-)
-){
+if(song.includes("-")){
 
-let p=
+const p=
 song.split("-");
 
 artist=
@@ -431,35 +439,19 @@ p.slice(1)
 
 }
 
-let queries=[];
+const queries=[
 
-if(
-artist &&
-track
-){
+`track:"${track}" artist:"${artist}"`,
 
-queries.push(
-`track:"${track}" artist:"${artist}"`
-);
+`${artist} ${track}`,
 
-}
+`${track} ${artist}`,
 
-queries.push(
 song
-);
 
-queries.push(
-`${artist} ${track}`
-);
+];
 
-queries.push(
-`${track} ${artist}`
-);
-
-for(
-const q
-of queries
-){
+for(const q of queries){
 
 try{
 
@@ -519,17 +511,30 @@ return;
 
 }
 
+let name=
+document.getElementById(
+"playlistName"
+).value.trim();
+
+if(!name){
+
+name=
+prompt(
+"Nombre playlist"
+);
+
+if(!name){
+
+name=
+"Playlist";
+
+}
+
+}
+
 msg(
 "Creando playlist..."
 );
-
-const name=
-
-document.getElementById(
-"playlistName"
-).value ||
-
-`Playlist ${new Date().toLocaleDateString()}`;
 
 const p=
 await fetch(
@@ -546,10 +551,8 @@ Authorization:
 
 body:
 JSON.stringify({
-
 name,
 public:false
-
 })
 
 }
@@ -558,7 +561,7 @@ public:false
 const playlist=
 await p.json();
 
-let songs=
+const songs=
 document
 .getElementById(
 "songs"
@@ -571,10 +574,7 @@ x=>x.trim()
 
 let uris=[];
 
-for(
-const s
-of songs
-){
+for(const s of songs){
 
 const uri=
 await searchSong(
@@ -583,9 +583,7 @@ s
 
 if(uri){
 
-uris.push(
-uri
-);
+uris.push(uri);
 
 }
 
@@ -597,9 +595,18 @@ ${uris.length}`
 );
 
 if(
-uris.length
+uris.length===0
 ){
 
+msg(
+"No agregué canciones"
+);
+
+return;
+
+}
+
+const add=
 await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/items`,
 {
@@ -620,10 +627,13 @@ uris
 }
 );
 
-}
+const result=
+await add.json();
 
-window.open(
-playlist.external_urls.spotify
+if(result.snapshot_id){
+
+msg(
+"Canciones agregadas"
 );
 
 document.getElementById(
@@ -636,8 +646,10 @@ document.getElementById(
 ).innerHTML=
 "Playlist 🟢";
 
-msg(
-"Playlist creada"
+}
+
+window.open(
+playlist.external_urls.spotify
 );
 
 }
@@ -678,9 +690,7 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(
-64
-);
+randomString(64);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -751,6 +761,7 @@ grant_type:
 "authorization_code",
 
 code,
+
 redirect_uri:
 REDIRECT_URI,
 
