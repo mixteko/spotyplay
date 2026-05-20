@@ -6,7 +6,6 @@
 <title>Spotify Playlist Creator</title>
 
 <style>
-
 body{
 background:#121212;
 color:white;
@@ -16,93 +15,43 @@ margin:auto;
 padding:30px;
 }
 
-h1{
-color:#1DB954;
-margin-bottom:20px;
-}
-
-input,
-textarea{
-
+input,textarea{
 width:100%;
-
 padding:12px;
-
 margin:10px 0;
-
 border:none;
-
 border-radius:10px;
-
 background:#222;
-
 color:white;
-
-font-size:15px;
-
 }
 
 textarea{
 height:250px;
-resize:vertical;
 }
 
 button{
-
 padding:12px;
-
 margin-right:10px;
-
 margin-top:10px;
-
 border:none;
-
 border-radius:10px;
-
 cursor:pointer;
-
 color:white;
-
 }
 
-.green{
-background:#1DB954;
-}
-
-.orange{
-background:#ff9800;
-}
-
-.blue{
-background:#2196F3;
-}
-
-.red{
-background:#e53935;
-}
+.green{background:#1DB954;}
+.orange{background:#ff9800;}
+.blue{background:#2196F3;}
 
 #log{
-
 margin-top:20px;
-
 padding:15px;
-
 background:#1a1a1a;
-
 border-radius:10px;
-
 white-space:pre-wrap;
-
 font-family:monospace;
-
-max-height:350px;
-
-overflow:auto;
-
 }
-
 </style>
-
 </head>
 
 <body>
@@ -116,8 +65,7 @@ placeholder="Nombre playlist">
 <textarea
 id="songs"
 placeholder="Michael Jackson - Billie Jean
-Queen - Bohemian Rhapsody
-Ray Charles - Hit the Road Jack">
+Queen - Bohemian Rhapsody">
 </textarea>
 
 <button class="green"
@@ -126,22 +74,17 @@ Conectar Spotify
 </button>
 
 <button class="orange"
-onclick="clearSession()">
-Limpiar sesión
+onclick="resetSpotify()">
+Reiniciar permisos
 </button>
 
 <button class="blue"
 onclick="createPlaylist()">
-Crear playlist
-</button>
-
-<button class="red"
-onclick="changeUser()">
-Cambiar cuenta
+Crear Playlist
 </button>
 
 <div id="log">
-Esperando conexión...
+Esperando conexión
 </div>
 
 <script>
@@ -175,26 +118,20 @@ function msg(t){
 log.innerHTML +=
 "\n"+t;
 
-log.scrollTop=
-log.scrollHeight;
-
 }
 
-function clearSession(){
+function resetSpotify(){
 
 localStorage.clear();
 
-location.reload();
+accessToken="";
 
-}
+msg(
+"Permisos eliminados"
+);
 
-function changeUser(){
-
-clearSession();
-
-window.open(
-"https://www.spotify.com/logout/",
-"_blank"
+msg(
+"Pulsa Conectar Spotify"
 );
 
 }
@@ -245,6 +182,8 @@ String.fromCharCode(
 }
 
 async function loginSpotify(){
+
+resetSpotify();
 
 const verifier=
 randomString(64);
@@ -302,7 +241,7 @@ location.search
 if(!code)return;
 
 msg(
-"Intercambiando token..."
+"Obteniendo token..."
 );
 
 const verifier=
@@ -347,18 +286,6 @@ body
 const data=
 await res.json();
 
-if(!data.access_token){
-
-msg(
-JSON.stringify(
-data
-)
-);
-
-return;
-
-}
-
 accessToken=
 data.access_token;
 
@@ -367,47 +294,23 @@ localStorage.setItem(
 accessToken
 );
 
+msg(
+"Spotify conectado"
+);
+
 history.replaceState(
 {},
 "",
 REDIRECT_URI
 );
 
-msg(
-"Spotify conectado"
-);
-
 }
 
 async function searchSong(song){
 
-try{
-
-let query=song;
-
-if(song.includes("-")){
-
-const p=
-song.split("-");
-
-const artist=
-p[0].trim();
-
-const track=
-p.slice(1)
-.join("-")
-.trim();
-
-query=
-`track:${track} artist:${artist}`;
-
-}
-
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(
-query
-)}&type=track&limit=1`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
 {
 headers:{
 Authorization:
@@ -421,13 +324,7 @@ await res.json();
 
 return data.tracks
 ?.items?.[0]
-?.uri || null;
-
-}catch{
-
-return null;
-
-}
+?.uri||null;
 
 }
 
@@ -435,27 +332,31 @@ async function createPlaylist(){
 
 log.innerHTML="";
 
-const name=
-document
-.getElementById(
-"playlistName"
-)
-.value
-.trim();
+msg(
+"Verificando usuario..."
+);
 
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
+const me=
+await fetch(
+"https://api.spotify.com/v1/me",
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const user=
+await me.json();
+
+msg(
+`Usuario:
+${user.display_name}`
 );
 
 msg(
-"Creando playlist"
+"Creando playlist..."
 );
 
 const playlistRes=
@@ -475,8 +376,12 @@ Authorization:
 body:
 JSON.stringify({
 
-name,
-public:true
+name:
+document.getElementById(
+"playlistName"
+).value,
+
+public:false
 
 })
 
@@ -490,52 +395,37 @@ msg(
 "Playlist creada"
 );
 
-msg(
-"Buscando canciones..."
-);
-
-const results=
-await Promise.all(
-songs.map(
-x=>searchSong(x)
+const songs=
+document
+.getElementById(
+"songs"
 )
+.value
+.split("\n")
+.filter(
+x=>x.trim()
 );
 
-const uris=
-results.filter(
-x=>x
+const uris=[];
+
+for(const s of songs){
+
+const u=
+await searchSong(
+s
 );
+
+if(u){
+
+uris.push(u);
+
+}
+
+}
 
 msg(
 `Encontradas:
 ${uris.length}`
-);
-
-if(!uris.length){
-
-msg(
-"No encontré canciones"
-);
-
-return;
-
-}
-
-for(
-let i=0;
-i<uris.length;
-i+=100
-){
-
-const batch=
-uris.slice(
-i,
-i+100
-);
-
-msg(
-`Agregando lote:
-${batch.length}`
 );
 
 const add=
@@ -554,7 +444,7 @@ Authorization:
 
 body:
 JSON.stringify({
-uris:batch
+uris
 })
 
 }
@@ -562,12 +452,6 @@ uris:batch
 
 const result=
 await add.json();
-
-if(!add.ok){
-
-msg(
-"ERROR Spotify"
-);
 
 msg(
 JSON.stringify(
@@ -577,36 +461,13 @@ null,
 )
 );
 
-return;
-
-}
-
 if(result.snapshot_id){
 
 msg(
-"Snapshot OK"
+"Playlist finalizada correctamente"
 );
-
-}else{
-
-msg(
-"Spotify no devolvió snapshot"
-);
-
-return;
 
 }
-
-}
-
-msg(
-"Playlist finalizada"
-);
-
-window.open(
-playlist.external_urls.spotify,
-"_blank"
-);
 
 }
 
@@ -615,5 +476,4 @@ getToken();
 </script>
 
 </body>
-
 </html>
