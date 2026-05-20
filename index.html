@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator AI v2.4
+Spotify Playlist Creator AI v2.6
 </title>
 
 <style>
@@ -21,7 +21,7 @@ font-family:Arial;
 background:
 linear-gradient(
 135deg,
-#0a0a0a,
+#050505,
 #121212,
 #1DB954
 );
@@ -35,6 +35,7 @@ display:flex;
 justify-content:center;
 
 color:white;
+
 }
 
 .card{
@@ -55,15 +56,69 @@ padding:30px;
 
 border-radius:25px;
 
+box-shadow:
+0 0 40px rgba(
+0,
+0,
+0,
+0.5
+);
+
+}
+
+h1{
+margin:0;
+color:#1DB954;
 }
 
 .version{
+
+margin-top:10px;
+
 display:inline-block;
+
 padding:8px 15px;
+
+background:#1DB954;
+
+color:black;
+
+font-weight:bold;
+
+border-radius:20px;
+
+}
+
+.statusBox{
+
+display:flex;
+
+gap:10px;
+
+flex-wrap:wrap;
+
+margin-top:20px;
+
+}
+
+.status{
+
+padding:12px 18px;
+
+border-radius:15px;
+
+font-weight:bold;
+
+}
+
+.greenStatus{
 background:#1DB954;
 color:black;
-font-weight:bold;
-border-radius:20px;
+}
+
+.redStatus{
+background:#e53935;
+color:white;
 }
 
 input,
@@ -84,27 +139,43 @@ background:#222;
 
 color:white;
 
+font-size:15px;
+
 }
 
 textarea{
 height:220px;
+resize:vertical;
 }
 
 .buttons{
+
 display:flex;
+
 gap:10px;
+
 flex-wrap:wrap;
+
 margin-top:20px;
+
 }
 
 button{
+
 flex:1;
+
 padding:14px;
+
 border:none;
+
 border-radius:15px;
+
 font-weight:bold;
+
 cursor:pointer;
+
 color:white;
+
 }
 
 .green{
@@ -125,14 +196,23 @@ background:#e53935;
 }
 
 #log{
+
 margin-top:20px;
+
 padding:20px;
+
 background:#111;
+
 border-radius:20px;
+
 font-family:monospace;
+
 white-space:pre-wrap;
+
 max-height:350px;
+
 overflow:auto;
+
 }
 
 </style>
@@ -148,7 +228,29 @@ Spotify Playlist Creator AI
 </h1>
 
 <div class="version">
-Versión v2.4
+Versión v2.6
+</div>
+
+<div class="statusBox">
+
+<div
+id="spotifyStatus"
+class="status redStatus">
+
+Spotify:
+🔴 Desconectado
+
+</div>
+
+<div
+id="geminiStatus"
+class="status redStatus">
+
+Gemini:
+🔴 Sin API
+
+</div>
+
 </div>
 
 <input
@@ -158,27 +260,41 @@ placeholder="Gemini API Key">
 <button
 class="green"
 onclick="saveGeminiKey()">
-Guardar IA
+
+Guardar Gemini
+
 </button>
 
 <textarea
 id="promptAI"
-placeholder="Rock clásico carretera">
+placeholder="Rock clásico carretera USA">
 </textarea>
 
 <select id="songCount">
 
-<option value="10">10</option>
-<option value="25">25</option>
-<option value="50">50</option>
-<option value="100">100</option>
+<option value="10">
+10 canciones
+</option>
+
+<option value="25">
+25 canciones
+</option>
+
+<option value="50">
+50 canciones
+</option>
+
+<option value="100">
+100 canciones
+</option>
 
 </select>
 
 <button
-class="blue"
-onclick="generateAIPlaylist()">
+class="blue">
+
 Generar IA
+
 </button>
 
 <input
@@ -194,36 +310,48 @@ id="songs">
 <button
 class="green"
 onclick="loginSpotify()">
+
 Conectar Spotify
+
 </button>
 
 <button
 class="orange"
 onclick="changeUser()">
+
 Cambiar cuenta
+
 </button>
 
 <button
-class="blue"
-onclick="createPlaylist()">
+class="blue">
+
 Crear Playlist
+
 </button>
 
 <button
 class="red"
 onclick="clearStorage()">
-Borrar
+
+Borrar datos
+
 </button>
 
 </div>
 
 <div id="log">
+
 Esperando conexión
+
 </div>
 
 </div>
 
 <script>
+
+const APP_VERSION=
+"v2.6";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -236,7 +364,9 @@ const SCOPES=
 "user-read-private",
 "playlist-modify-private",
 "playlist-modify-public"
-].join(" ");
+].join(
+" "
+);
 
 let accessToken=
 localStorage.getItem(
@@ -259,21 +389,86 @@ log.scrollHeight;
 }
 
 msg(
-"v2.4"
+APP_VERSION
 );
+
+function updateStatus(){
+
+const spotify=
+document.getElementById(
+"spotifyStatus"
+);
+
+const gemini=
+document.getElementById(
+"geminiStatus"
+);
+
+if(
+accessToken
+){
+
+spotify.className=
+"status greenStatus";
+
+spotify.innerHTML=
+"Spotify:<br>🟢 Conectado";
+
+}else{
+
+spotify.className=
+"status redStatus";
+
+spotify.innerHTML=
+"Spotify:<br>🔴 Desconectado";
+
+}
+
+const key=
+localStorage.getItem(
+"gemini_key"
+);
+
+if(
+key &&
+key.trim()
+){
+
+gemini.className=
+"status greenStatus";
+
+gemini.innerHTML=
+"Gemini:<br>🟢 Conectado";
+
+}else{
+
+gemini.className=
+"status redStatus";
+
+gemini.innerHTML=
+"Gemini:<br>🔴 Sin API";
+
+}
+
+}
 
 function saveGeminiKey(){
 
-localStorage.setItem(
-"gemini_key",
+const key=
 document.getElementById(
 "geminiKey"
-).value
+).value.trim();
+
+localStorage.setItem(
+"gemini_key",
+key
 );
 
 msg(
 "Gemini guardada"
 );
+
+updateStatus();
 
 }
 
@@ -284,244 +479,206 @@ localStorage.getItem(
 "gemini_key"
 )||"";
 
-async function generateAIPlaylist(){
+function clearStorage(){
 
-const key=
-localStorage.getItem(
-"gemini_key"
-);
+localStorage.clear();
 
-const prompt=
-document.getElementById(
-"promptAI"
-).value;
+sessionStorage.clear();
 
-const count=
-document.getElementById(
-"songCount"
-).value;
-
-msg(
-"Generando IA..."
-);
-
-const r=
-await fetch(
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-contents:[
-{
-parts:[
-{
-text:
-`Genera ${count} canciones.
-
-Formato:
-
-ARTISTA - CANCION
-
-Tema:
-${prompt}`
-}
-]
-}
-]
-
-})
-
-}
-);
-
-const d=
-await r.json();
-
-document.getElementById(
-"songs"
-).value=
-d.candidates?.[0]
-?.content
-?.parts?.[0]
-?.text||"";
-
-msg(
-"IA lista"
-);
+location.reload();
 
 }
 
-async function searchSong(song){
-
-msg(
-`Buscar:
-${song}`
-);
-
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const d=
-await r.json();
-
-return d.tracks
-?.items?.[0]
-?.uri||null;
-
-}
-
-async function createPlaylist(){
-
-log.innerHTML="";
-
-msg(
-"Creando playlist..."
-);
-
-const p=
-await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-
-name:
-document.getElementById(
-"playlistName"
-).value,
-
-public:false
-
-})
-
-}
-);
-
-const playlist=
-await p.json();
-
-msg(
-"Playlist creada"
-);
-
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split(
-"\n"
-)
-.filter(
-x=>x.trim()
-);
-
-let uris=[];
-
-for(
-let i=0;
-i<songs.length;
-i++
-){
-
-msg(
-`${i+1}/${songs.length}`
-);
-
-const uri=
-await searchSong(
-songs[i]
-);
-
-if(uri){
-
-uris.push(
-uri
-);
-
-}
-
-}
-
-msg(
-`Encontradas:
-${uris.length}`
-);
-
-const add=
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-uris
-})
-
-}
-);
-
-msg(
-`HTTP:
-${add.status}`
-);
-
-if(add.ok){
+function changeUser(){
 
 window.open(
-playlist.external_urls.spotify,
+"https://www.spotify.com/logout/",
 "_blank"
 );
 
-msg(
-"Terminada"
+clearStorage();
+
+}
+
+function randomString(n){
+
+const chars=
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+let r="";
+
+for(
+let i=0;
+i<n;
+i++
+){
+
+r+=chars[
+Math.floor(
+Math.random()*
+chars.length
+)
+];
+
+}
+
+return r;
+
+}
+
+async function challenge(v){
+
+const data=
+new TextEncoder()
+.encode(v);
+
+const hash=
+await crypto.subtle.digest(
+"SHA-256",
+data
 );
 
-}
+return btoa(
+String.fromCharCode(
+...new Uint8Array(hash)
+))
+.replace(/\+/g,"-")
+.replace(/\//g,"_")
+.replace(/=/g,"");
 
 }
+
+async function loginSpotify(){
+
+const verifier=
+randomString(
+64
+);
+
+localStorage.setItem(
+"spotify_verifier",
+verifier
+);
+
+const c=
+await challenge(
+verifier
+);
+
+const params=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+response_type:
+"code",
+
+redirect_uri:
+REDIRECT_URI,
+
+scope:
+SCOPES,
+
+show_dialog:true,
+
+code_challenge_method:
+"S256",
+
+code_challenge:
+c
+
+});
+
+window.location.href=
+"https://accounts.spotify.com/authorize?"+
+params.toString();
+
+}
+
+async function getToken(){
+
+const code=
+new URLSearchParams(
+location.search
+).get(
+"code"
+);
+
+if(
+!code
+){
+
+updateStatus();
+
+return;
+
+}
+
+const verifier=
+localStorage.getItem(
+"spotify_verifier"
+);
+
+const body=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+grant_type:
+"authorization_code",
+
+code,
+
+redirect_uri:
+REDIRECT_URI,
+
+code_verifier:
+verifier
+
+});
+
+const r=
+await fetch(
+"https://accounts.spotify.com/api/token",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body
+}
+);
+
+const d=
+await r.json();
+
+accessToken=
+d.access_token;
+
+localStorage.setItem(
+"spotify_token",
+accessToken
+);
+
+msg(
+"Spotify conectado"
+);
+
+updateStatus();
+
+}
+
+updateStatus();
 
 getToken();
 
 </script>
 
 </body>
+
 </html>
