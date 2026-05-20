@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>Spotify Playlist Creator</title>
 
 <style>
-
 body{
 background:#121212;
 color:white;
@@ -28,7 +26,7 @@ color:white;
 }
 
 textarea{
-height:240px;
+height:250px;
 }
 
 button{
@@ -56,9 +54,7 @@ font-family:monospace;
 max-height:400px;
 overflow:auto;
 }
-
 </style>
-
 </head>
 
 <body>
@@ -71,9 +67,9 @@ placeholder="Nombre playlist">
 
 <textarea
 id="songs"
-placeholder="Queen - Bohemian Rhapsody
-Michael Jackson - Billie Jean
-Hall & Oates - Rich Girl">
+placeholder="Hall & Oates - Rich Girl
+Queen - Bohemian Rhapsody
+Michael Jackson - Billie Jean">
 </textarea>
 
 <button class="green"
@@ -88,7 +84,7 @@ Borrar almacenamiento
 
 <button class="blue"
 onclick="createPlaylist()">
-Crear Playlist
+Crear playlist
 </button>
 
 <button class="red"
@@ -123,8 +119,7 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML +=
-"\n"+t;
+log.innerHTML += "\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -136,8 +131,6 @@ function clearStorage(){
 localStorage.clear();
 
 sessionStorage.clear();
-
-accessToken="";
 
 location.reload();
 
@@ -201,9 +194,7 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(
-64
-);
+randomString(64);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -211,33 +202,24 @@ verifier
 );
 
 const c=
-await challenge(
-verifier
-);
+await challenge(verifier);
 
 const params=
 new URLSearchParams({
 
-client_id:
-CLIENT_ID,
+client_id:CLIENT_ID,
 
-response_type:
-"code",
+response_type:"code",
 
-redirect_uri:
-REDIRECT_URI,
+redirect_uri:REDIRECT_URI,
 
-scope:
-SCOPES,
+scope:SCOPES,
 
-show_dialog:
-true,
+show_dialog:true,
 
-code_challenge_method:
-"S256",
+code_challenge_method:"S256",
 
-code_challenge:
-c
+code_challenge:c
 
 });
 
@@ -266,39 +248,33 @@ localStorage.getItem(
 const body=
 new URLSearchParams({
 
-client_id:
-CLIENT_ID,
+client_id:CLIENT_ID,
 
-grant_type:
-"authorization_code",
+grant_type:"authorization_code",
 
 code,
 
-redirect_uri:
-REDIRECT_URI,
+redirect_uri:REDIRECT_URI,
 
-code_verifier:
-verifier
+code_verifier:verifier
 
 });
 
-const r=
+const res=
 await fetch(
 "https://accounts.spotify.com/api/token",
 {
 method:"POST",
-
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
-
 body
 }
 );
 
 const data=
-await r.json();
+await res.json();
 
 accessToken=
 data.access_token;
@@ -316,11 +292,48 @@ msg(
 
 async function searchSong(song){
 
+let artist="";
+let track="";
+
+if(song.includes("-")){
+
+const p=
+song.split("-");
+
+artist=
+p[0]
+.trim()
+.replace(/&/g," ");
+
+track=
+p.slice(1)
+.join("-")
+.trim();
+
+}
+
+const queries=[
+
+`track:"${track}" artist:"${artist}"`,
+
+`${track} ${artist}`,
+
+song
+
+];
+
+for(const q of queries){
+
+msg(
+`Buscar:
+${q}`
+);
+
 const res=
 await fetch(
 `https://api.spotify.com/v1/search?q=${encodeURIComponent(
-song
-)}&type=track&market=MX&limit=1`,
+q
+)}&type=track&market=MX&limit=5`,
 {
 headers:{
 Authorization:
@@ -332,9 +345,21 @@ Authorization:
 const data=
 await res.json();
 
+if(
+data.tracks &&
+data.tracks.items &&
+data.tracks.items.length
+){
+
 return data.tracks
-?.items?.[0]
-?.uri||null;
+.items[0]
+.uri;
+
+}
+
+}
+
+return null;
 
 }
 
@@ -342,30 +367,7 @@ async function createPlaylist(){
 
 log.innerHTML="";
 
-msg(
-"Leyendo usuario..."
-);
-
-const meRes=
-await fetch(
-"https://api.spotify.com/v1/me",
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const me=
-await meRes.json();
-
-msg(
-`Usuario:
-${me.display_name}`
-);
-
-const createRes=
+const playlist=
 await fetch(
 "https://api.spotify.com/v1/me/playlists",
 {
@@ -377,7 +379,6 @@ Authorization:
 
 "Content-Type":
 "application/json"
-
 },
 
 body:
@@ -395,8 +396,8 @@ public:false
 }
 );
 
-const playlist=
-await createRes.json();
+const p=
+await playlist.json();
 
 msg(
 "Playlist creada"
@@ -436,13 +437,19 @@ ${s}`
 }
 
 msg(
-`Uris:
+`Encontradas:
 ${uris.length}`
 );
 
-const addRes=
+if(!uris.length){
+
+return;
+
+}
+
+const add=
 await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+`https://api.spotify.com/v1/playlists/${p.id}/tracks`,
 {
 method:"POST",
 
@@ -452,7 +459,6 @@ Authorization:
 
 "Content-Type":
 "application/json"
-
 },
 
 body:
@@ -463,37 +469,16 @@ uris
 }
 );
 
-const add=
-await addRes.json();
+const result=
+await add.json();
 
 msg(
 JSON.stringify(
-add,
+result,
 null,
 2
 )
 );
-
-if(
-add.snapshot_id
-){
-
-msg(
-"Canciones agregadas"
-);
-
-window.open(
-playlist.external_urls.spotify,
-"_blank"
-);
-
-}else{
-
-msg(
-"Spotify rechazó inserción"
-);
-
-}
 
 }
 
