@@ -15,7 +15,7 @@ padding:0;
 body{
 background:#121212;
 color:white;
-font-family:Arial;
+font-family:Arial,sans-serif;
 max-width:900px;
 margin:auto;
 padding:30px;
@@ -38,19 +38,19 @@ font-size:15px;
 }
 
 textarea{
-height:220px;
+height:240px;
 resize:vertical;
 }
 
 .btns{
 display:flex;
-flex-wrap:wrap;
 gap:10px;
+flex-wrap:wrap;
 margin-top:10px;
 }
 
 button{
-padding:12px 20px;
+padding:12px 18px;
 border:none;
 border-radius:10px;
 cursor:pointer;
@@ -109,7 +109,7 @@ Cambiar cuenta
 
 <button class="blue"
 onclick="createPlaylist()">
-Crear playlist
+Crear Playlist
 </button>
 
 <button class="red"
@@ -135,8 +135,7 @@ const SCOPES=
 [
 "playlist-modify-private",
 "playlist-modify-public",
-"user-read-private",
-"user-read-email"
+"user-read-private"
 ].join(" ");
 
 let accessToken=
@@ -149,21 +148,18 @@ document.getElementById(
 "log"
 );
 
-function addLog(
-txt,
-cls=""
-){
+function addLog(msg,cls=""){
 
-const el=
+const d=
 document.createElement(
 "div"
 );
 
-el.className=cls;
+d.className=cls;
 
-el.textContent=txt;
+d.textContent=msg;
 
-log.appendChild(el);
+log.appendChild(d);
 
 log.scrollTop=
 log.scrollHeight;
@@ -191,20 +187,14 @@ addLog(
 
 }
 
-function randomString(
-n
-){
+function randomString(n){
 
 const chars=
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 let r="";
 
-for(
-let i=0;
-i<n;
-i++
-){
+for(let i=0;i<n;i++){
 
 r+=chars[
 Math.floor(
@@ -219,9 +209,7 @@ return r;
 
 }
 
-async function createChallenge(
-v
-){
+async function createChallenge(v){
 
 const data=
 new TextEncoder()
@@ -249,14 +237,12 @@ async function loginSpotify(){
 clearLog();
 
 addLog(
-"Iniciando login...",
+"Iniciando login",
 "info"
 );
 
 const verifier=
-randomString(
-64
-);
+randomString(64);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -318,39 +304,20 @@ loginSpotify,
 
 async function getToken(){
 
-const url=
+const code=
 new URLSearchParams(
 window.location.search
-);
-
-const code=
-url.get(
+)
+.get(
 "code"
 );
-
-const error=
-url.get(
-"error"
-);
-
-if(error){
-
-addLog(
-"Spotify error: "+
-error,
-"err"
-);
-
-return;
-
-}
 
 if(!code){
 
 if(accessToken){
 
 addLog(
-"Token cargado",
+"Spotify conectado",
 "ok"
 );
 
@@ -361,7 +328,7 @@ return;
 }
 
 addLog(
-"Intercambiando token...",
+"Intercambiando token",
 "info"
 );
 
@@ -369,17 +336,6 @@ const verifier=
 localStorage.getItem(
 "spotify_verifier"
 );
-
-if(!verifier){
-
-addLog(
-"Verifier perdido",
-"err"
-);
-
-return;
-
-}
 
 const body=
 new URLSearchParams({
@@ -400,8 +356,6 @@ verifier
 
 });
 
-try{
-
 const res=
 await fetch(
 "https://accounts.spotify.com/api/token",
@@ -420,14 +374,10 @@ body
 const data=
 await res.json();
 
-if(
-!res.ok
-){
+if(!data.access_token){
 
 addLog(
-JSON.stringify(
-data
-),
+JSON.stringify(data),
 "err"
 );
 
@@ -454,27 +404,15 @@ addLog(
 "ok"
 );
 
-}catch(e){
-
-addLog(
-e.message,
-"err"
-);
-
 }
 
-}
-
-async function spotifyFetch(
-url,
-options={}
-){
+async function spotifyFetch(url,opt={}){
 
 const res=
 await fetch(
 url,
 {
-...options,
+...opt,
 
 headers:{
 
@@ -484,7 +422,7 @@ Authorization:
 "Content-Type":
 "application/json",
 
-...(options.headers||{})
+...(opt.headers||{})
 
 }
 
@@ -494,14 +432,10 @@ Authorization:
 const data=
 await res.json();
 
-if(
-!res.ok
-){
+if(!res.ok){
 
 throw new Error(
-JSON.stringify(
-data
-)
+JSON.stringify(data)
 );
 
 }
@@ -510,11 +444,172 @@ return data;
 
 }
 
+async function searchSong(song){
+
+const q=
+encodeURIComponent(
+song
+);
+
+const data=
+await spotifyFetch(
+`https://api.spotify.com/v1/search?q=${q}&type=track&limit=3`
+);
+
+return data.tracks
+?.items?.[0]
+?.uri || null;
+
+}
+
 async function createPlaylist(){
 
+clearLog();
+
+const name=
+document
+.getElementById(
+"playlistName"
+)
+.value
+.trim();
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.map(
+x=>x.trim()
+)
+.filter(
+x=>x
+);
+
+if(!accessToken){
+
 addLog(
-"Función playlist lista",
+"Conecta Spotify primero",
+"err"
+);
+
+return;
+
+}
+
+if(!name){
+
+addLog(
+"Escribe nombre playlist",
+"warn"
+);
+
+return;
+
+}
+
+addLog(
+"Creando playlist",
 "info"
+);
+
+const playlist=
+await spotifyFetch(
+"https://api.spotify.com/v1/me/playlists",
+{
+method:"POST",
+
+body:
+JSON.stringify({
+
+name,
+
+public:true
+
+})
+
+}
+);
+
+addLog(
+"Playlist creada",
+"ok"
+);
+
+let uris=[];
+
+for(let i=0;i<songs.length;i++){
+
+addLog(
+`Buscando:
+${songs[i]}`,
+"info"
+);
+
+const uri=
+await searchSong(
+songs[i]
+);
+
+if(uri){
+
+uris.push(uri);
+
+addLog(
+"Encontrada",
+"ok"
+);
+
+}else{
+
+addLog(
+"No encontrada",
+"warn"
+);
+
+}
+
+}
+
+if(!uris.length){
+
+addLog(
+"No encontré canciones",
+"warn"
+);
+
+return;
+
+}
+
+addLog(
+`Agregando ${uris.length}`,
+"info"
+);
+
+await spotifyFetch(
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+{
+method:"POST",
+
+body:
+JSON.stringify({
+uris
+})
+
+}
+);
+
+addLog(
+"Playlist finalizada",
+"ok"
+);
+
+window.open(
+playlist.external_urls.spotify,
+"_blank"
 );
 
 }
