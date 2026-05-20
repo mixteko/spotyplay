@@ -26,7 +26,7 @@ color:white;
 }
 
 textarea{
-height:250px;
+height:240px;
 }
 
 button{
@@ -51,7 +51,7 @@ background:#1a1a1a;
 border-radius:10px;
 white-space:pre-wrap;
 font-family:monospace;
-max-height:400px;
+max-height:420px;
 overflow:auto;
 }
 </style>
@@ -67,8 +67,7 @@ placeholder="Nombre playlist">
 
 <textarea
 id="songs"
-placeholder="Hall & Oates - Rich Girl
-Queen - Bohemian Rhapsody
+placeholder="Queen - Bohemian Rhapsody
 Michael Jackson - Billie Jean">
 </textarea>
 
@@ -84,7 +83,7 @@ Borrar almacenamiento
 
 <button class="blue"
 onclick="createPlaylist()">
-Crear playlist
+Crear Playlist
 </button>
 
 <button class="red"
@@ -105,7 +104,12 @@ const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
 const SCOPES=
-"user-read-private playlist-modify-private playlist-modify-public";
+[
+"user-read-private",
+"playlist-modify-private",
+"playlist-modify-public",
+"playlist-read-private"
+].join(" ");
 
 let accessToken=
 localStorage.getItem(
@@ -132,7 +136,11 @@ localStorage.clear();
 
 sessionStorage.clear();
 
-location.reload();
+accessToken="";
+
+msg(
+"Storage eliminado"
+);
 
 }
 
@@ -143,6 +151,10 @@ clearStorage();
 window.open(
 "https://www.spotify.com/logout/",
 "_blank"
+);
+
+msg(
+"Spotify logout abierto"
 );
 
 }
@@ -158,8 +170,7 @@ for(let i=0;i<n;i++){
 
 r+=chars[
 Math.floor(
-Math.random()*
-chars.length
+Math.random()*chars.length
 )
 ];
 
@@ -172,8 +183,7 @@ return r;
 async function challenge(v){
 
 const data=
-new TextEncoder()
-.encode(v);
+new TextEncoder().encode(v);
 
 const hash=
 await crypto.subtle.digest(
@@ -193,6 +203,8 @@ String.fromCharCode(
 
 async function loginSpotify(){
 
+clearStorage();
+
 const verifier=
 randomString(64);
 
@@ -207,17 +219,22 @@ await challenge(verifier);
 const params=
 new URLSearchParams({
 
-client_id:CLIENT_ID,
+client_id:
+CLIENT_ID,
 
-response_type:"code",
+response_type:
+"code",
 
-redirect_uri:REDIRECT_URI,
+redirect_uri:
+REDIRECT_URI,
 
-scope:SCOPES,
+scope:
+SCOPES,
 
 show_dialog:true,
 
-code_challenge_method:"S256",
+code_challenge_method:
+"S256",
 
 code_challenge:c
 
@@ -234,9 +251,7 @@ async function getToken(){
 const code=
 new URLSearchParams(
 location.search
-).get(
-"code"
-);
+).get("code");
 
 if(!code)return;
 
@@ -250,13 +265,16 @@ new URLSearchParams({
 
 client_id:CLIENT_ID,
 
-grant_type:"authorization_code",
+grant_type:
+"authorization_code",
 
 code,
 
-redirect_uri:REDIRECT_URI,
+redirect_uri:
+REDIRECT_URI,
 
-code_verifier:verifier
+code_verifier:
+verifier
 
 });
 
@@ -265,10 +283,12 @@ await fetch(
 "https://accounts.spotify.com/api/token",
 {
 method:"POST",
+
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
+
 body
 }
 );
@@ -292,48 +312,9 @@ msg(
 
 async function searchSong(song){
 
-let artist="";
-let track="";
-
-if(song.includes("-")){
-
-const p=
-song.split("-");
-
-artist=
-p[0]
-.trim()
-.replace(/&/g," ");
-
-track=
-p.slice(1)
-.join("-")
-.trim();
-
-}
-
-const queries=[
-
-`track:"${track}" artist:"${artist}"`,
-
-`${track} ${artist}`,
-
-song
-
-];
-
-for(const q of queries){
-
-msg(
-`Buscar:
-${q}`
-);
-
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(
-q
-)}&type=track&market=MX&limit=5`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`,
 {
 headers:{
 Authorization:
@@ -345,21 +326,9 @@ Authorization:
 const data=
 await res.json();
 
-if(
-data.tracks &&
-data.tracks.items &&
-data.tracks.items.length
-){
-
 return data.tracks
-.items[0]
-.uri;
-
-}
-
-}
-
-return null;
+?.items?.[0]
+?.uri||null;
 
 }
 
@@ -367,7 +336,18 @@ async function createPlaylist(){
 
 log.innerHTML="";
 
-const playlist=
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.filter(
+x=>x.trim()
+);
+
+const playlistRes=
 await fetch(
 "https://api.spotify.com/v1/me/playlists",
 {
@@ -379,6 +359,7 @@ Authorization:
 
 "Content-Type":
 "application/json"
+
 },
 
 body:
@@ -396,22 +377,11 @@ public:false
 }
 );
 
-const p=
-await playlist.json();
+const playlist=
+await playlistRes.json();
 
 msg(
 "Playlist creada"
-);
-
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
 );
 
 let uris=[];
@@ -419,9 +389,7 @@ let uris=[];
 for(const s of songs){
 
 const uri=
-await searchSong(
-s
-);
+await searchSong(s);
 
 if(uri){
 
@@ -441,15 +409,9 @@ msg(
 ${uris.length}`
 );
 
-if(!uris.length){
-
-return;
-
-}
-
-const add=
+const addRes=
 await fetch(
-`https://api.spotify.com/v1/playlists/${p.id}/tracks`,
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 {
 method:"POST",
 
@@ -459,6 +421,7 @@ Authorization:
 
 "Content-Type":
 "application/json"
+
 },
 
 body:
@@ -470,7 +433,7 @@ uris
 );
 
 const result=
-await add.json();
+await addRes.json();
 
 msg(
 JSON.stringify(
@@ -479,6 +442,14 @@ null,
 2
 )
 );
+
+if(result.snapshot_id){
+
+msg(
+"Canciones agregadas correctamente"
+);
+
+}
 
 }
 
