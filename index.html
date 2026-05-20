@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v3.9</title>
+<title>Spotify Playlist Creator AI v4.0</title>
 
 <style>
 body{
@@ -44,10 +44,7 @@ color:black;
 background:#e53935;
 }
 
-input,
-textarea,
-select,
-button{
+input,textarea,select,button{
 width:100%;
 padding:14px;
 margin-top:12px;
@@ -55,9 +52,7 @@ border:none;
 border-radius:15px;
 }
 
-input,
-textarea,
-select{
+input,textarea,select{
 background:#222;
 color:white;
 }
@@ -87,7 +82,6 @@ max-height:350px;
 overflow:auto;
 }
 </style>
-
 </head>
 
 <body>
@@ -96,7 +90,7 @@ overflow:auto;
 
 <h1>Spotify Playlist Creator AI</h1>
 
-<div>Versión v3.9</div>
+<div>Versión v4.0</div>
 
 <div class="statusBox">
 
@@ -131,19 +125,19 @@ Guardar DeepSeek
 
 <textarea
 id="promptAI"
-placeholder="Rock carretera USA">
+placeholder="Regional mexicano romántico">
 </textarea>
 
 <select id="songCount">
 
-<option>10</option>
-<option>20</option>
-<option>40</option>
-<option>50</option>
-<option>60</option>
-<option>80</option>
-<option>100</option>
-<option>200</option>
+<option value="10">10</option>
+<option value="20">20</option>
+<option value="40">40</option>
+<option value="50">50</option>
+<option value="60">60</option>
+<option value="80">80</option>
+<option value="100">100</option>
+<option value="200">200</option>
 
 </select>
 
@@ -213,8 +207,7 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML +=
-"\n"+t;
+log.innerHTML += "\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -228,52 +221,15 @@ document.getElementById(
 ).value="";
 
 document.getElementById(
-"playlistName"
-).value="";
-
-document.getElementById(
 "songs"
 ).value="";
 
+document.getElementById(
+"playlistName"
+).value="";
+
 log.innerHTML=
-"Lista limpiada";
-
-}
-
-function updateStatus(){
-
-document.getElementById(
-"spotifyStatus"
-).className=
-accessToken ?
-"status green":
-"status red";
-
-document.getElementById(
-"spotifyStatus"
-).innerHTML=
-accessToken ?
-"Spotify 🟢":
-"Spotify 🔴";
-
-const d=
-localStorage.getItem(
-"deepseek_key"
-);
-
-document.getElementById(
-"deepseekStatus"
-).className=
-d ?
-"status green":
-"status red";
-
-document.getElementById(
-"deepseekStatus"
-).innerHTML=
-d ?
-"DeepSeek 🟢":
-"DeepSeek 🔴";
+"Refrescado";
 
 }
 
@@ -288,10 +244,6 @@ document.getElementById(
 
 updateStatus();
 
-msg(
-"DeepSeek guardada"
-);
-
 }
 
 document.getElementById(
@@ -301,6 +253,43 @@ localStorage.getItem(
 "deepseek_key"
 )||"";
 
+function updateStatus(){
+
+document.getElementById(
+"spotifyStatus"
+).className=
+accessToken?
+"status green":
+"status red";
+
+document.getElementById(
+"spotifyStatus"
+).innerHTML=
+accessToken?
+"Spotify 🟢":
+"Spotify 🔴";
+
+const d=
+localStorage.getItem(
+"deepseek_key"
+);
+
+document.getElementById(
+"deepseekStatus"
+).className=
+d?
+"status green":
+"status red";
+
+document.getElementById(
+"deepseekStatus"
+).innerHTML=
+d?
+"DeepSeek 🟢":
+"DeepSeek 🔴";
+
+}
+
 async function generateDeepSeek(more=false){
 
 const key=
@@ -308,24 +297,10 @@ localStorage.getItem(
 "deepseek_key"
 );
 
-if(!key){
-
-msg(
-"Guardar DeepSeek"
-);
-
-return;
-
-}
-
 const count=
 document.getElementById(
 "songCount"
 ).value;
-
-msg(
-"Generando..."
-);
 
 const r=
 await fetch(
@@ -352,7 +327,9 @@ role:"user",
 
 content:
 `
-Genera ${count} canciones
+Genera EXACTAMENTE
+${count}
+canciones
 
 Formato:
 
@@ -386,8 +363,7 @@ document.getElementById(
 ).value=
 d.choices?.[0]
 ?.message
-?.content||
-"";
+?.content||"";
 
 msg(
 "Lista creada"
@@ -395,46 +371,139 @@ msg(
 
 }
 
+function cleanSong(song){
+
+return song
+
+.replace(
+/^\d+\./,
+""
+)
+
+.replace(
+/\*\*/g,
+""
+)
+
+.replace(
+/\*/g,
+""
+)
+
+.replace(
+/•/g,
+""
+)
+
+.replace(
+/"/g,
+""
+)
+
+.trim();
+
+}
+
 async function searchSong(song){
+
+song=
+cleanSong(song);
+
+let artist="";
+let track="";
+
+if(
+song.includes(
+"-"
+)
+){
+
+let p=
+song.split("-");
+
+artist=
+p[0].trim();
+
+track=
+p.slice(1)
+.join("-")
+.trim();
+
+}
+
+let queries=[];
+
+if(
+artist &&
+track
+){
+
+queries.push(
+`track:"${track}" artist:"${artist}"`
+);
+
+}
+
+queries.push(
+song
+);
+
+queries.push(
+`${artist} ${track}`
+);
+
+queries.push(
+`${track} ${artist}`
+);
+
+for(
+const q
+of queries
+){
 
 try{
 
-const controller=
-new AbortController();
-
-setTimeout(
-()=>controller.abort(),
-3000
-);
-
 const r=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=1`,
 {
 headers:{
 Authorization:
 `Bearer ${accessToken}`
-},
-
-signal:
-controller.signal
-
+}
 }
 );
 
 const d=
 await r.json();
 
-return d.tracks
+const uri=
+d.tracks
 ?.items?.[0]
-?.uri||null;
+?.uri;
+
+if(uri){
+
+msg(
+`OK:
+${song}`
+);
+
+return uri;
 
 }
-catch{
+
+}
+catch{}
+
+}
+
+msg(
+`No encontrada:
+${song}`
+);
 
 return null;
-
-}
 
 }
 
@@ -454,6 +523,14 @@ msg(
 "Creando playlist..."
 );
 
+const name=
+
+document.getElementById(
+"playlistName"
+).value ||
+
+`Playlist ${new Date().toLocaleDateString()}`;
+
 const p=
 await fetch(
 "https://api.spotify.com/v1/me/playlists",
@@ -470,12 +547,7 @@ Authorization:
 body:
 JSON.stringify({
 
-name:
-document.getElementById(
-"playlistName"
-).value||
-"Playlist DeepSeek",
-
+name,
 public:false
 
 })
@@ -499,29 +571,20 @@ x=>x.trim()
 
 let uris=[];
 
-for(const s of songs){
+for(
+const s
+of songs
+){
 
 const uri=
 await searchSong(
-s.trim()
+s
 );
 
 if(uri){
 
-msg(
-`OK:
-${s}`
-);
-
 uris.push(
 uri
-);
-
-}else{
-
-msg(
-`No encontrada:
-${s}`
 );
 
 }
@@ -559,6 +622,10 @@ uris
 
 }
 
+window.open(
+playlist.external_urls.spotify
+);
+
 document.getElementById(
 "playlistStatus"
 ).className=
@@ -568,10 +635,6 @@ document.getElementById(
 "playlistStatus"
 ).innerHTML=
 "Playlist 🟢";
-
-window.open(
-playlist.external_urls.spotify
-);
 
 msg(
 "Playlist creada"
@@ -629,7 +692,8 @@ await challenge(
 verifier
 );
 
-const p=
+window.location=
+"https://accounts.spotify.com/authorize?"+
 new URLSearchParams({
 
 client_id:
@@ -652,10 +716,6 @@ code_challenge_method:
 code_challenge:c
 
 });
-
-window.location=
-"https://accounts.spotify.com/authorize?"+
-p;
 
 }
 
@@ -686,11 +746,14 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
+
 grant_type:
 "authorization_code",
+
 code,
 redirect_uri:
 REDIRECT_URI,
+
 code_verifier:
 verifier
 
