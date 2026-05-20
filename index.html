@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v4.3</title>
+<title>Spotify Playlist Creator AI v4.4</title>
 
 <style>
 body{
@@ -78,7 +78,7 @@ background:black;
 padding:20px;
 border-radius:20px;
 white-space:pre-wrap;
-max-height:350px;
+max-height:360px;
 overflow:auto;
 }
 </style>
@@ -90,7 +90,7 @@ overflow:auto;
 
 <h1>Spotify Playlist Creator AI</h1>
 
-<div>Versión v4.3</div>
+<div>Versión v4.4</div>
 
 <div class="statusBox">
 
@@ -129,14 +129,16 @@ placeholder="Kpop relajante">
 </textarea>
 
 <select id="songCount">
-<option>10</option>
-<option>20</option>
-<option>40</option>
-<option>50</option>
-<option>60</option>
-<option>80</option>
-<option>100</option>
-<option>200</option>
+
+<option value="10">10</option>
+<option value="20">20</option>
+<option value="40">40</option>
+<option value="50">50</option>
+<option value="60">60</option>
+<option value="80">80</option>
+<option value="100">100</option>
+<option value="200">200</option>
+
 </select>
 
 <div class="buttons">
@@ -205,8 +207,7 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML +=
-"\n"+t;
+log.innerHTML += "\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -354,7 +355,10 @@ role:"user",
 
 content:
 `
-Genera EXACTAMENTE ${count} canciones.
+Genera EXACTAMENTE
+${count}
+
+canciones
 
 SOLO:
 
@@ -390,26 +394,6 @@ d.choices?.[0]
 msg(
 "Lista generada"
 );
-
-}
-
-async function searchQuery(q){
-
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=5`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const d=
-await r.json();
-
-return d.tracks?.items||[];
 
 }
 
@@ -450,17 +434,37 @@ for(const q of queries){
 
 try{
 
-const items=
-await searchQuery(q);
+const r=
+await fetch(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=5`,
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
 
-if(items.length){
+const d=
+await r.json();
+
+const item=
+d.tracks
+?.items?.[0];
+
+if(item){
 
 msg(
 `OK:
 ${song}`
 );
 
-return items[0].uri;
+msg(
+`URI:
+${item.uri}`
+);
+
+return item.uri;
 
 }
 
@@ -493,7 +497,8 @@ return;
 const name=
 document.getElementById(
 "playlistName"
-).value.trim()||
+).value.trim()
+||
 "Playlist";
 
 msg(
@@ -526,7 +531,8 @@ const playlist=
 await p.json();
 
 const songs=
-document.getElementById(
+document
+.getElementById(
 "songs"
 )
 .value
@@ -540,11 +546,20 @@ let uris=[];
 for(const s of songs){
 
 const uri=
-await searchSong(s);
+await searchSong(
+s
+);
 
 if(uri){
 
-uris.push(uri);
+msg(
+`Agregar:
+${uri}`
+);
+
+uris.push(
+uri.trim()
+);
 
 }
 
@@ -555,7 +570,17 @@ msg(
 ${uris.length}`
 );
 
-if(!uris.length){
+msg(
+JSON.stringify(
+uris,
+null,
+2
+)
+);
+
+if(
+uris.length===0
+){
 
 msg(
 "No agregué canciones"
@@ -564,6 +589,10 @@ msg(
 return;
 
 }
+
+msg(
+"Agregando canciones..."
+);
 
 const add=
 await fetch(
@@ -580,7 +609,14 @@ Authorization:
 
 body:
 JSON.stringify({
+
+uris:[
+...new Set(
 uris
+)
+
+]
+
 })
 
 }
@@ -589,7 +625,17 @@ uris
 const result=
 await add.json();
 
-if(result.snapshot_id){
+msg(
+JSON.stringify(
+result,
+null,
+2
+)
+);
+
+if(
+result.snapshot_id
+){
 
 document.getElementById(
 "playlistStatus"
@@ -605,11 +651,11 @@ msg(
 "Canciones agregadas"
 );
 
-}
-
 window.open(
 playlist.external_urls.spotify
 );
+
+}
 
 }
 
@@ -649,7 +695,9 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(64);
+randomString(
+64
+);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -693,7 +741,9 @@ async function getToken(){
 const code=
 new URLSearchParams(
 location.search
-).get("code");
+).get(
+"code"
+);
 
 if(!code){
 
@@ -778,4 +828,5 @@ getToken();
 </script>
 
 </body>
+
 </html>
