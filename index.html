@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator AI v3.4
+Spotify Playlist Creator AI v3.5
 </title>
 
 <style>
@@ -42,7 +42,7 @@ margin-bottom:20px;
 }
 
 .status{
-padding:10px 18px;
+padding:12px 20px;
 border-radius:15px;
 font-weight:bold;
 }
@@ -66,26 +66,22 @@ textarea,
 button{
 
 width:100%;
-
 padding:14px;
-
 margin-top:12px;
-
 border:none;
-
 border-radius:15px;
 
 }
 
+input,
 textarea{
-height:220px;
 background:#222;
 color:white;
 }
 
-input{
-background:#222;
-color:white;
+textarea{
+height:220px;
+resize:vertical;
 }
 
 .buttons{
@@ -104,15 +100,8 @@ background:black;
 padding:20px;
 border-radius:20px;
 white-space:pre-wrap;
-max-height:300px;
+max-height:320px;
 overflow:auto;
-}
-
-#history{
-margin-top:20px;
-background:#1a1a1a;
-padding:20px;
-border-radius:20px;
 }
 
 </style>
@@ -128,7 +117,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div>
-Versión v3.4
+Versión v3.5
 </div>
 
 <div class="statusBox">
@@ -150,14 +139,6 @@ DeepSeek 🔴
 </div>
 
 <div
-id="localStatus"
-class="status orange">
-
-IA Local 🟡
-
-</div>
-
-<div
 id="playlistStatus"
 class="status red">
 
@@ -171,13 +152,25 @@ Playlist 🔴
 id="deepseekKey"
 placeholder="DeepSeek API Key">
 
+<div class="buttons">
+
 <button
 class="green"
 onclick="saveDeepSeek()">
 
-Guardar DeepSeek
+Guardar
 
 </button>
+
+<button
+class="orange"
+onclick="testDeepSeek()">
+
+Probar DeepSeek
+
+</button>
+
+</div>
 
 <textarea
 id="promptAI"
@@ -190,15 +183,15 @@ placeholder="Rock carretera USA">
 class="orange"
 onclick="generateDeepSeek()">
 
-Generar DeepSeek
+Generar Lista
 
 </button>
 
 <button
 class="orange"
-onclick="useLocal(true)">
+onclick="generateDeepSeek(true)">
 
-Buscar más
+Buscar Más
 
 </button>
 
@@ -244,10 +237,6 @@ Crear Playlist
 Esperando conexión
 </div>
 
-<div id="history">
-Sin historial
-</div>
-
 </div>
 
 <script>
@@ -269,8 +258,6 @@ localStorage.getItem(
 "spotify_token"
 )||"";
 
-let rotate=0;
-
 const log=
 document.getElementById(
 "log"
@@ -286,35 +273,6 @@ log.scrollHeight;
 
 }
 
-const localAI={
-
-rock:[
-"Queen - Bohemian Rhapsody",
-"Journey - Faithfully",
-"Eagles - Hotel California",
-"Boston - More Than a Feeling",
-"Tom Petty - Free Fallin'",
-"Bruce Springsteen - Born to Run",
-"Kansas - Carry On Wayward Son"
-],
-
-gym:[
-"Survivor - Eye of the Tiger",
-"Bon Jovi - Livin on a Prayer",
-"Europe - Final Countdown",
-"Queen - We Will Rock You",
-"ACDC - Thunderstruck"
-],
-
-mex:[
-"Carin León - Primera Cita",
-"Grupo Firme - Ya Supérame",
-"Christian Nodal - Adiós Amor",
-"Peso Pluma - Ella Baila Sola"
-]
-
-};
-
 function saveDeepSeek(){
 
 localStorage.setItem(
@@ -324,11 +282,11 @@ document.getElementById(
 ).value.trim()
 );
 
-updateStatus();
-
 msg(
 "DeepSeek guardada"
 );
+
+updateStatus();
 
 }
 
@@ -355,112 +313,9 @@ accessToken ?
 "Spotify 🟢":
 "Spotify 🔴";
 
-const d=
-localStorage.getItem(
-"deepseek_key"
-);
-
-document.getElementById(
-"deepseekStatus"
-).className=
-d ?
-"status green":
-"status red";
-
-document.getElementById(
-"deepseekStatus"
-).innerHTML=
-d ?
-"DeepSeek 🟢":
-"DeepSeek 🔴";
-
 }
 
-function localGenerate(){
-
-rotate++;
-
-const prompt=
-document.getElementById(
-"promptAI"
-).value
-.toLowerCase();
-
-let base=
-localAI.rock;
-
-if(
-prompt.includes(
-"gym"
-)
-){
-
-base=
-localAI.gym;
-
-}
-
-if(
-prompt.includes(
-"mex"
-)
-||
-prompt.includes(
-"regional"
-)
-){
-
-base=
-localAI.mex;
-
-}
-
-return [
-
-...base.slice(
-rotate%
-base.length
-),
-
-...base.slice(
-0,
-rotate%
-base.length
-)
-
-];
-
-}
-
-function useLocal(){
-
-const songs=
-localGenerate();
-
-document.getElementById(
-"songs"
-).value=
-songs.join(
-"\n"
-);
-
-document.getElementById(
-"localStatus"
-).className=
-"status green";
-
-document.getElementById(
-"localStatus"
-).innerHTML=
-"IA Local 🟢";
-
-msg(
-"IA Local usada"
-);
-
-}
-
-async function generateDeepSeek(){
+async function testDeepSeek(){
 
 const key=
 localStorage.getItem(
@@ -470,16 +325,23 @@ localStorage.getItem(
 if(!key){
 
 msg(
-"Guardar DeepSeek"
+"Guardar API"
 );
 
 return;
 
 }
 
-msg(
-"Generando..."
+const box=
+document.getElementById(
+"deepseekStatus"
 );
+
+box.className=
+"status orange";
+
+box.innerHTML=
+"DeepSeek 🟡";
 
 try{
 
@@ -490,13 +352,120 @@ await fetch(
 method:"POST",
 
 headers:{
-
 Authorization:
 `Bearer ${key}`,
 
 "Content-Type":
 "application/json"
+},
 
+body:
+JSON.stringify({
+
+model:
+"deepseek-chat",
+
+messages:[
+{
+role:"user",
+content:
+"Responde OK"
+}
+]
+
+})
+
+}
+);
+
+const d=
+await r.json();
+
+if(
+d.choices
+){
+
+box.className=
+"status green";
+
+box.innerHTML=
+"DeepSeek 🟢";
+
+msg(
+"DeepSeek conectada"
+);
+
+}else{
+
+box.className=
+"status red";
+
+box.innerHTML=
+"DeepSeek 🔴";
+
+msg(
+JSON.stringify(
+d,
+null,
+2
+)
+);
+
+}
+
+}
+catch(e){
+
+box.className=
+"status red";
+
+box.innerHTML=
+"DeepSeek 🔴";
+
+msg(
+e.message
+);
+
+}
+
+}
+
+async function generateDeepSeek(more=false){
+
+const key=
+localStorage.getItem(
+"deepseek_key"
+);
+
+if(!key){
+
+msg(
+"Guardar API"
+);
+
+return;
+
+}
+
+msg(
+more ?
+"Buscando más..."
+:
+"Generando..."
+);
+
+const r=
+await fetch(
+"https://api.deepseek.com/chat/completions",
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${key}`,
+
+"Content-Type":
+"application/json"
 },
 
 body:
@@ -511,7 +480,7 @@ role:"user",
 
 content:
 `
-Genera 20 canciones
+Genera 20 canciones.
 
 Formato:
 
@@ -522,6 +491,12 @@ Tema:
 ${document.getElementById(
 "promptAI"
 ).value}
+
+${
+more ?
+"No repitas canciones":
+""
+}
 
 Sin numeración
 `
@@ -541,38 +516,14 @@ d.choices?.[0]
 ?.message
 ?.content;
 
-if(!text){
-
-useLocal();
-
-return;
-
-}
-
 document.getElementById(
 "songs"
 ).value=
-text
-.replace(
-/^\d+\./gm,
-""
-)
-.trim();
+text || "";
 
 msg(
-"DeepSeek lista"
+"Lista generada"
 );
-
-}
-catch(e){
-
-msg(
-e.message
-);
-
-useLocal();
-
-}
 
 }
 
@@ -592,7 +543,9 @@ Authorization:
 const d=
 await r.json();
 
-return d.tracks?.items?.[0]?.uri || null;
+return d.tracks
+?.items?.[0]
+?.uri||null;
 
 }
 
@@ -607,6 +560,10 @@ msg(
 return;
 
 }
+
+msg(
+"Creando playlist..."
+);
 
 const p=
 await fetch(
@@ -628,7 +585,7 @@ name:
 document.getElementById(
 "playlistName"
 ).value ||
-"Playlist AI",
+"Playlist DeepSeek",
 
 public:false
 
@@ -695,10 +652,6 @@ uris
 }
 );
 
-window.open(
-playlist.external_urls.spotify
-);
-
 document.getElementById(
 "playlistStatus"
 ).className=
@@ -708,6 +661,10 @@ document.getElementById(
 "playlistStatus"
 ).innerHTML=
 "Playlist 🟢";
+
+window.open(
+playlist.external_urls.spotify
+);
 
 msg(
 "Playlist creada"
@@ -888,5 +845,4 @@ getToken();
 </script>
 
 </body>
-
 </html>
