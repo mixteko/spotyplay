@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator v1.7
+Spotify Playlist Creator v1.8
 </title>
 
 <style>
@@ -16,8 +16,11 @@ box-sizing:border-box;
 }
 
 body{
+
 margin:0;
+
 font-family:Arial;
+
 background:
 linear-gradient(
 135deg,
@@ -35,6 +38,7 @@ justify-content:center;
 padding:30px;
 
 color:white;
+
 }
 
 .card{
@@ -105,10 +109,13 @@ border-radius:15px;
 
 color:white;
 
+font-size:15px;
+
 }
 
 textarea{
 height:250px;
+resize:vertical;
 }
 
 .buttons{
@@ -138,6 +145,8 @@ font-weight:bold;
 cursor:pointer;
 
 color:white;
+
+font-size:15px;
 
 }
 
@@ -185,6 +194,8 @@ width:0%;
 
 background:#1DB954;
 
+transition:.3s;
+
 }
 
 #log{
@@ -219,6 +230,14 @@ border-radius:15px;
 
 }
 
+.playlistLink{
+
+color:#1DB954;
+
+word-break:break-all;
+
+}
+
 </style>
 
 </head>
@@ -232,7 +251,7 @@ Spotify Playlist Creator
 </h1>
 
 <div class="version">
-Versión v1.7
+Versión v1.8
 </div>
 
 <input
@@ -270,7 +289,7 @@ id="progress">
 <button
 class="green"
 onclick="loginSpotify()">
-Conectar
+Conectar Spotify
 </button>
 
 <button
@@ -288,7 +307,7 @@ Crear playlist
 <button
 class="red"
 onclick="clearStorage()">
-Borrar
+Borrar datos
 </button>
 
 </div>
@@ -313,7 +332,8 @@ Sin playlists
 
 <script>
 
-const APP_VERSION="v1.7";
+const APP_VERSION=
+"v1.8";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -321,7 +341,8 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=[
+const SCOPES=
+[
 "user-read-private",
 "playlist-read-private",
 "playlist-modify-private",
@@ -347,6 +368,10 @@ log.scrollTop=
 log.scrollHeight;
 
 }
+
+msg(
+APP_VERSION
+);
 
 function updateCounter(){
 
@@ -517,10 +542,353 @@ params.toString();
 
 }
 
+async function getToken(){
+
+const code=
+new URLSearchParams(
+location.search
+).get(
+"code"
+);
+
+if(!code){
+
+return;
+
+}
+
+const verifier=
+localStorage.getItem(
+"spotify_verifier"
+);
+
+const body=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+grant_type:
+"authorization_code",
+
+code,
+
+redirect_uri:
+REDIRECT_URI,
+
+code_verifier:
+verifier
+
+});
+
+const res=
+await fetch(
+"https://accounts.spotify.com/api/token",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body
+}
+);
+
+const data=
+await res.json();
+
+accessToken=
+data.access_token;
+
+localStorage.setItem(
+"spotify_token",
+accessToken
+);
+
+msg(
+"Spotify conectado"
+);
+
+}
+
+async function searchSong(song){
+
+const r=
+await fetch(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`,
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const d=
+await r.json();
+
+return d.tracks
+?.items?.[0]
+?.uri || null;
+
+}
+
+function saveHistory(name,url){
+
+let h=
+JSON.parse(
+localStorage.getItem(
+"playlist_history"
+)||"[]"
+);
+
+h.unshift({
+name,
+url
+});
+
+h=
+h.slice(0,10);
+
+localStorage.setItem(
+"playlist_history",
+JSON.stringify(h)
+);
+
+renderHistory();
+
+}
+
+function renderHistory(){
+
+const container=
+document.getElementById(
+"history"
+);
+
+const h=
+JSON.parse(
+localStorage.getItem(
+"playlist_history"
+)||"[]"
+);
+
+if(!h.length){
+
+container.innerHTML=
+"Sin playlists";
+
+return;
+
+}
+
+container.innerHTML=
+h.map(
+x=>`
+<div>
+<a
+class="playlistLink"
+href="${x.url}"
+target="_blank">
+${x.name}
+</a>
+</div>
+`
+).join("");
+
+}
+
+async function createPlaylist(){
+
+log.innerHTML="";
+
+msg(
+APP_VERSION
+);
+
+if(!accessToken){
+
+msg(
+"No conectado a Spotify"
+);
+
+return;
+
+}
+
+const playlistRes=
+await fetch(
+"https://api.spotify.com/v1/me/playlists",
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+
+name:
+document.getElementById(
+"playlistName"
+).value,
+
+public:false
+
+})
+
+}
+);
+
+const playlist=
+await playlistRes.json();
+
+msg(
+`HTTP playlist:
+${playlistRes.status}`
+);
+
+if(!playlistRes.ok){
+
+msg(
+JSON.stringify(
+playlist,
+null,
+2
+)
+);
+
+return;
+
+}
+
+let uris=[];
+
+const missed=[];
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.filter(
+x=>x.trim()
+);
+
+for(const s of songs){
+
+const uri=
+await searchSong(
+s
+);
+
+if(uri){
+
+uris.push(uri);
+
+msg(
+`OK:
+${s}`
+);
+
+}else{
+
+missed.push(s);
+
+}
+
+}
+
+msg(
+`Encontradas:
+${uris.length}`
+);
+
+const add=
+await fetch(
+`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+uris
+})
+
+}
+);
+
+msg(
+`HTTP canciones:
+${add.status}`
+);
+
+const result=
+await add.json();
+
+msg(
+JSON.stringify(
+result,
+null,
+2
+)
+);
+
+if(add.ok){
+
+msg(
+"Playlist completada"
+);
+
+saveHistory(
+playlist.name,
+playlist.external_urls.spotify
+);
+
+window.open(
+playlist.external_urls.spotify,
+"_blank"
+);
+
+}
+
+if(missed.length){
+
+msg(
+"\nNo encontradas:\n"+
+missed.join("\n")
+);
+
+}
+
+}
+
 updateCounter();
+
+renderHistory();
+
+getToken();
 
 </script>
 
 </body>
-
 </html>
