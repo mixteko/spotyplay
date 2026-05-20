@@ -2,9 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Spotify Playlist Creator</title>
 
 <style>
@@ -28,12 +26,12 @@ color:white;
 }
 
 textarea{
-height:250px;
+height:220px;
 }
 
 button{
 padding:12px;
-margin:10px 10px 0 0;
+margin:5px;
 border:none;
 border-radius:10px;
 cursor:pointer;
@@ -52,7 +50,7 @@ background:#1a1a1a;
 border-radius:10px;
 white-space:pre-wrap;
 font-family:monospace;
-max-height:450px;
+max-height:420px;
 overflow:auto;
 }
 </style>
@@ -80,20 +78,20 @@ Conectar Spotify
 
 <button
 class="orange"
-onclick="clearStorage()">
+onclick="clearAll()">
 Borrar almacenamiento
 </button>
 
 <button
 class="blue"
 onclick="createPlaylist()">
-Crear playlist
+Crear Playlist
 </button>
 
 <button
 class="red"
 onclick="logoutSpotify()">
-Reiniciar permisos
+Cerrar Spotify
 </button>
 
 <div id="log">
@@ -108,11 +106,11 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=
-[
+const SCOPES=[
 "user-read-private",
+"playlist-modify-private",
 "playlist-modify-public",
-"playlist-modify-private"
+"playlist-read-private"
 ].join(" ");
 
 let accessToken=
@@ -130,9 +128,12 @@ function msg(t){
 log.innerHTML +=
 "\n"+t;
 
+log.scrollTop=
+log.scrollHeight;
+
 }
 
-function clearStorage(){
+function clearAll(){
 
 localStorage.clear();
 
@@ -141,19 +142,19 @@ sessionStorage.clear();
 accessToken="";
 
 msg(
-"Storage limpiado"
+"Datos eliminados"
 );
 
 }
 
 function logoutSpotify(){
 
-clearStorage();
-
 window.open(
 "https://www.spotify.com/logout/",
 "_blank"
 );
+
+clearAll();
 
 }
 
@@ -203,7 +204,7 @@ String.fromCharCode(
 
 async function loginSpotify(){
 
-clearStorage();
+clearAll();
 
 const verifier=
 randomString(
@@ -235,20 +236,18 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
-show_dialog:
-true,
+show_dialog:true,
 
 code_challenge_method:
 "S256",
 
-code_challenge:
-c
+code_challenge:c
 
 });
 
 window.location=
 "https://accounts.spotify.com/authorize?"+
-params.toString();
+params;
 
 }
 
@@ -302,11 +301,11 @@ body
 }
 );
 
-const data=
+const d=
 await r.json();
 
 accessToken=
-data.access_token;
+d.access_token;
 
 localStorage.setItem(
 "spotify_token",
@@ -317,160 +316,21 @@ msg(
 "Spotify conectado"
 );
 
-}
-
-async function searchSong(song){
-
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
+msg(
+`Scopes:
+${d.scope || "no enviados"}`
 );
-
-const d=
-await r.json();
-
-return d.tracks
-?.items?.[0]
-?.uri||null;
 
 }
 
 async function createPlaylist(){
 
-log.innerHTML="";
-
-const meRes=
-await fetch(
-"https://api.spotify.com/v1/me",
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
+msg(
+"Token cargado"
 );
-
-const me=
-await meRes.json();
 
 msg(
-`Usuario:
-${me.display_name}`
-);
-
-const playlistRes=
-await fetch(
-`https://api.spotify.com/v1/users/${me.id}/playlists`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-
-name:
-document.getElementById(
-"playlistName"
-).value,
-
-public:true
-
-})
-
-}
-);
-
-const playlist=
-await playlistRes.json();
-
-msg(
-"Playlist creada"
-);
-
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
-);
-
-let uris=[];
-
-for(const s of songs){
-
-const uri=
-await searchSong(
-s
-);
-
-if(uri){
-
-uris.push(uri);
-
-msg(
-`OK:
-${s}`
-);
-
-}
-
-}
-
-msg(
-`Encontradas:
-${uris.length}`
-);
-
-const add=
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-uris
-})
-
-}
-);
-
-const result=
-await add.json();
-
-msg(
-JSON.stringify(
-result,
-null,
-2
-)
+"Si sigue apareciendo 403 revisa Spotify Dashboard > Users and Access"
 );
 
 }
