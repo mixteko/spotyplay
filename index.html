@@ -2,73 +2,241 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator v1.5</title>
+<title>
+Spotify Playlist Creator v1.6
+</title>
 
 <style>
 
+*{
+box-sizing:border-box;
+}
+
 body{
-background:#121212;
-color:white;
+
+margin:0;
+
 font-family:Arial;
-max-width:900px;
-margin:auto;
+
+background:
+linear-gradient(
+135deg,
+#0f0f0f,
+#121212,
+#1DB954
+);
+
+min-height:100vh;
+
+color:white;
+
+display:flex;
+
+justify-content:center;
+
 padding:30px;
+
+}
+
+.card{
+
+width:100%;
+
+max-width:850px;
+
+background:
+rgba(
+20,
+20,
+20,
+0.95
+);
+
+padding:30px;
+
+border-radius:25px;
+
+box-shadow:
+0 0 40px rgba(
+0,
+0,
+0,
+0.4
+);
+
 }
 
 h1{
+
+margin:0;
+
 color:#1DB954;
+
 }
 
-#versionBox{
+.version{
+
+margin-top:10px;
+
 display:inline-block;
-padding:8px 12px;
+
+padding:8px 15px;
+
+border-radius:20px;
+
 background:#1DB954;
+
 color:black;
+
 font-weight:bold;
-border-radius:8px;
-margin-bottom:20px;
+
 }
 
 input,
 textarea{
+
 width:100%;
-padding:12px;
-margin:10px 0;
+
+margin-top:15px;
+
+padding:15px;
+
 border:none;
-border-radius:10px;
+
+border-radius:15px;
+
 background:#222;
+
 color:white;
+
+font-size:15px;
+
 }
 
 textarea{
-height:240px;
+
+height:250px;
+
+resize:vertical;
+
+}
+
+.buttons{
+
+display:flex;
+
+flex-wrap:wrap;
+
+gap:10px;
+
+margin-top:20px;
+
 }
 
 button{
-padding:12px;
-margin:5px;
+
+flex:1;
+
+padding:14px;
+
 border:none;
-border-radius:10px;
+
+border-radius:15px;
+
 cursor:pointer;
+
+font-weight:bold;
+
 color:white;
+
 }
 
-.green{background:#1DB954;}
-.orange{background:#ff9800;}
-.blue{background:#2196F3;}
-.red{background:#e53935;}
+.green{
+background:#1DB954;
+color:black;
+}
+
+.orange{
+background:#ff9800;
+}
+
+.blue{
+background:#2196F3;
+}
+
+.red{
+background:#e53935;
+}
+
+.counter{
+
+margin-top:15px;
+
+font-weight:bold;
+
+}
+
+.progress{
+
+width:100%;
+
+height:14px;
+
+background:#333;
+
+border-radius:20px;
+
+overflow:hidden;
+
+margin-top:10px;
+
+}
+
+.progressFill{
+
+height:100%;
+
+width:0%;
+
+background:#1DB954;
+
+transition:.3s;
+
+}
 
 #log{
+
 margin-top:20px;
-padding:15px;
-background:#1a1a1a;
-border-radius:10px;
-font-family:monospace;
+
+padding:20px;
+
+background:#111;
+
+border-radius:20px;
+
 white-space:pre-wrap;
-max-height:450px;
+
+font-family:monospace;
+
+max-height:350px;
+
 overflow:auto;
+
+}
+
+.history{
+
+margin-top:20px;
+
+padding:15px;
+
+background:#191919;
+
+border-radius:15px;
+
 }
 
 </style>
@@ -77,12 +245,14 @@ overflow:auto;
 
 <body>
 
+<div class="card">
+
 <h1>
 Spotify Playlist Creator
 </h1>
 
-<div id="versionBox">
-Versión v1.5
+<div class="version">
+Versión v1.6
 </div>
 
 <input
@@ -95,37 +265,78 @@ placeholder="Queen - Bohemian Rhapsody
 Michael Jackson - Billie Jean">
 </textarea>
 
+<div class="counter">
+
+Canciones:
+<span id="count">
+0
+</span>
+
+/100
+
+</div>
+
+<div class="progress">
+
+<div
+class="progressFill"
+id="progress">
+</div>
+
+</div>
+
+<div class="buttons">
+
 <button
 class="green"
 onclick="loginSpotify()">
-Conectar Spotify
+Conectar
 </button>
 
 <button
 class="orange"
-onclick="clearStorage()">
-Borrar almacenamiento
+onclick="changeUser()">
+Cambiar cuenta
 </button>
 
 <button
 class="blue"
 onclick="createPlaylist()">
-Crear Playlist
+Crear playlist
 </button>
 
 <button
 class="red"
-onclick="logoutSpotify()">
-Cerrar Spotify
+onclick="clearStorage()">
+Borrar
 </button>
+
+</div>
 
 <div id="log">
 Esperando conexión
 </div>
 
+<div class="history">
+
+<h3>
+Historial local
+</h3>
+
+<div id="history">
+
+Sin playlists
+
+</div>
+
+</div>
+
+</div>
+
 <script>
 
-const APP_VERSION="v1.5";
+const APP_VERSION=
+"v1.6";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -133,7 +344,8 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=[
+const SCOPES=
+[
 "user-read-private",
 "playlist-read-private",
 "playlist-modify-private",
@@ -160,8 +372,64 @@ log.scrollHeight;
 
 }
 
-msg(
-APP_VERSION
+function updateCounter(){
+
+let songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.filter(
+x=>x.trim()
+);
+
+if(
+songs.length>100
+){
+
+songs=
+songs.slice(
+0,
+100
+);
+
+document
+.getElementById(
+"songs"
+)
+.value=
+songs.join(
+"\n"
+);
+
+}
+
+document
+.getElementById(
+"count"
+)
+innerText=
+songs.length;
+
+document
+.getElementById(
+"progress"
+)
+.style.width=
+songs.length+
+"%";
+
+}
+
+document
+.getElementById(
+"songs"
+)
+.addEventListener(
+"input",
+updateCounter
 );
 
 function clearStorage(){
@@ -170,13 +438,11 @@ localStorage.clear();
 
 sessionStorage.clear();
 
-accessToken="";
-
 location.reload();
 
 }
 
-function logoutSpotify(){
+function changeUser(){
 
 window.open(
 "https://www.spotify.com/logout/",
@@ -187,165 +453,9 @@ clearStorage();
 
 }
 
-function randomString(n){
-
-const chars=
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-let r="";
-
-for(let i=0;i<n;i++){
-
-r+=chars[
-Math.floor(
-Math.random()*
-chars.length
-)
-];
-
-}
-
-return r;
-
-}
-
-async function challenge(v){
-
-const data=
-new TextEncoder()
-.encode(v);
-
-const hash=
-await crypto.subtle.digest(
-"SHA-256",
-data
-);
-
-return btoa(
-String.fromCharCode(
-...new Uint8Array(hash)
-))
-.replace(/\+/g,"-")
-.replace(/\//g,"_")
-.replace(/=/g,"");
-
-}
-
 async function loginSpotify(){
 
-clearStorage();
-
-const verifier=
-randomString(64);
-
-localStorage.setItem(
-"spotify_verifier",
-verifier
-);
-
-const c=
-await challenge(
-verifier
-);
-
-const params=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-response_type:
-"code",
-
-redirect_uri:
-REDIRECT_URI,
-
-scope:
-SCOPES,
-
-show_dialog:true,
-
-code_challenge_method:
-"S256",
-
-code_challenge:c
-
-});
-
-window.location.href=
-"https://accounts.spotify.com/authorize?"+
-params.toString();
-
-}
-
-async function getToken(){
-
-const code=
-new URLSearchParams(
-location.search
-).get(
-"code"
-);
-
-if(!code){
-
-return;
-
-}
-
-const verifier=
-localStorage.getItem(
-"spotify_verifier"
-);
-
-const body=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-grant_type:
-"authorization_code",
-
-code,
-
-redirect_uri:
-REDIRECT_URI,
-
-code_verifier:
-verifier
-
-});
-
-const res=
-await fetch(
-"https://accounts.spotify.com/api/token",
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/x-www-form-urlencoded"
-},
-
-body
-}
-);
-
-const data=
-await res.json();
-
-accessToken=
-data.access_token;
-
-localStorage.setItem(
-"spotify_token",
-accessToken
-);
-
-msg(
-"Spotify conectado"
-);
+changeUser();
 
 }
 
@@ -367,7 +477,7 @@ await r.json();
 
 return d.tracks
 ?.items?.[0]
-?.uri || null;
+?.uri||null;
 
 }
 
@@ -379,135 +489,13 @@ msg(
 APP_VERSION
 );
 
-const playlistRes=
-await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-
-name:
-document.getElementById(
-"playlistName"
-).value,
-
-public:false
-
-})
-
-}
-);
-
-const playlist=
-await playlistRes.json();
-
 msg(
-`HTTP playlist:
-${playlistRes.status}`
-);
-
-if(
-!playlistRes.ok
-){
-
-msg(
-JSON.stringify(
-playlist,
-null,
-2
-)
-);
-
-return;
-
-}
-
-let uris=[];
-
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
-);
-
-for(
-const s of songs
-){
-
-const uri=
-await searchSong(
-s
-);
-
-if(uri){
-
-uris.push(
-uri
+"Creando playlist..."
 );
 
 }
 
-}
-
-msg(
-`Encontradas:
-${uris.length}`
-);
-
-const add=
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-uris
-})
-
-}
-);
-
-msg(
-`HTTP canciones:
-${add.status}`
-);
-
-const result=
-await add.text();
-
-msg(
-result
-);
-
-}
-
-getToken();
+updateCounter();
 
 </script>
 
