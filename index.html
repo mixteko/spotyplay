@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>
+Spotify Playlist Creator v1.0
+</title>
+
+<style>
+
+body{
+background:#121212;
+color:white;
+font-family:Arial;
+max-width:900px;
+margin:auto;
+padding:30px;
+}
+
+h1{
+color:#1DB954;
+margin-bottom:5px;
+}
+
+#versionBox{
+display:inline-block;
+padding:8px 12px;
+background:#1DB954;
+color:black;
+font-weight:bold;
+border-radius:8px;
+margin-bottom:20px;
+}
+
+input,
+textarea{
+
+width:100%;
+
+padding:12px;
+
+margin:10px 0;
+
+border:none;
+
+border-radius:10px;
+
+background:#222;
+
+color:white;
+
+}
+
+textarea{
+height:240px;
+}
+
+button{
+
+padding:12px;
+
+margin:5px;
+
+border:none;
+
+border-radius:10px;
+
+cursor:pointer;
+
+color:white;
+
+}
+
+.green{
+background:#1DB954;
+}
+
+.orange{
+background:#ff9800;
+}
+
+.blue{
+background:#2196F3;
+}
+
+.red{
+background:#e53935;
+}
+
+#log{
+
+margin-top:20px;
+
+padding:15px;
+
+background:#1a1a1a;
+
+border-radius:10px;
+
+font-family:monospace;
+
+white-space:pre-wrap;
+
+max-height:450px;
+
+overflow:auto;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>
+Spotify Playlist Creator
+</h1>
+
+<div id="versionBox">
+Versión v1.0
+</div>
+
+<input
+id="playlistName"
+placeholder="Nombre playlist">
+
+<textarea
+id="songs"
+placeholder="Queen - Bohemian Rhapsody
+Michael Jackson - Billie Jean">
+</textarea>
+
+<button
+class="green"
+onclick="loginSpotify()">
+Conectar Spotify
+</button>
+
+<button
+class="orange"
+onclick="clearStorage()">
+Borrar almacenamiento
+</button>
+
+<button
+class="blue"
+onclick="createPlaylist()">
+Crear Playlist
+</button>
+
+<button
+class="red"
+onclick="logoutSpotify()">
+Cerrar Spotify
+</button>
+
+<div id="log">
+Esperando conexión
+</div>
+
+<script>
+
+const APP_VERSION=
+"v1.0";
+
+const CLIENT_ID=
+"6c398ae66eae4f84959cfce08bd0c74c";
+
+const REDIRECT_URI=
+"https://mixteko.github.io/spotyplay/";
+
+const SCOPES=
+[
+"user-read-private",
+"playlist-read-private",
+"playlist-modify-private",
+"playlist-modify-public"
+].join(" ");
+
+let accessToken=
+localStorage.getItem(
+"spotify_token"
+)||"";
+
+const log=
+document.getElementById(
+"log"
+);
+
+msg(
+`Versión:
+${APP_VERSION}`
+);
+
+function msg(t){
+
+log.innerHTML +=
+"\n"+t;
+
+log.scrollTop=
+log.scrollHeight;
+
+}
+
+function clearStorage(){
+
+localStorage.clear();
+
+sessionStorage.clear();
+
+accessToken="";
+
+msg(
+"Datos eliminados"
+);
+
+location.reload();
+
+}
+
+function logoutSpotify(){
+
+window.open(
+"https://www.spotify.com/logout/",
+"_blank"
+);
+
+clearStorage();
+
+}
+
+function randomString(n){
+
+const chars=
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+let r="";
+
+for(
+let i=0;
+i<n;
+i++
+){
+
+r+=chars[
+Math.floor(
+Math.random()*
+chars.length
+)
+];
+
+}
+
+return r;
+
+}
+
+async function challenge(v){
+
+const data=
+new TextEncoder()
+.encode(v);
+
+const hash=
+await crypto.subtle.digest(
+"SHA-256",
+data
+);
+
+return btoa(
+String.fromCharCode(
+...new Uint8Array(hash)
+))
+.replace(/\+/g,"-")
+.replace(/\//g,"_")
+.replace(/=/g,"");
+
+}
+
+async function loginSpotify(){
+
+clearStorage();
+
+const verifier=
+randomString(
+64
+);
+
+localStorage.setItem(
+"spotify_verifier",
+verifier
+);
+
+const c=
+await challenge(
+verifier
+);
+
+const params=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+response_type:
+"code",
+
+redirect_uri:
+REDIRECT_URI,
+
+scope:
+SCOPES,
+
+show_dialog:
+true,
+
+code_challenge_method:
+"S256",
+
+code_challenge:
+c
+
+});
+
+window.location.href=
+"https://accounts.spotify.com/authorize?"+
+params.toString();
+
+}
+
+async function getToken(){
+
+const code=
+new URLSearchParams(
+location.search
+).get(
+"code"
+);
+
+if(!code){
+
+return;
+
+}
+
+const verifier=
+localStorage.getItem(
+"spotify_verifier"
+);
+
+const body=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+grant_type:
+"authorization_code",
+
+code,
+
+redirect_uri:
+REDIRECT_URI,
+
+code_verifier:
+verifier
+
+});
+
+const res=
+await fetch(
+"https://accounts.spotify.com/api/token",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body
+}
+);
+
+const data=
+await res.json();
+
+accessToken=
+data.access_token;
+
+localStorage.setItem(
+"spotify_token",
+accessToken
+);
+
+msg(
+"Spotify conectado"
+);
+
+msg(
+`Scopes:
+${data.scope}`
+);
+
+}
+
+async function searchSong(song){
+
+const res=
+await fetch(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(
+song
+)}&type=track&market=MX&limit=1`,
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const data=
+await res.json();
+
+return data.tracks
+?.items?.[0]
+?.uri || null;
+
+}
+
+async function createPlaylist(){
+
+log.innerHTML="";
+
+msg(
+`Versión:
+${APP_VERSION}`
+);
+
+const meRes=
+await fetch(
+"https://api.spotify.com/v1/me",
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const me=
+await meRes.json();
+
+msg(
+`Usuario:
+${me.display_name}`
+);
+
+const playlistRes=
+await fetch(
+`https://api.spotify.com/v1/users/${me.id}/playlists`,
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+
+name:
+document.getElementById(
+"playlistName"
+).value,
+
+public:false
+
+})
+
+}
+);
+
+const playlist=
+await playlistRes.json();
+
+msg(
+"Playlist creada"
+);
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.filter(
+x=>x.trim()
+);
+
+let uris=[];
+
+for(
+const s of songs
+){
+
+const uri=
+await searchSong(
+s
+);
+
+if(uri){
+
+uris.push(
+uri
+);
+
+msg(
+`OK:
+${s}`
+);
+
+}
+
+}
+
+msg(
+`Encontradas:
+${uris.length}`
+);
+
+const addRes=
+await fetch(
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+uris
+})
+
+}
+);
+
+const result=
+await addRes.text();
+
+msg(
+`HTTP:
+${addRes.status}`
+);
+
+msg(
+result
+);
+
+}
+
+getToken();
+
+</script>
+
+</body>
+
+</html>
