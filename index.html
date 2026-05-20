@@ -6,24 +6,13 @@
 <title>Spotify Playlist Creator</title>
 
 <style>
-*{
-box-sizing:border-box;
-margin:0;
-padding:0;
-}
-
 body{
 background:#121212;
 color:white;
-font-family:Arial,sans-serif;
+font-family:Arial;
 max-width:900px;
 margin:auto;
 padding:30px;
-}
-
-h1{
-color:#1DB954;
-margin-bottom:20px;
 }
 
 input,textarea{
@@ -34,23 +23,15 @@ border:none;
 border-radius:10px;
 background:#222;
 color:white;
-font-size:15px;
 }
 
 textarea{
 height:250px;
-resize:vertical;
-}
-
-.btns{
-display:flex;
-gap:10px;
-flex-wrap:wrap;
-margin-top:10px;
 }
 
 button{
-padding:12px 18px;
+padding:12px;
+margin-right:10px;
 border:none;
 border-radius:10px;
 cursor:pointer;
@@ -60,7 +41,6 @@ color:white;
 .green{background:#1DB954;}
 .orange{background:#ff9800;}
 .blue{background:#2196F3;}
-.red{background:#e53935;}
 
 #log{
 margin-top:20px;
@@ -68,15 +48,7 @@ padding:15px;
 background:#1a1a1a;
 border-radius:10px;
 white-space:pre-wrap;
-font-family:monospace;
-max-height:350px;
-overflow:auto;
 }
-
-.ok{color:#1DB954;}
-.err{color:#ff5252;}
-.info{color:#64b5f6;}
-.warn{color:#ffb74d;}
 </style>
 </head>
 
@@ -95,16 +67,14 @@ Queen - Bohemian Rhapsody
 Michael Jackson - Billie Jean">
 </textarea>
 
-<div class="btns">
-
 <button class="green"
 onclick="loginSpotify()">
 Conectar Spotify
 </button>
 
 <button class="orange"
-onclick="changeSpotifyUser()">
-Cambiar cuenta
+onclick="clearSession()">
+Limpiar sesión
 </button>
 
 <button class="blue"
@@ -112,15 +82,8 @@ onclick="createPlaylist()">
 Crear Playlist
 </button>
 
-<button class="red"
-onclick="clearSession()">
-Limpiar sesión
-</button>
-
-</div>
-
 <div id="log">
-Esperando conexión...
+Esperando conexión
 </div>
 
 <script>
@@ -132,11 +95,7 @@ const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
 const SCOPES=
-[
-"playlist-modify-private",
-"playlist-modify-public",
-"user-read-private"
-].join(" ");
+"playlist-modify-private playlist-modify-public user-read-private";
 
 let accessToken=
 localStorage.getItem(
@@ -148,40 +107,18 @@ document.getElementById(
 "log"
 );
 
-function addLog(msg,cls=""){
+function msg(t){
 
-const d=
-document.createElement(
-"div"
-);
+log.innerHTML+=
+"\n"+t;
 
-d.className=cls;
-
-d.textContent=msg;
-
-log.appendChild(d);
-
-log.scrollTop=
-log.scrollHeight;
-
-}
-
-function clearLog(){
-log.innerHTML="";
 }
 
 function clearSession(){
 
 localStorage.clear();
 
-accessToken="";
-
-clearLog();
-
-addLog(
-"Sesión eliminada",
-"warn"
-);
+location.reload();
 
 }
 
@@ -207,7 +144,7 @@ return r;
 
 }
 
-async function createChallenge(v){
+async function challenge(v){
 
 const data=
 new TextEncoder()
@@ -240,8 +177,8 @@ localStorage.setItem(
 verifier
 );
 
-const challenge=
-await createChallenge(
+const c=
+await challenge(
 verifier
 );
 
@@ -260,35 +197,19 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
-show_dialog:true,
-
 code_challenge_method:
 "S256",
 
 code_challenge:
-challenge
+c,
+
+show_dialog:true
 
 });
 
-window.location.href=
+window.location=
 "https://accounts.spotify.com/authorize?"+
-params.toString();
-
-}
-
-function changeSpotifyUser(){
-
-clearSession();
-
-window.open(
-"https://www.spotify.com/logout/",
-"_blank"
-);
-
-setTimeout(
-loginSpotify,
-1500
-);
+params;
 
 }
 
@@ -296,26 +217,12 @@ async function getToken(){
 
 const code=
 new URLSearchParams(
-window.location.search
-)
-.get(
+location.search
+).get(
 "code"
 );
 
-if(!code){
-
-if(accessToken){
-
-addLog(
-"Spotify conectado",
-"ok"
-);
-
-}
-
-return;
-
-}
+if(!code)return;
 
 const verifier=
 localStorage.getItem(
@@ -359,17 +266,6 @@ body
 const data=
 await res.json();
 
-if(!data.access_token){
-
-addLog(
-JSON.stringify(data),
-"err"
-);
-
-return;
-
-}
-
 accessToken=
 data.access_token;
 
@@ -384,46 +280,9 @@ history.replaceState(
 REDIRECT_URI
 );
 
-addLog(
-"Spotify conectado",
-"ok"
+msg(
+"Spotify conectado"
 );
-
-}
-
-async function spotifyFetch(url,opt={}){
-
-const res=
-await fetch(
-url,
-{
-...opt,
-
-headers:{
-
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-}
-
-}
-);
-
-const data=
-await res.json();
-
-if(!res.ok){
-
-throw new Error(
-JSON.stringify(data)
-);
-
-}
-
-return data;
 
 }
 
@@ -431,31 +290,9 @@ async function searchSong(song){
 
 try{
 
-let query=song;
-
-if(song.includes("-")){
-
-const p=
-song.split("-");
-
-const artist=
-p[0].trim();
-
-const track=
-p.slice(1)
-.join("-")
-.trim();
-
-query=
-`track:"${track}" artist:"${artist}"`;
-
-}
-
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(
-query
-)}&type=track&limit=5`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
 {
 headers:{
 Authorization:
@@ -467,21 +304,11 @@ Authorization:
 const data=
 await res.json();
 
-if(
-data.tracks &&
-data.tracks.items &&
-data.tracks.items.length
-){
-
 return data.tracks
-.items[0]
-.uri;
+?.items?.[0]
+?.uri||null;
 
-}
-
-return null;
-
-}catch(e){
+}catch{
 
 return null;
 
@@ -491,7 +318,7 @@ return null;
 
 async function createPlaylist(){
 
-clearLog();
+log.innerHTML="";
 
 const name=
 document
@@ -508,155 +335,90 @@ document
 )
 .value
 .split("\n")
-.map(
-x=>x.trim()
-)
 .filter(
-x=>x
+x=>x.trim()
 );
 
-if(!accessToken){
-
-addLog(
-"Conecta Spotify primero",
-"err"
+msg(
+"Creando playlist"
 );
 
-return;
-
-}
-
-if(!name){
-
-addLog(
-"Escribe nombre",
-"warn"
-);
-
-return;
-
-}
-
-addLog(
-"Creando playlist",
-"info"
-);
-
-const playlist=
-await spotifyFetch(
+const playlistRes=
+await fetch(
 "https://api.spotify.com/v1/me/playlists",
 {
 method:"POST",
 
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+},
+
 body:
 JSON.stringify({
-
 name,
-
 public:true
-
 })
 
 }
 );
 
-addLog(
-"Playlist creada",
-"ok"
+const playlist=
+await playlistRes.json();
+
+msg(
+"Playlist creada"
 );
 
-let uris=[];
-
-for(let i=0;i<songs.length;i++){
-
-addLog(
-`Buscando ${i+1}/${songs.length}
-
-${songs[i]}`,
-"info"
+msg(
+"Buscando canciones..."
 );
 
-const uri=
-await Promise.race([
+const results=
+await Promise.all(
 
-searchSong(
-songs[i]
-),
-
-new Promise(
-r=>
-setTimeout(
-()=>r(null),
-5000
-)
+songs.map(
+s=>searchSong(s)
 )
 
-]);
-
-if(uri){
-
-uris.push(uri);
-
-addLog(
-"Encontrada",
-"ok"
 );
 
-}else{
-
-addLog(
-"No encontrada",
-"warn"
+const uris=
+results.filter(
+x=>x
 );
 
-}
-
-}
-
-if(!uris.length){
-
-addLog(
-"No encontré canciones",
-"warn"
+msg(
+`Encontradas:
+${uris.length}`
 );
 
-return;
-
-}
-
-for(
-let i=0;
-i<uris.length;
-i+=100
-){
-
-const batch=
-uris.slice(
-i,
-i+100
-);
-
-await spotifyFetch(
+await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 {
 method:"POST",
 
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+},
+
 body:
 JSON.stringify({
-uris:batch
+uris
 })
 
 }
 );
 
-}
-
-addLog(
-`Playlist terminada
-
-Canciones agregadas:
-${uris.length}`,
-"ok"
+msg(
+"Playlist finalizada"
 );
 
 window.open(
