@@ -2,26 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
-
-<title>
-Spotify Playlist Creator AI v4.2
-</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spotify Playlist Creator AI v4.3</title>
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
-background:
-linear-gradient(
-135deg,
-#050505,
-#121212,
-#1DB954
-);
-
+background:linear-gradient(135deg,#050505,#121212,#1DB954);
 padding:30px;
 color:white;
 }
@@ -56,10 +44,7 @@ color:black;
 background:#e53935;
 }
 
-input,
-textarea,
-select,
-button{
+input,textarea,select,button{
 width:100%;
 padding:14px;
 margin-top:12px;
@@ -67,9 +52,7 @@ border:none;
 border-radius:15px;
 }
 
-input,
-textarea,
-select{
+input,textarea,select{
 background:#222;
 color:white;
 }
@@ -98,47 +81,32 @@ white-space:pre-wrap;
 max-height:350px;
 overflow:auto;
 }
-
 </style>
-
 </head>
 
 <body>
 
 <div class="card">
 
-<h1>
-Spotify Playlist Creator AI
-</h1>
+<h1>Spotify Playlist Creator AI</h1>
 
-<div>
-Versión v4.2
-</div>
+<div>Versión v4.3</div>
 
 <div class="statusBox">
 
-<div
-id="spotifyStatus"
+<div id="spotifyStatus"
 class="status red">
-
 Spotify 🔴
-
 </div>
 
-<div
-id="deepseekStatus"
+<div id="deepseekStatus"
 class="status red">
-
 DeepSeek 🔴
-
 </div>
 
-<div
-id="playlistStatus"
+<div id="playlistStatus"
 class="status red">
-
 Playlist 🔴
-
 </div>
 
 </div>
@@ -161,7 +129,6 @@ placeholder="Kpop relajante">
 </textarea>
 
 <select id="songCount">
-
 <option>10</option>
 <option>20</option>
 <option>40</option>
@@ -170,7 +137,6 @@ placeholder="Kpop relajante">
 <option>80</option>
 <option>100</option>
 <option>200</option>
-
 </select>
 
 <div class="buttons">
@@ -277,6 +243,10 @@ document.getElementById(
 
 updateStatus();
 
+msg(
+"DeepSeek guardada"
+);
+
 }
 
 document.getElementById(
@@ -326,7 +296,6 @@ d?
 function cleanSong(song){
 
 return song
-
 .replace(/^\d+\./,"")
 .replace(/\*\*/g,"")
 .replace(/\*/g,"")
@@ -345,6 +314,16 @@ const key=
 localStorage.getItem(
 "deepseek_key"
 );
+
+if(!key){
+
+msg(
+"Guardar DeepSeek"
+);
+
+return;
+
+}
 
 const count=
 document.getElementById(
@@ -367,8 +346,7 @@ Authorization:
 body:
 JSON.stringify({
 
-model:
-"deepseek-chat",
+model:"deepseek-chat",
 
 messages:[
 {
@@ -376,10 +354,7 @@ role:"user",
 
 content:
 `
-Genera EXACTAMENTE
-${count}
-
-canciones
+Genera EXACTAMENTE ${count} canciones.
 
 SOLO:
 
@@ -391,11 +366,7 @@ ${document.getElementById(
 "promptAI"
 ).value}
 
-${
-more?
-"No repetir":
-""
-}
+${more?"No repetir":""}
 `
 }
 ]
@@ -438,9 +409,7 @@ Authorization:
 const d=
 await r.json();
 
-return d.tracks
-?.items||
-[];
+return d.tracks?.items||[];
 
 }
 
@@ -452,9 +421,7 @@ cleanSong(song);
 let artist="";
 let track="";
 
-if(
-song.includes("-")
-){
+if(song.includes("-")){
 
 const p=
 song.split("-");
@@ -472,32 +439,21 @@ p.slice(1)
 const queries=[
 
 `track:"${track}" artist:"${artist}"`,
-
 `${artist} ${track}`,
-
 `${track} ${artist}`,
-
 track,
-
 song
 
 ];
 
-for(
-const q
-of queries
-){
+for(const q of queries){
 
 try{
 
 const items=
-await searchQuery(
-q
-);
+await searchQuery(q);
 
-if(
-items.length
-){
+if(items.length){
 
 msg(
 `OK:
@@ -537,7 +493,7 @@ return;
 const name=
 document.getElementById(
 "playlistName"
-).value.trim() ||
+).value.trim()||
 "Playlist";
 
 msg(
@@ -570,8 +526,7 @@ const playlist=
 await p.json();
 
 const songs=
-document
-.getElementById(
+document.getElementById(
 "songs"
 )
 .value
@@ -582,21 +537,14 @@ x=>x.trim()
 
 let uris=[];
 
-for(
-const s
-of songs
-){
+for(const s of songs){
 
 const uri=
-await searchSong(
-s
-);
+await searchSong(s);
 
 if(uri){
 
-uris.push(
-uri
-);
+uris.push(uri);
 
 }
 
@@ -607,9 +555,7 @@ msg(
 ${uris.length}`
 );
 
-if(
-uris.length===0
-){
+if(!uris.length){
 
 msg(
 "No agregué canciones"
@@ -643,13 +589,7 @@ uris
 const result=
 await add.json();
 
-if(
-result.snapshot_id
-){
-
-msg(
-"Canciones agregadas"
-);
+if(result.snapshot_id){
 
 document.getElementById(
 "playlistStatus"
@@ -660,6 +600,10 @@ document.getElementById(
 "playlistStatus"
 ).innerHTML=
 "Playlist 🟢";
+
+msg(
+"Canciones agregadas"
+);
 
 }
 
@@ -696,7 +640,7 @@ return btoa(
 String.fromCharCode(
 ...new Uint8Array(h)
 ))
-replace(/\+/g,"-")
+.replace(/\+/g,"-")
 .replace(/\//g,"_")
 .replace(/=/g,"");
 
@@ -705,9 +649,7 @@ replace(/\+/g,"-")
 async function loginSpotify(){
 
 const verifier=
-randomString(
-64
-);
+randomString(64);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -751,9 +693,7 @@ async function getToken(){
 const code=
 new URLSearchParams(
 location.search
-).get(
-"code"
-);
+).get("code");
 
 if(!code){
 
@@ -773,15 +713,11 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
-
 grant_type:
 "authorization_code",
-
 code,
-
 redirect_uri:
 REDIRECT_URI,
-
 code_verifier:
 verifier
 
@@ -842,5 +778,4 @@ getToken();
 </script>
 
 </body>
-
 </html>
