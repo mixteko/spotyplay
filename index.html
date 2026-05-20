@@ -2,12 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>
-Spotify Playlist Creator AI v2.2
-</title>
+<title>Spotify Playlist Creator AI v2.3</title>
 
 <style>
 
@@ -27,13 +24,9 @@ linear-gradient(
 );
 
 min-height:100vh;
-
 padding:30px;
-
 display:flex;
-
 justify-content:center;
-
 color:white;
 }
 
@@ -49,7 +42,6 @@ rgba(
 );
 
 padding:30px;
-
 border-radius:25px;
 }
 
@@ -67,17 +59,11 @@ textarea,
 select{
 
 width:100%;
-
 padding:14px;
-
 margin-top:15px;
-
 border:none;
-
 border-radius:15px;
-
 background:#222;
-
 color:white;
 
 }
@@ -125,8 +111,8 @@ margin-top:20px;
 padding:20px;
 background:#111;
 border-radius:20px;
-white-space:pre-wrap;
 font-family:monospace;
+white-space:pre-wrap;
 max-height:350px;
 overflow:auto;
 }
@@ -144,7 +130,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div class="version">
-Versión v2.2
+Versión v2.3
 </div>
 
 <input
@@ -154,12 +140,12 @@ placeholder="Gemini API Key">
 <button
 class="green"
 onclick="saveGeminiKey()">
-Guardar Gemini
+Guardar IA
 </button>
 
 <textarea
 id="promptAI"
-placeholder="Rock clásico carretera">
+placeholder="Rock clásico carretera USA">
 </textarea>
 
 <select id="songCount">
@@ -232,8 +218,7 @@ Esperando conexión
 
 <script>
 
-const APP_VERSION=
-"v2.2";
+const APP_VERSION="v2.3";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -241,15 +226,12 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=
-[
+const SCOPES=[
 "user-read-private",
 "playlist-read-private",
 "playlist-modify-private",
 "playlist-modify-public"
-].join(
-" "
-);
+].join(" ");
 
 let accessToken=
 localStorage.getItem(
@@ -271,9 +253,125 @@ log.scrollHeight;
 
 }
 
-msg(
-APP_VERSION
+msg(APP_VERSION);
+
+function saveGeminiKey(){
+
+const key=
+document.getElementById(
+"geminiKey"
+).value.trim();
+
+localStorage.setItem(
+"gemini_key",
+key
 );
+
+msg(
+"Gemini guardada"
+);
+
+}
+
+document.getElementById(
+"geminiKey"
+).value=
+localStorage.getItem(
+"gemini_key"
+)||"";
+
+async function generateAIPlaylist(){
+
+const key=
+localStorage.getItem(
+"gemini_key"
+);
+
+if(!key){
+
+msg(
+"Guardar Gemini primero"
+);
+
+return;
+
+}
+
+msg(
+"Generando IA..."
+);
+
+const prompt=
+document.getElementById(
+"promptAI"
+).value;
+
+const count=
+document.getElementById(
+"songCount"
+).value;
+
+const body={
+
+contents:[
+{
+parts:[
+{
+text:
+`Genera ${count} canciones.
+
+Formato:
+
+ARTISTA - CANCION
+
+Tema:
+
+${prompt}
+
+Sin numeración`
+}
+]
+}
+]
+
+};
+
+const r=
+await fetch(
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:
+JSON.stringify(body)
+
+}
+);
+
+const d=
+await r.json();
+
+const text=
+d.candidates?.[0]
+?.content
+?.parts?.[0]
+?.text||"";
+
+document.getElementById(
+"songs"
+).value=
+text;
+
+msg(
+"IA lista"
+);
+
+}
 
 function clearStorage(){
 
@@ -295,28 +393,6 @@ window.open(
 clearStorage();
 
 }
-
-function saveGeminiKey(){
-
-localStorage.setItem(
-"gemini_key",
-document.getElementById(
-"geminiKey"
-).value
-);
-
-msg(
-"Gemini guardada"
-);
-
-}
-
-document.getElementById(
-"geminiKey"
-).value=
-localStorage.getItem(
-"gemini_key"
-)||"";
 
 function randomString(n){
 
@@ -365,9 +441,7 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(
-64
-);
+randomString(64);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -375,9 +449,7 @@ verifier
 );
 
 const c=
-await challenge(
-verifier
-);
+await challenge(verifier);
 
 const params=
 new URLSearchParams({
@@ -399,8 +471,7 @@ show_dialog:true,
 code_challenge_method:
 "S256",
 
-code_challenge:
-c
+code_challenge:c
 
 });
 
@@ -415,15 +486,9 @@ async function getToken(){
 const code=
 new URLSearchParams(
 location.search
-).get(
-"code"
-);
+).get("code");
 
-if(!code){
-
-return;
-
-}
+if(!code)return;
 
 const verifier=
 localStorage.getItem(
@@ -449,7 +514,7 @@ verifier
 
 });
 
-const res=
+const r=
 await fetch(
 "https://accounts.spotify.com/api/token",
 {
@@ -464,11 +529,11 @@ body
 }
 );
 
-const data=
-await res.json();
+const d=
+await r.json();
 
 accessToken=
-data.access_token;
+d.access_token;
 
 localStorage.setItem(
 "spotify_token",
@@ -477,6 +542,36 @@ accessToken
 
 msg(
 "Spotify conectado"
+);
+
+}
+
+async function searchSong(song){
+
+const r=
+await fetch(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`,
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const d=
+await r.json();
+
+return d.tracks
+?.items?.[0]
+?.uri||null;
+
+}
+
+async function createPlaylist(){
+
+msg(
+"Creando playlist..."
 );
 
 }
