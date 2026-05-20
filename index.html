@@ -6,7 +6,7 @@
 content="width=device-width,initial-scale=1">
 
 <title>
-Spotify Playlist Creator v1.0
+Spotify Playlist Creator v1.1
 </title>
 
 <style>
@@ -37,21 +37,13 @@ margin-bottom:20px;
 
 input,
 textarea{
-
 width:100%;
-
 padding:12px;
-
 margin:10px 0;
-
 border:none;
-
 border-radius:10px;
-
 background:#222;
-
 color:white;
-
 }
 
 textarea{
@@ -59,19 +51,12 @@ height:240px;
 }
 
 button{
-
 padding:12px;
-
 margin:5px;
-
 border:none;
-
 border-radius:10px;
-
 cursor:pointer;
-
 color:white;
-
 }
 
 .green{
@@ -91,23 +76,14 @@ background:#e53935;
 }
 
 #log{
-
 margin-top:20px;
-
 padding:15px;
-
 background:#1a1a1a;
-
 border-radius:10px;
-
 font-family:monospace;
-
 white-space:pre-wrap;
-
 max-height:450px;
-
 overflow:auto;
-
 }
 
 </style>
@@ -121,7 +97,7 @@ Spotify Playlist Creator
 </h1>
 
 <div id="versionBox">
-Versión v1.0
+Versión v1.1
 </div>
 
 <input
@@ -165,7 +141,7 @@ Esperando conexión
 <script>
 
 const APP_VERSION=
-"v1.0";
+"v1.1";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -191,11 +167,6 @@ document.getElementById(
 "log"
 );
 
-msg(
-`Versión:
-${APP_VERSION}`
-);
-
 function msg(t){
 
 log.innerHTML +=
@@ -206,6 +177,11 @@ log.scrollHeight;
 
 }
 
+msg(
+`Versión:
+${APP_VERSION}`
+);
+
 function clearStorage(){
 
 localStorage.clear();
@@ -213,10 +189,6 @@ localStorage.clear();
 sessionStorage.clear();
 
 accessToken="";
-
-msg(
-"Datos eliminados"
-);
 
 location.reload();
 
@@ -412,9 +384,7 @@ async function searchSong(song){
 
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(
-song
-)}&type=track&market=MX&limit=1`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`,
 {
 headers:{
 Authorization:
@@ -539,26 +509,21 @@ msg(
 ${uris.length}`
 );
 
+const uriString=
+encodeURIComponent(
+uris.join(",")
+);
+
 const addRes=
 await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks?uris=${uriString}`,
 {
 method:"POST",
 
 headers:{
 Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-uris
-})
-
+`Bearer ${accessToken}`
+}
 }
 );
 
@@ -573,6 +538,21 @@ ${addRes.status}`
 msg(
 result
 );
+
+if(
+addRes.ok
+){
+
+msg(
+"Canciones agregadas"
+);
+
+window.open(
+playlist.external_urls.spotify,
+"_blank"
+);
+
+}
 
 }
 
