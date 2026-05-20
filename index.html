@@ -3,24 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>Spotify Playlist Creator AI v3.8</title>
+<title>Spotify Playlist Creator AI v3.9</title>
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
-background:
-linear-gradient(
-135deg,
-#050505,
-#121212,
-#1DB954
-);
-
-color:white;
+background:linear-gradient(135deg,#050505,#121212,#1DB954);
 padding:30px;
+color:white;
 }
 
 .card{
@@ -57,13 +48,11 @@ input,
 textarea,
 select,
 button{
-
 width:100%;
 padding:14px;
 margin-top:12px;
 border:none;
 border-radius:15px;
-
 }
 
 input,
@@ -94,10 +83,9 @@ background:black;
 padding:20px;
 border-radius:20px;
 white-space:pre-wrap;
-max-height:320px;
+max-height:350px;
 overflow:auto;
 }
-
 </style>
 
 </head>
@@ -106,60 +94,39 @@ overflow:auto;
 
 <div class="card">
 
-<h1>
-Spotify Playlist Creator AI
-</h1>
+<h1>Spotify Playlist Creator AI</h1>
 
-<div>
-Versión v3.8
-</div>
+<div>Versión v3.9</div>
 
 <div class="statusBox">
 
-<div
-id="spotifyStatus"
+<div id="spotifyStatus"
 class="status red">
-
 Spotify 🔴
-
 </div>
 
-<div
-id="deepseekStatus"
+<div id="deepseekStatus"
 class="status red">
-
 DeepSeek 🔴
-
 </div>
 
-<div
-id="playlistStatus"
+<div id="playlistStatus"
 class="status red">
-
 Playlist 🔴
-
 </div>
 
 </div>
 
-<!-- SOLO SPOTIFY ARRIBA -->
-
-<button
-onclick="loginSpotify()">
-
+<button onclick="loginSpotify()">
 Conectar Spotify
-
 </button>
 
 <input
 id="deepseekKey"
 placeholder="DeepSeek API Key">
 
-<button
-onclick="saveDeepSeek()">
-
+<button onclick="saveDeepSeek()">
 Guardar DeepSeek
-
 </button>
 
 <textarea
@@ -169,31 +136,29 @@ placeholder="Rock carretera USA">
 
 <select id="songCount">
 
-<option value="10">10</option>
-<option value="20">20</option>
-<option value="40">40</option>
-<option value="50">50</option>
-<option value="60">60</option>
-<option value="80">80</option>
-<option value="100">100</option>
-<option value="200">200</option>
+<option>10</option>
+<option>20</option>
+<option>40</option>
+<option>50</option>
+<option>60</option>
+<option>80</option>
+<option>100</option>
+<option>200</option>
 
 </select>
 
 <div class="buttons">
 
-<button
-onclick="generateDeepSeek()">
-
+<button onclick="generateDeepSeek()">
 Generar Lista
-
 </button>
 
-<button
-onclick="generateDeepSeek(true)">
-
+<button onclick="generateDeepSeek(true)">
 Buscar Más
+</button>
 
+<button onclick="refreshApp()">
+Refrescar
 </button>
 
 </div>
@@ -202,26 +167,16 @@ Buscar Más
 id="playlistName"
 placeholder="Nombre playlist">
 
-<textarea
-id="songs">
-</textarea>
-
-<!-- BOTONES ABAJO -->
+<textarea id="songs"></textarea>
 
 <div class="buttons">
 
-<button
-onclick="createPlaylist()">
-
+<button onclick="createPlaylist()">
 Crear Playlist
-
 </button>
 
-<button
-onclick="changeUser()">
-
+<button onclick="changeUser()">
 Cambiar cuenta
-
 </button>
 
 </div>
@@ -263,6 +218,25 @@ log.innerHTML +=
 
 log.scrollTop=
 log.scrollHeight;
+
+}
+
+function refreshApp(){
+
+document.getElementById(
+"promptAI"
+).value="";
+
+document.getElementById(
+"playlistName"
+).value="";
+
+document.getElementById(
+"songs"
+).value="";
+
+log.innerHTML=
+"Lista limpiada";
 
 }
 
@@ -344,17 +318,14 @@ return;
 
 }
 
-msg(
-more ?
-"Buscando más..."
-:
-"Generando..."
-);
-
 const count=
 document.getElementById(
 "songCount"
 ).value;
+
+msg(
+"Generando..."
+);
 
 const r=
 await fetch(
@@ -365,10 +336,8 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${key}`,
-
 "Content-Type":
 "application/json"
-
 },
 
 body:
@@ -383,9 +352,7 @@ role:"user",
 
 content:
 `
-Genera EXACTAMENTE
-${count}
-canciones.
+Genera ${count} canciones
 
 Formato:
 
@@ -398,12 +365,10 @@ ${document.getElementById(
 ).value}
 
 ${
-more ?
+more?
 "No repetir":
 ""
 }
-
-Sin numeración
 `
 }
 ]
@@ -421,7 +386,7 @@ document.getElementById(
 ).value=
 d.choices?.[0]
 ?.message
-?.content ||
+?.content||
 "";
 
 msg(
@@ -432,6 +397,16 @@ msg(
 
 async function searchSong(song){
 
+try{
+
+const controller=
+new AbortController();
+
+setTimeout(
+()=>controller.abort(),
+3000
+);
+
 const r=
 await fetch(
 `https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
@@ -439,7 +414,11 @@ await fetch(
 headers:{
 Authorization:
 `Bearer ${accessToken}`
-}
+},
+
+signal:
+controller.signal
+
 }
 );
 
@@ -448,7 +427,14 @@ await r.json();
 
 return d.tracks
 ?.items?.[0]
-?.uri || null;
+?.uri||null;
+
+}
+catch{
+
+return null;
+
+}
 
 }
 
@@ -487,7 +473,7 @@ JSON.stringify({
 name:
 document.getElementById(
 "playlistName"
-).value ||
+).value||
 "Playlist DeepSeek",
 
 public:false
@@ -506,24 +492,14 @@ document
 "songs"
 )
 .value
-.split(
-"\n"
-)
+.split("\n")
 .filter(
 x=>x.trim()
 );
 
 let uris=[];
 
-for(
-const s
-of songs
-){
-
-msg(
-`Buscar:
-${s}`
-);
+for(const s of songs){
 
 const uri=
 await searchSong(
@@ -532,8 +508,20 @@ s.trim()
 
 if(uri){
 
+msg(
+`OK:
+${s}`
+);
+
 uris.push(
 uri
+);
+
+}else{
+
+msg(
+`No encontrada:
+${s}`
 );
 
 }
@@ -546,18 +534,9 @@ ${uris.length}`
 );
 
 if(
-uris.length===0
+uris.length
 ){
 
-msg(
-"No encontré canciones"
-);
-
-return;
-
-}
-
-const add=
 await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/items`,
 {
@@ -578,16 +557,7 @@ uris
 }
 );
 
-const result=
-await add.json();
-
-msg(
-JSON.stringify(
-result,
-null,
-2
-)
-);
+}
 
 document.getElementById(
 "playlistStatus"
@@ -716,15 +686,11 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
-
 grant_type:
 "authorization_code",
-
 code,
-
 redirect_uri:
 REDIRECT_URI,
-
 code_verifier:
 verifier
 
