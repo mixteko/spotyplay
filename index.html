@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spotify Playlist Creator</title>
+
+<style>
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+}
+
+body{
+background:#121212;
+color:white;
+font-family:Arial;
+max-width:900px;
+margin:auto;
+padding:30px;
+}
+
+h1{
+color:#1DB954;
+margin-bottom:20px;
+}
+
+input,textarea{
+width:100%;
+padding:12px;
+margin:10px 0;
+border:none;
+border-radius:10px;
+background:#222;
+color:white;
+font-size:15px;
+}
+
+textarea{
+height:220px;
+resize:vertical;
+}
+
+.btns{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin-top:10px;
+}
+
+button{
+padding:12px 20px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+color:white;
+}
+
+.green{background:#1DB954;}
+.orange{background:#ff9800;}
+.blue{background:#2196F3;}
+.red{background:#e53935;}
+
+#log{
+margin-top:20px;
+padding:15px;
+background:#1a1a1a;
+border-radius:10px;
+white-space:pre-wrap;
+font-family:monospace;
+max-height:350px;
+overflow:auto;
+}
+
+.ok{color:#1DB954;}
+.err{color:#ff5252;}
+.info{color:#64b5f6;}
+.warn{color:#ffb74d;}
+</style>
+</head>
+
+<body>
+
+<h1>Spotify Playlist Creator</h1>
+
+<input
+id="playlistName"
+placeholder="Nombre playlist">
+
+<textarea
+id="songs"
+placeholder="Michael Jackson - Billie Jean
+Queen - Bohemian Rhapsody
+Bad Bunny - Tití Me Preguntó">
+</textarea>
+
+<div class="btns">
+
+<button class="green"
+onclick="loginSpotify()">
+Conectar Spotify
+</button>
+
+<button class="orange"
+onclick="changeSpotifyUser()">
+Cambiar cuenta
+</button>
+
+<button class="blue"
+onclick="createPlaylist()">
+Crear playlist
+</button>
+
+<button class="red"
+onclick="clearSession()">
+Limpiar sesión
+</button>
+
+</div>
+
+<div id="log">
+Esperando conexión...
+</div>
+
+<script>
+
+const CLIENT_ID=
+"6c398ae66eae4f84959cfce08bd0c74c";
+
+const REDIRECT_URI=
+"https://mixteko.github.io/spotyplay/";
+
+const SCOPES=
+[
+"playlist-modify-private",
+"playlist-modify-public",
+"user-read-private",
+"user-read-email"
+].join(" ");
+
+let accessToken=
+localStorage.getItem(
+"spotify_token"
+)||"";
+
+const log=
+document.getElementById(
+"log"
+);
+
+function addLog(
+txt,
+cls=""
+){
+
+const el=
+document.createElement(
+"div"
+);
+
+el.className=cls;
+
+el.textContent=txt;
+
+log.appendChild(el);
+
+log.scrollTop=
+log.scrollHeight;
+
+}
+
+function clearLog(){
+
+log.innerHTML="";
+
+}
+
+function clearSession(){
+
+localStorage.clear();
+
+accessToken="";
+
+clearLog();
+
+addLog(
+"Sesión eliminada",
+"warn"
+);
+
+}
+
+function randomString(
+n
+){
+
+const chars=
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+let r="";
+
+for(
+let i=0;
+i<n;
+i++
+){
+
+r+=chars[
+Math.floor(
+Math.random()*
+chars.length
+)
+];
+
+}
+
+return r;
+
+}
+
+async function createChallenge(
+v
+){
+
+const data=
+new TextEncoder()
+.encode(v);
+
+const hash=
+await crypto.subtle.digest(
+"SHA-256",
+data
+);
+
+return btoa(
+String.fromCharCode(
+...new Uint8Array(hash)
+)
+)
+.replace(/\+/g,"-")
+.replace(/\//g,"_")
+.replace(/=/g,"");
+
+}
+
+async function loginSpotify(){
+
+clearLog();
+
+addLog(
+"Iniciando login...",
+"info"
+);
+
+const verifier=
+randomString(
+64
+);
+
+localStorage.setItem(
+"spotify_verifier",
+verifier
+);
+
+const challenge=
+await createChallenge(
+verifier
+);
+
+const params=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+response_type:
+"code",
+
+redirect_uri:
+REDIRECT_URI,
+
+scope:
+SCOPES,
+
+show_dialog:
+true,
+
+code_challenge_method:
+"S256",
+
+code_challenge:
+challenge
+
+});
+
+window.location.href=
+"https://accounts.spotify.com/authorize?"+
+params.toString();
+
+}
+
+function changeSpotifyUser(){
+
+clearSession();
+
+window.open(
+"https://www.spotify.com/logout/",
+"_blank"
+);
+
+setTimeout(
+loginSpotify,
+1500
+);
+
+}
+
+async function getToken(){
+
+const url=
+new URLSearchParams(
+window.location.search
+);
+
+const code=
+url.get(
+"code"
+);
+
+const error=
+url.get(
+"error"
+);
+
+if(error){
+
+addLog(
+"Spotify error: "+
+error,
+"err"
+);
+
+return;
+
+}
+
+if(!code){
+
+if(accessToken){
+
+addLog(
+"Token cargado",
+"ok"
+);
+
+}
+
+return;
+
+}
+
+addLog(
+"Intercambiando token...",
+"info"
+);
+
+const verifier=
+localStorage.getItem(
+"spotify_verifier"
+);
+
+if(!verifier){
+
+addLog(
+"Verifier perdido",
+"err"
+);
+
+return;
+
+}
+
+const body=
+new URLSearchParams({
+
+client_id:
+CLIENT_ID,
+
+grant_type:
+"authorization_code",
+
+code,
+
+redirect_uri:
+REDIRECT_URI,
+
+code_verifier:
+verifier
+
+});
+
+try{
+
+const res=
+await fetch(
+"https://accounts.spotify.com/api/token",
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body
+}
+);
+
+const data=
+await res.json();
+
+if(
+!res.ok
+){
+
+addLog(
+JSON.stringify(
+data
+),
+"err"
+);
+
+return;
+
+}
+
+accessToken=
+data.access_token;
+
+localStorage.setItem(
+"spotify_token",
+accessToken
+);
+
+history.replaceState(
+{},
+"",
+REDIRECT_URI
+);
+
+addLog(
+"Spotify conectado",
+"ok"
+);
+
+}catch(e){
+
+addLog(
+e.message,
+"err"
+);
+
+}
+
+}
+
+async function spotifyFetch(
+url,
+options={}
+){
+
+const res=
+await fetch(
+url,
+{
+...options,
+
+headers:{
+
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json",
+
+...(options.headers||{})
+
+}
+
+}
+);
+
+const data=
+await res.json();
+
+if(
+!res.ok
+){
+
+throw new Error(
+JSON.stringify(
+data
+)
+);
+
+}
+
+return data;
+
+}
+
+async function createPlaylist(){
+
+addLog(
+"Función playlist lista",
+"info"
+);
+
+}
+
+getToken();
+
+</script>
+
+</body>
+</html>
