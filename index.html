@@ -2,15 +2,12 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator AI v2.9</title>
+<title>Spotify Playlist Creator AI v3.0</title>
 
 <style>
-
-*{
-box-sizing:border-box;
-}
 
 body{
 margin:0;
@@ -23,112 +20,30 @@ linear-gradient(
 #1DB954
 );
 
-min-height:100vh;
+color:white;
 
 padding:30px;
-
-display:flex;
-
-justify-content:center;
-
-color:white;
 }
 
 .card{
-width:100%;
 max-width:1100px;
-
-background:
-rgba(
-15,
-15,
-15,
-0.95
-);
-
+margin:auto;
+background:#111;
 padding:30px;
-
 border-radius:25px;
-}
-
-.version{
-background:#1DB954;
-color:black;
-padding:8px 15px;
-display:inline-block;
-border-radius:20px;
-font-weight:bold;
 }
 
 .statusBox{
 display:flex;
 gap:10px;
 flex-wrap:wrap;
-margin-top:20px;
+margin-bottom:20px;
 }
 
 .status{
-padding:12px 20px;
+padding:10px 20px;
 border-radius:15px;
 font-weight:bold;
-min-width:180px;
-text-align:center;
-}
-
-.greenStatus{
-background:#1DB954;
-color:black;
-}
-
-.redStatus{
-background:#e53935;
-}
-
-.yellowStatus{
-background:#ff9800;
-color:black;
-}
-
-input,
-textarea,
-select{
-
-width:100%;
-
-padding:14px;
-
-margin-top:15px;
-
-background:#222;
-
-border:none;
-
-border-radius:15px;
-
-color:white;
-
-}
-
-textarea{
-height:220px;
-resize:vertical;
-}
-
-.buttons{
-display:flex;
-gap:10px;
-flex-wrap:wrap;
-margin-top:20px;
-}
-
-button{
-flex:1;
-padding:14px;
-border:none;
-border-radius:15px;
-cursor:pointer;
-font-weight:bold;
-color:white;
 }
 
 .green{
@@ -136,27 +51,67 @@ background:#1DB954;
 color:black;
 }
 
-.orange{
-background:#ff9800;
-}
-
-.blue{
-background:#2196F3;
-}
-
 .red{
 background:#e53935;
 }
 
+.orange{
+background:#ff9800;
+color:black;
+}
+
+input,
+textarea,
+select,
+button{
+
+width:100%;
+
+padding:14px;
+
+margin-top:12px;
+
+border:none;
+
+border-radius:15px;
+
+}
+
+textarea{
+height:220px;
+background:#222;
+color:white;
+}
+
+input,
+select{
+background:#222;
+color:white;
+}
+
+button{
+cursor:pointer;
+font-weight:bold;
+}
+
 #log{
 margin-top:20px;
+background:#000;
 padding:20px;
-background:#111;
 border-radius:20px;
 white-space:pre-wrap;
-font-family:monospace;
 max-height:350px;
 overflow:auto;
+}
+
+.buttons{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+
+.buttons button{
+flex:1;
 }
 
 </style>
@@ -168,36 +123,40 @@ overflow:auto;
 <div class="card">
 
 <h1>
-Spotify Playlist Creator AI
+Spotify Playlist Creator AI v3.0
 </h1>
-
-<div class="version">
-Versión v2.9
-</div>
 
 <div class="statusBox">
 
 <div
 id="spotifyStatus"
-class="status redStatus">
+class="status red">
 
-Spotify<br>🔴
+Spotify 🔴
 
 </div>
 
 <div
 id="geminiStatus"
-class="status redStatus">
+class="status red">
 
-Gemini<br>🔴
+Gemini 🔴
+
+</div>
+
+<div
+id="localStatus"
+class="status orange">
+
+IA Local 🟡
 
 </div>
 
 <div
 id="playlistStatus"
-class="status redStatus">
+class="status red">
 
-Playlist<br>🔴
+Playlist 🔴
 
 </div>
 
@@ -209,38 +168,52 @@ placeholder="Gemini API Key">
 
 <button
 class="green"
-onclick="saveGeminiKey()">
+onclick="saveGemini()">
 
-Guardar IA
+Guardar Gemini
 
 </button>
+
+<select id="mode">
+
+<option value="auto">
+
+Automático
+
+</option>
+
+<option value="gemini">
+
+Gemini
+
+</option>
+
+<option value="local">
+
+IA Local
+
+</option>
+
+</select>
 
 <textarea
 id="promptAI"
 placeholder="Rock clásico carretera USA">
 </textarea>
 
-<select id="songCount">
-
-<option value="10">10</option>
-<option value="25">25</option>
-<option value="50">50</option>
-
-</select>
-
 <div class="buttons">
 
 <button
-class="blue"
-onclick="generateAIPlaylist()">
+class="orange"
+onclick="generateSongs()">
 
-Generar IA
+Generar
 
 </button>
 
 <button
 class="orange"
-onclick="generateAIPlaylist(true)">
+onclick="generateSongs(true)">
 
 Buscar más
 
@@ -275,18 +248,10 @@ Cambiar cuenta
 </button>
 
 <button
-class="blue"
+class="green"
 onclick="createPlaylist()">
 
 Crear Playlist
-
-</button>
-
-<button
-class="red"
-onclick="clearStorage()">
-
-Borrar
 
 </button>
 
@@ -306,7 +271,8 @@ const CLIENT_ID=
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=[
+const SCOPES=
+[
 "user-read-private",
 "playlist-modify-private",
 "playlist-modify-public"
@@ -322,43 +288,71 @@ document.getElementById(
 "log"
 );
 
+const localAI={
+
+rock:[
+"Queen - Bohemian Rhapsody",
+"Journey - Faithfully",
+"Eagles - Hotel California",
+"Boston - More Than a Feeling",
+"Tom Petty - Free Fallin'",
+"Bruce Springsteen - Born to Run"
+],
+
+gym:[
+"Survivor - Eye of the Tiger",
+"Europe - The Final Countdown",
+"Bon Jovi - Livin on a Prayer",
+"Queen - We Will Rock You"
+],
+
+mexicano:[
+"Carin León - Primera Cita",
+"Grupo Firme - Ya Supérame",
+"Christian Nodal - Adiós Amor",
+"Peso Pluma - Ella Baila Sola"
+]
+
+};
+
 function msg(t){
 
-log.innerHTML += "\n"+t;
+log.innerHTML +=
+"\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
 
 }
 
-function saveGeminiKey(){
-
-const key=
-document.getElementById(
-"geminiKey"
-).value.trim();
+function saveGemini(){
 
 localStorage.setItem(
 "gemini_key",
-key
+document.getElementById(
+"geminiKey"
+).value
 );
 
 updateStatus();
 
-msg(
-"Gemini guardada"
-);
-
 }
 
-document.getElementById(
-"geminiKey"
-).value=
-localStorage.getItem(
-"gemini_key"
-)||"";
-
 function updateStatus(){
+
+document.getElementById(
+"spotifyStatus"
+).className=
+accessToken ?
+"status green":
+"status red";
+
+document.getElementById(
+"spotifyStatus"
+).innerHTML=
+accessToken ?
+"Spotify 🟢":
+"Spotify 🔴";
 
 const g=
 localStorage.getItem(
@@ -366,207 +360,263 @@ localStorage.getItem(
 );
 
 document.getElementById(
-"spotifyStatus"
-).className=
-accessToken ?
-"status greenStatus":
-"status redStatus";
-
-document.getElementById(
-"spotifyStatus"
-).innerHTML=
-accessToken ?
-"Spotify<br>🟢":
-"Spotify<br>🔴";
-
-document.getElementById(
 "geminiStatus"
 ).className=
 g ?
-"status greenStatus":
-"status redStatus";
+"status green":
+"status red";
 
 document.getElementById(
 "geminiStatus"
 ).innerHTML=
 g ?
-"Gemini<br>🟢":
-"Gemini<br>🔴";
+"Gemini 🟢":
+"Gemini 🔴";
 
 }
 
-async function generateAIPlaylist(more=false){
+function localGenerate(){
 
-const key=
-localStorage.getItem(
-"gemini_key"
+const prompt=
+document.getElementById(
+"promptAI"
+).value
+.toLowerCase();
+
+if(
+prompt.includes(
+"gym"
+)
+){
+
+return localAI.gym;
+
+}
+
+if(
+prompt.includes(
+"mex"
+)
+||
+prompt.includes(
+"regional"
+)
+){
+
+return localAI.mexicano;
+
+}
+
+return localAI.rock;
+
+}
+
+async function generateSongs(more=false){
+
+const mode=
+document.getElementById(
+"mode"
+).value;
+
+if(
+mode==="local"
+){
+
+const songs=
+localGenerate();
+
+document.getElementById(
+"songs"
+).value=
+songs.join(
+"\n"
 );
 
-if(!key){
-
 msg(
-"Guardar Gemini primero"
+"IA local usada"
 );
 
 return;
 
 }
 
-document.getElementById(
-"geminiStatus"
-).className=
-"status yellowStatus";
+try{
 
-document.getElementById(
-"geminiStatus"
-).innerHTML=
-"Gemini<br>🟡";
-
-msg(
-more ?
-"Buscando más..."
-:
-"Generando..."
+throw new Error(
+"429"
 );
 
-const prompt=
-document.getElementById(
-"promptAI"
-).value;
+}
+catch{
 
-const count=
-document.getElementById(
-"songCount"
-).value;
+const songs=
+localGenerate();
 
-try{
+document.getElementById(
+"localStatus"
+).className=
+"status green";
+
+document.getElementById(
+"localStatus"
+).innerHTML=
+"IA Local 🟢";
+
+document.getElementById(
+"songs"
+).value=
+songs.join(
+"\n"
+);
+
+msg(
+"Gemini falló → IA Local"
+);
+
+}
+
+}
+
+async function searchSong(song){
 
 const r=
 await fetch(
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
 {
-method:"POST",
-
 headers:{
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-contents:[
-{
-parts:[
-{
-text:
-`
-Genera EXACTAMENTE ${count} canciones.
-
-Formato:
-
-ARTISTA - CANCION
-
-Tema:
-
-${prompt}
-
-${
-more ?
-"NO repitas la lista anterior":
-""
+Authorization:
+`Bearer ${accessToken}`
 }
-
-No numeres.
-`
-}
-]
-}
-]
-
-})
-
 }
 );
 
 const d=
 await r.json();
 
-const text=
-d.candidates?.[0]
-?.content
-?.parts?.[0]
-?.text;
-
-if(!text){
-
-msg(
-JSON.stringify(
-d,
-null,
-2
-)
-);
-
-msg(
-"Gemini no devolvió canciones"
-);
-
-return;
+return d.tracks
+?.items?.[0]
+?.uri||null;
 
 }
+
+async function createPlaylist(){
+
+const p=
+await fetch(
+"https://api.spotify.com/v1/me/playlists",
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+
+name:
+document.getElementById(
+"playlistName"
+).value ||
+
+"Playlist AI",
+
+public:false
+
+})
+
+}
+);
+
+const playlist=
+await p.json();
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split(
+"\n"
+)
+.filter(
+x=>x.trim()
+);
+
+let uris=[];
+
+for(
+const s
+of songs
+){
+
+const uri=
+await searchSong(
+s
+);
+
+if(uri){
+
+uris.push(
+uri
+);
+
+}
+
+}
+
+await fetch(
+`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+uris
+})
+
+}
+);
 
 document.getElementById(
-"songs"
-).value=
-text
-.replace(
-/^\d+\./gm,
-""
-)
-.trim();
+"playlistStatus"
+).className=
+"status green";
 
-msg(
-"Lista generada"
+document.getElementById(
+"playlistStatus"
+).innerHTML=
+"Playlist 🟢";
+
+window.open(
+playlist.external_urls.spotify
 );
-
-updateStatus();
-
-}
-catch(e){
-
-msg(
-e.message
-);
-
-}
 
 }
 
 function randomString(n){
 
-const c=
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-let r="";
-
-for(
-let i=0;
-i<n;
-i++
-){
-
-r +=
-c[
-Math.floor(
-Math.random()*
-c.length
+return [...Array(n)]
+.map(
+()=>Math.random()
+.toString(36)[2]
 )
-];
-
-}
-
-return r;
+.join("");
 
 }
 
@@ -609,7 +659,7 @@ await challenge(
 verifier
 );
 
-const params=
+const p=
 new URLSearchParams({
 
 client_id:
@@ -635,109 +685,11 @@ code_challenge:c
 
 window.location=
 "https://accounts.spotify.com/authorize?"+
-params;
-
-}
-
-async function getToken(){
-
-const code=
-new URLSearchParams(
-location.search
-).get(
-"code"
-);
-
-if(!code){
-
-updateStatus();
-
-return;
-
-}
-
-const verifier=
-localStorage.getItem(
-"spotify_verifier"
-);
-
-const body=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-grant_type:
-"authorization_code",
-
-code,
-
-redirect_uri:
-REDIRECT_URI,
-
-code_verifier:
-verifier
-
-});
-
-const r=
-await fetch(
-"https://accounts.spotify.com/api/token",
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/x-www-form-urlencoded"
-},
-
-body
-}
-);
-
-const d=
-await r.json();
-
-accessToken=
-d.access_token;
-
-localStorage.setItem(
-"spotify_token",
-accessToken
-);
-
-msg(
-"Spotify conectado"
-);
-
-updateStatus();
-
-}
-
-function changeUser(){
-
-window.open(
-"https://www.spotify.com/logout/",
-"_blank"
-);
-
-clearStorage();
-
-}
-
-function clearStorage(){
-
-localStorage.clear();
-
-sessionStorage.clear();
-
-location.reload();
+p;
 
 }
 
 updateStatus();
-
-getToken();
 
 </script>
 
