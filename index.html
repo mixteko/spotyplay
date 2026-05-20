@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Spotify Playlist Creator</title>
 
 <style>
+
 body{
 background:#121212;
 color:white;
@@ -13,10 +15,6 @@ font-family:Arial;
 max-width:900px;
 margin:auto;
 padding:30px;
-}
-
-h1{
-color:#1DB954;
 }
 
 input,textarea{
@@ -55,10 +53,12 @@ background:#1a1a1a;
 border-radius:10px;
 white-space:pre-wrap;
 font-family:monospace;
-max-height:350px;
+max-height:400px;
 overflow:auto;
 }
+
 </style>
+
 </head>
 
 <body>
@@ -71,9 +71,9 @@ placeholder="Nombre playlist">
 
 <textarea
 id="songs"
-placeholder="Hall & Oates - Rich Girl
-Queen - Bohemian Rhapsody
-Michael Jackson - Billie Jean">
+placeholder="Queen - Bohemian Rhapsody
+Michael Jackson - Billie Jean
+Hall & Oates - Rich Girl">
 </textarea>
 
 <button class="green"
@@ -82,8 +82,8 @@ Conectar Spotify
 </button>
 
 <button class="orange"
-onclick="resetSpotify()">
-Reiniciar permisos
+onclick="clearStorage()">
+Borrar almacenamiento
 </button>
 
 <button class="blue"
@@ -92,8 +92,8 @@ Crear Playlist
 </button>
 
 <button class="red"
-onclick="clearStorage()">
-Borrar almacenamiento
+onclick="resetSpotify()">
+Reiniciar permisos
 </button>
 
 <div id="log">
@@ -109,11 +109,7 @@ const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
 const SCOPES=
-[
-"user-read-private",
-"playlist-modify-private",
-"playlist-modify-public"
-].join(" ");
+"user-read-private playlist-modify-private playlist-modify-public";
 
 let accessToken=
 localStorage.getItem(
@@ -150,6 +146,11 @@ location.reload();
 function resetSpotify(){
 
 clearStorage();
+
+window.open(
+"https://www.spotify.com/logout/",
+"_blank"
+);
 
 }
 
@@ -200,7 +201,9 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(64);
+randomString(
+64
+);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -227,7 +230,8 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
-show_dialog:true,
+show_dialog:
+true,
 
 code_challenge_method:
 "S256",
@@ -278,21 +282,23 @@ verifier
 
 });
 
-const res=
+const r=
 await fetch(
 "https://accounts.spotify.com/api/token",
 {
 method:"POST",
+
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
+
 body
 }
 );
 
 const data=
-await res.json();
+await r.json();
 
 accessToken=
 data.access_token;
@@ -308,40 +314,23 @@ msg(
 
 }
 
-async function api(url,opt={}){
+async function searchSong(song){
 
 const res=
 await fetch(
-url,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(
+song
+)}&type=track&market=MX&limit=1`,
 {
-...opt,
-
 headers:{
-
 Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
+`Bearer ${accessToken}`
 }
-
 }
 );
 
 const data=
 await res.json();
-
-return data;
-
-}
-
-async function searchSong(song){
-
-const data=
-await api(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`
-);
 
 return data.tracks
 ?.items?.[0]
@@ -354,28 +343,42 @@ async function createPlaylist(){
 log.innerHTML="";
 
 msg(
-"Obteniendo usuario..."
+"Leyendo usuario..."
+);
+
+const meRes=
+await fetch(
+"https://api.spotify.com/v1/me",
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
 );
 
 const me=
-await api(
-"https://api.spotify.com/v1/me"
-);
+await meRes.json();
 
 msg(
 `Usuario:
 ${me.display_name}`
 );
 
-msg(
-"Creando playlist..."
-);
-
-const playlist=
-await api(
-`https://api.spotify.com/v1/users/${me.id}/playlists`,
+const createRes=
+await fetch(
+"https://api.spotify.com/v1/me/playlists",
 {
 method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
 
 body:
 JSON.stringify({
@@ -391,6 +394,9 @@ public:false
 
 }
 );
+
+const playlist=
+await createRes.json();
 
 msg(
 "Playlist creada"
@@ -430,21 +436,24 @@ ${s}`
 }
 
 msg(
-`Encontradas:
+`Uris:
 ${uris.length}`
 );
 
-if(!uris.length){
-
-return;
-
-}
-
-const add=
-await api(
+const addRes=
+await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 {
 method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
 
 body:
 JSON.stringify({
@@ -454,6 +463,9 @@ uris
 }
 );
 
+const add=
+await addRes.json();
+
 msg(
 JSON.stringify(
 add,
@@ -462,15 +474,23 @@ null,
 )
 );
 
-if(add.snapshot_id){
+if(
+add.snapshot_id
+){
 
 msg(
-"Playlist finalizada"
+"Canciones agregadas"
 );
 
 window.open(
 playlist.external_urls.spotify,
 "_blank"
+);
+
+}else{
+
+msg(
+"Spotify rechazó inserción"
 );
 
 }
