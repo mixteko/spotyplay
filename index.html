@@ -2,14 +2,26 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v4.1</title>
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>
+Spotify Playlist Creator AI v4.2
+</title>
 
 <style>
+
 body{
 margin:0;
 font-family:Arial;
-background:linear-gradient(135deg,#050505,#121212,#1DB954);
+background:
+linear-gradient(
+135deg,
+#050505,
+#121212,
+#1DB954
+);
+
 padding:30px;
 color:white;
 }
@@ -44,7 +56,10 @@ color:black;
 background:#e53935;
 }
 
-input,textarea,select,button{
+input,
+textarea,
+select,
+button{
 width:100%;
 padding:14px;
 margin-top:12px;
@@ -52,7 +67,9 @@ border:none;
 border-radius:15px;
 }
 
-input,textarea,select{
+input,
+textarea,
+select{
 background:#222;
 color:white;
 }
@@ -81,32 +98,47 @@ white-space:pre-wrap;
 max-height:350px;
 overflow:auto;
 }
+
 </style>
+
 </head>
 
 <body>
 
 <div class="card">
 
-<h1>Spotify Playlist Creator AI</h1>
+<h1>
+Spotify Playlist Creator AI
+</h1>
 
-<div>Versión v4.1</div>
+<div>
+Versión v4.2
+</div>
 
 <div class="statusBox">
 
-<div id="spotifyStatus"
+<div
+id="spotifyStatus"
 class="status red">
+
 Spotify 🔴
+
 </div>
 
-<div id="deepseekStatus"
+<div
+id="deepseekStatus"
 class="status red">
+
 DeepSeek 🔴
+
 </div>
 
-<div id="playlistStatus"
+<div
+id="playlistStatus"
 class="status red">
+
 Playlist 🔴
+
 </div>
 
 </div>
@@ -125,19 +157,19 @@ Guardar DeepSeek
 
 <textarea
 id="promptAI"
-placeholder="Regional mexicano romántico">
+placeholder="Kpop relajante">
 </textarea>
 
 <select id="songCount">
 
-<option value="10">10</option>
-<option value="20">20</option>
-<option value="40">40</option>
-<option value="50">50</option>
-<option value="60">60</option>
-<option value="80">80</option>
-<option value="100">100</option>
-<option value="200">200</option>
+<option>10</option>
+<option>20</option>
+<option>40</option>
+<option>50</option>
+<option>60</option>
+<option>80</option>
+<option>100</option>
+<option>200</option>
 
 </select>
 
@@ -207,7 +239,8 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML += "\n"+t;
+log.innerHTML +=
+"\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -290,25 +323,19 @@ d?
 
 }
 
-function normalizeLine(line){
+function cleanSong(song){
 
-line=line
+return song
+
 .replace(/^\d+\./,"")
 .replace(/\*\*/g,"")
 .replace(/\*/g,"")
 .replace(/\(.*?\)/g,"")
+.replace(/feat.*$/i,"")
+.replace(/ft.*$/i,"")
+.replace(/prod.*$/i,"")
 .replace(/•/g,"")
 .trim();
-
-if(
-!line.includes("-")
-){
-
-return null;
-
-}
-
-return line;
 
 }
 
@@ -354,11 +381,9 @@ ${count}
 
 canciones
 
-SOLO formato:
+SOLO:
 
 ARTISTA - CANCION
-
-Sin comentarios
 
 Tema:
 
@@ -383,26 +408,13 @@ more?
 const d=
 await r.json();
 
-const raw=
+document.getElementById(
+"songs"
+).value=
 d.choices?.[0]
 ?.message
 ?.content||
 "";
-
-let lines=
-raw
-.split("\n")
-.map(
-normalizeLine
-)
-.filter(
-x=>x
-);
-
-document.getElementById(
-"songs"
-).value=
-lines.join("\n");
 
 msg(
 "Lista generada"
@@ -410,21 +422,39 @@ msg(
 
 }
 
+async function searchQuery(q){
+
+const r=
+await fetch(
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=5`,
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+);
+
+const d=
+await r.json();
+
+return d.tracks
+?.items||
+[];
+
+}
+
 async function searchSong(song){
 
 song=
-normalizeLine(song);
-
-if(!song){
-
-return null;
-
-}
+cleanSong(song);
 
 let artist="";
 let track="";
 
-if(song.includes("-")){
+if(
+song.includes("-")
+){
 
 const p=
 song.split("-");
@@ -447,41 +477,34 @@ const queries=[
 
 `${track} ${artist}`,
 
+track,
+
 song
 
 ];
 
-for(const q of queries){
+for(
+const q
+of queries
+){
 
 try{
 
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=1`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
+const items=
+await searchQuery(
+q
 );
 
-const d=
-await r.json();
-
-const uri=
-d.tracks
-?.items?.[0]
-?.uri;
-
-if(uri){
+if(
+items.length
+){
 
 msg(
 `OK:
 ${song}`
 );
 
-return uri;
+return items[0].uri;
 
 }
 
@@ -511,26 +534,11 @@ return;
 
 }
 
-let name=
+const name=
 document.getElementById(
 "playlistName"
-).value.trim();
-
-if(!name){
-
-name=
-prompt(
-"Nombre playlist"
-);
-
-if(!name){
-
-name=
+).value.trim() ||
 "Playlist";
-
-}
-
-}
 
 msg(
 "Creando playlist..."
@@ -574,7 +582,10 @@ x=>x.trim()
 
 let uris=[];
 
-for(const s of songs){
+for(
+const s
+of songs
+){
 
 const uri=
 await searchSong(
@@ -583,7 +594,9 @@ s
 
 if(uri){
 
-uris.push(uri);
+uris.push(
+uri
+);
 
 }
 
@@ -630,7 +643,9 @@ uris
 const result=
 await add.json();
 
-if(result.snapshot_id){
+if(
+result.snapshot_id
+){
 
 msg(
 "Canciones agregadas"
@@ -681,7 +696,7 @@ return btoa(
 String.fromCharCode(
 ...new Uint8Array(h)
 ))
-.replace(/\+/g,"-")
+replace(/\+/g,"-")
 .replace(/\//g,"_")
 .replace(/=/g,"");
 
@@ -690,7 +705,9 @@ String.fromCharCode(
 async function loginSpotify(){
 
 const verifier=
-randomString(64);
+randomString(
+64
+);
 
 localStorage.setItem(
 "spotify_verifier",
@@ -825,4 +842,5 @@ getToken();
 </script>
 
 </body>
+
 </html>
