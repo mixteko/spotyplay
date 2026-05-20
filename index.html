@@ -6,6 +6,7 @@
 <title>Spotify Playlist Creator</title>
 
 <style>
+
 body{
 background:#121212;
 color:white;
@@ -15,41 +16,91 @@ margin:auto;
 padding:30px;
 }
 
-input,textarea{
+h1{
+color:#1DB954;
+margin-bottom:20px;
+}
+
+input,
+textarea{
+
 width:100%;
+
 padding:12px;
+
 margin:10px 0;
+
 border:none;
+
 border-radius:10px;
+
 background:#222;
+
 color:white;
+
+font-size:15px;
+
 }
 
 textarea{
 height:250px;
+resize:vertical;
 }
 
 button{
+
 padding:12px;
+
 margin-right:10px;
+
+margin-top:10px;
+
 border:none;
+
 border-radius:10px;
+
 cursor:pointer;
+
 color:white;
+
 }
 
-.green{background:#1DB954;}
-.orange{background:#ff9800;}
-.blue{background:#2196F3;}
+.green{
+background:#1DB954;
+}
+
+.orange{
+background:#ff9800;
+}
+
+.blue{
+background:#2196F3;
+}
+
+.red{
+background:#e53935;
+}
 
 #log{
+
 margin-top:20px;
+
 padding:15px;
+
 background:#1a1a1a;
+
 border-radius:10px;
+
 white-space:pre-wrap;
+
 font-family:monospace;
+
+max-height:350px;
+
+overflow:auto;
+
 }
+
 </style>
 
 </head>
@@ -84,8 +135,13 @@ onclick="createPlaylist()">
 Crear playlist
 </button>
 
+<button class="red"
+onclick="changeUser()">
+Cambiar cuenta
+</button>
+
 <div id="log">
-Esperando conexión
+Esperando conexión...
 </div>
 
 <script>
@@ -97,7 +153,12 @@ const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
 const SCOPES=
-"playlist-modify-private playlist-modify-public user-read-private";
+[
+"playlist-modify-private",
+"playlist-modify-public",
+"playlist-read-private",
+"user-read-private"
+].join(" ");
 
 let accessToken=
 localStorage.getItem(
@@ -114,6 +175,9 @@ function msg(t){
 log.innerHTML +=
 "\n"+t;
 
+log.scrollTop=
+log.scrollHeight;
+
 }
 
 function clearSession(){
@@ -121,6 +185,17 @@ function clearSession(){
 localStorage.clear();
 
 location.reload();
+
+}
+
+function changeUser(){
+
+clearSession();
+
+window.open(
+"https://www.spotify.com/logout/",
+"_blank"
+);
 
 }
 
@@ -209,9 +284,9 @@ c
 
 });
 
-window.location=
+window.location.href=
 "https://accounts.spotify.com/authorize?"+
-params;
+params.toString();
 
 }
 
@@ -225,6 +300,10 @@ location.search
 );
 
 if(!code)return;
+
+msg(
+"Intercambiando token..."
+);
 
 const verifier=
 localStorage.getItem(
@@ -267,6 +346,18 @@ body
 
 const data=
 await res.json();
+
+if(!data.access_token){
+
+msg(
+JSON.stringify(
+data
+)
+);
+
+return;
+
+}
 
 accessToken=
 data.access_token;
@@ -330,7 +421,7 @@ await res.json();
 
 return data.tracks
 ?.items?.[0]
-?.uri||null;
+?.uri || null;
 
 }catch{
 
@@ -364,7 +455,7 @@ x=>x.trim()
 );
 
 msg(
-"Creando playlist..."
+"Creando playlist"
 );
 
 const playlistRes=
@@ -383,8 +474,10 @@ Authorization:
 
 body:
 JSON.stringify({
+
 name,
 public:true
+
 })
 
 }
@@ -395,6 +488,10 @@ await playlistRes.json();
 
 msg(
 "Playlist creada"
+);
+
+msg(
+"Buscando canciones..."
 );
 
 const results=
@@ -410,9 +507,19 @@ x=>x
 );
 
 msg(
-`Canciones encontradas:
+`Encontradas:
 ${uris.length}`
 );
+
+if(!uris.length){
+
+msg(
+"No encontré canciones"
+);
+
+return;
+
+}
 
 for(
 let i=0;
@@ -424,6 +531,11 @@ const batch=
 uris.slice(
 i,
 i+100
+);
+
+msg(
+`Agregando lote:
+${batch.length}`
 );
 
 const add=
@@ -451,11 +563,39 @@ uris:batch
 const result=
 await add.json();
 
+if(!add.ok){
+
+msg(
+"ERROR Spotify"
+);
+
 msg(
 JSON.stringify(
-result
+result,
+null,
+2
 )
 );
+
+return;
+
+}
+
+if(result.snapshot_id){
+
+msg(
+"Snapshot OK"
+);
+
+}else{
+
+msg(
+"Spotify no devolvió snapshot"
+);
+
+return;
+
+}
 
 }
 
@@ -475,4 +615,5 @@ getToken();
 </script>
 
 </body>
+
 </html>
