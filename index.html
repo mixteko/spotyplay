@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator AI v2.8</title>
+<title>Spotify Playlist Creator AI v2.9</title>
 
 <style>
 
@@ -35,9 +35,7 @@ color:white;
 }
 
 .card{
-
 width:100%;
-
 max-width:1100px;
 
 background:
@@ -51,7 +49,6 @@ rgba(
 padding:30px;
 
 border-radius:25px;
-
 }
 
 .version{
@@ -85,6 +82,11 @@ color:black;
 
 .redStatus{
 background:#e53935;
+}
+
+.yellowStatus{
+background:#ff9800;
+color:black;
 }
 
 input,
@@ -170,7 +172,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div class="version">
-Versión v2.8
+Versión v2.9
 </div>
 
 <div class="statusBox">
@@ -179,8 +181,7 @@ Versión v2.8
 id="spotifyStatus"
 class="status redStatus">
 
-Spotify<br>
-🔴
+Spotify<br>🔴
 
 </div>
 
@@ -188,8 +189,7 @@ Spotify<br>
 id="geminiStatus"
 class="status redStatus">
 
-Gemini<br>
-🔴
+Gemini<br>🔴
 
 </div>
 
@@ -197,8 +197,7 @@ Gemini<br>
 id="playlistStatus"
 class="status redStatus">
 
-Playlist<br>
-🔴
+Playlist<br>🔴
 
 </div>
 
@@ -241,7 +240,7 @@ Generar IA
 
 <button
 class="orange"
-onclick="generateAIPlaylist()">
+onclick="generateAIPlaylist(true)">
 
 Buscar más
 
@@ -325,8 +324,7 @@ document.getElementById(
 
 function msg(t){
 
-log.innerHTML +=
-"\n"+t;
+log.innerHTML += "\n"+t;
 
 log.scrollTop=
 log.scrollHeight;
@@ -335,11 +333,14 @@ log.scrollHeight;
 
 function saveGeminiKey(){
 
-localStorage.setItem(
-"gemini_key",
+const key=
 document.getElementById(
 "geminiKey"
-).value
+).value.trim();
+
+localStorage.setItem(
+"gemini_key",
+key
 );
 
 updateStatus();
@@ -359,6 +360,11 @@ localStorage.getItem(
 
 function updateStatus(){
 
+const g=
+localStorage.getItem(
+"gemini_key"
+);
+
 document.getElementById(
 "spotifyStatus"
 ).className=
@@ -372,11 +378,6 @@ document.getElementById(
 accessToken ?
 "Spotify<br>🟢":
 "Spotify<br>🔴";
-
-const g=
-localStorage.getItem(
-"gemini_key"
-);
 
 document.getElementById(
 "geminiStatus"
@@ -394,6 +395,154 @@ g ?
 
 }
 
+async function generateAIPlaylist(more=false){
+
+const key=
+localStorage.getItem(
+"gemini_key"
+);
+
+if(!key){
+
+msg(
+"Guardar Gemini primero"
+);
+
+return;
+
+}
+
+document.getElementById(
+"geminiStatus"
+).className=
+"status yellowStatus";
+
+document.getElementById(
+"geminiStatus"
+).innerHTML=
+"Gemini<br>🟡";
+
+msg(
+more ?
+"Buscando más..."
+:
+"Generando..."
+);
+
+const prompt=
+document.getElementById(
+"promptAI"
+).value;
+
+const count=
+document.getElementById(
+"songCount"
+).value;
+
+try{
+
+const r=
+await fetch(
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:
+JSON.stringify({
+
+contents:[
+{
+parts:[
+{
+text:
+`
+Genera EXACTAMENTE ${count} canciones.
+
+Formato:
+
+ARTISTA - CANCION
+
+Tema:
+
+${prompt}
+
+${
+more ?
+"NO repitas la lista anterior":
+""
+}
+
+No numeres.
+`
+}
+]
+}
+]
+
+})
+
+}
+);
+
+const d=
+await r.json();
+
+const text=
+d.candidates?.[0]
+?.content
+?.parts?.[0]
+?.text;
+
+if(!text){
+
+msg(
+JSON.stringify(
+d,
+null,
+2
+)
+);
+
+msg(
+"Gemini no devolvió canciones"
+);
+
+return;
+
+}
+
+document.getElementById(
+"songs"
+).value=
+text
+.replace(
+/^\d+\./gm,
+""
+)
+.trim();
+
+msg(
+"Lista generada"
+);
+
+updateStatus();
+
+}
+catch(e){
+
+msg(
+e.message
+);
+
+}
+
+}
+
 function randomString(n){
 
 const c=
@@ -401,7 +550,11 @@ const c=
 
 let r="";
 
-for(let i=0;i<n;i++){
+for(
+let i=0;
+i<n;
+i++
+){
 
 r +=
 c[
@@ -476,8 +629,7 @@ show_dialog:true,
 code_challenge_method:
 "S256",
 
-code_challenge:
-c
+code_challenge:c
 
 });
 
@@ -559,269 +711,6 @@ msg(
 );
 
 updateStatus();
-
-}
-
-async function generateAIPlaylist(){
-
-const key=
-localStorage.getItem(
-"gemini_key"
-);
-
-if(!key){
-
-msg(
-"Guardar Gemini"
-);
-
-return;
-
-}
-
-msg(
-"Generando..."
-);
-
-const prompt=
-document.getElementById(
-"promptAI"
-).value;
-
-const count=
-document.getElementById(
-"songCount"
-).value;
-
-const r=
-await fetch(
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-contents:[
-{
-parts:[
-{
-text:
-`Genera ${count} canciones
-
-Formato:
-
-ARTISTA - CANCION
-
-Tema:
-
-${prompt}
-
-Sin numeración`
-}
-]
-}
-]
-
-})
-
-}
-);
-
-const d=
-await r.json();
-
-document.getElementById(
-"songs"
-).value=
-d.candidates?.[0]
-?.content
-?.parts?.[0]
-?.text||"";
-
-msg(
-"IA lista"
-);
-
-}
-
-async function searchSong(song){
-
-const r=
-await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const d=
-await r.json();
-
-return d.tracks
-?.items?.[0]
-?.uri||null;
-
-}
-
-async function createPlaylist(){
-
-msg(
-"Creando playlist..."
-);
-
-const p=
-await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-
-name:
-document.getElementById(
-"playlistName"
-).value ||
-
-"Playlist IA",
-
-public:false
-
-})
-
-}
-);
-
-const playlist=
-await p.json();
-
-let uris=[];
-
-let missed=[];
-
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split(
-"\n"
-)
-.filter(
-x=>x.trim()
-);
-
-for(
-let i=0;
-i<songs.length;
-i++
-){
-
-msg(
-`${i+1}/${songs.length}`
-);
-
-const uri=
-await searchSong(
-songs[i]
-);
-
-if(uri){
-
-uris.push(
-uri
-);
-
-}else{
-
-missed.push(
-songs[i]
-);
-
-}
-
-}
-
-msg(
-`Encontradas:
-${uris.length}`
-);
-
-if(
-missed.length
-){
-
-msg(
-`No encontradas:
-${missed.join("\n")}`
-);
-
-}
-
-const add=
-await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-
-},
-
-body:
-JSON.stringify({
-uris
-})
-
-}
-);
-
-if(add.ok){
-
-document.getElementById(
-"playlistStatus"
-).className=
-"status greenStatus";
-
-document.getElementById(
-"playlistStatus"
-).innerHTML=
-"Playlist<br>🟢";
-
-window.open(
-playlist.external_urls.spotify,
-"_blank"
-);
-
-msg(
-"Playlist completa"
-);
-
-}
 
 }
 
