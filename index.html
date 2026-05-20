@@ -2,12 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>
-Spotify Playlist Creator AI v2.6
-</title>
+<title>Spotify Playlist Creator AI v2.7</title>
 
 <style>
 
@@ -35,13 +32,10 @@ display:flex;
 justify-content:center;
 
 color:white;
-
 }
 
 .card{
-
 width:100%;
-
 max-width:1000px;
 
 background:
@@ -63,7 +57,6 @@ box-shadow:
 0,
 0.5
 );
-
 }
 
 h1{
@@ -72,7 +65,6 @@ color:#1DB954;
 }
 
 .version{
-
 margin-top:10px;
 
 display:inline-block;
@@ -86,7 +78,6 @@ color:black;
 font-weight:bold;
 
 border-radius:20px;
-
 }
 
 .statusBox{
@@ -108,6 +99,10 @@ padding:12px 18px;
 border-radius:15px;
 
 font-weight:bold;
+
+min-width:180px;
+
+text-align:center;
 
 }
 
@@ -140,7 +135,6 @@ background:#222;
 color:white;
 
 font-size:15px;
-
 }
 
 textarea{
@@ -228,7 +222,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div class="version">
-Versión v2.6
+Versión v2.7
 </div>
 
 <div class="statusBox">
@@ -237,7 +231,7 @@ Versión v2.6
 id="spotifyStatus"
 class="status redStatus">
 
-Spotify:
+Spotify<br>
 🔴 Desconectado
 
 </div>
@@ -246,8 +240,17 @@ Spotify:
 id="geminiStatus"
 class="status redStatus">
 
-Gemini:
+Gemini<br>
 🔴 Sin API
+
+</div>
+
+<div
+id="playlistStatus"
+class="status redStatus">
+
+Playlist<br>
+🔴 No creada
 
 </div>
 
@@ -324,7 +327,8 @@ Cambiar cuenta
 </button>
 
 <button
-class="blue">
+class="blue"
+onclick="createPlaylist()">
 
 Crear Playlist
 
@@ -351,7 +355,7 @@ Esperando conexión
 <script>
 
 const APP_VERSION=
-"v2.6";
+"v2.7";
 
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
@@ -412,7 +416,7 @@ spotify.className=
 "status greenStatus";
 
 spotify.innerHTML=
-"Spotify:<br>🟢 Conectado";
+"Spotify<br>🟢 Conectado";
 
 }else{
 
@@ -420,7 +424,7 @@ spotify.className=
 "status redStatus";
 
 spotify.innerHTML=
-"Spotify:<br>🔴 Desconectado";
+"Spotify<br>🔴 Desconectado";
 
 }
 
@@ -438,7 +442,7 @@ gemini.className=
 "status greenStatus";
 
 gemini.innerHTML=
-"Gemini:<br>🟢 Conectado";
+"Gemini<br>🟢 Conectado";
 
 }else{
 
@@ -446,7 +450,34 @@ gemini.className=
 "status redStatus";
 
 gemini.innerHTML=
-"Gemini:<br>🔴 Sin API";
+"Gemini<br>🔴 Sin API";
+
+}
+
+}
+
+function updatePlaylistStatus(ok){
+
+const playlist=
+document.getElementById(
+"playlistStatus"
+);
+
+if(ok){
+
+playlist.className=
+"status greenStatus";
+
+playlist.innerHTML=
+"Playlist<br>🟢 Creada";
+
+}else{
+
+playlist.className=
+"status redStatus";
+
+playlist.innerHTML=
+"Playlist<br>🔴 No creada";
 
 }
 
@@ -605,9 +636,7 @@ location.search
 "code"
 );
 
-if(
-!code
-){
+if(!code){
 
 updateStatus();
 
@@ -673,7 +702,95 @@ updateStatus();
 
 }
 
+async function createPlaylist(){
+
+if(
+!accessToken
+){
+
+msg(
+"Spotify no conectado"
+);
+
+return;
+
+}
+
+msg(
+"Creando playlist..."
+);
+
+updatePlaylistStatus(
+false
+);
+
+const res=
+await fetch(
+"https://api.spotify.com/v1/me/playlists",
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+
+name:
+document.getElementById(
+"playlistName"
+).value ||
+
+"Playlist IA",
+
+public:false
+
+})
+
+}
+);
+
+const playlist=
+await res.json();
+
+if(
+!res.ok
+){
+
+msg(
+"Error creando playlist"
+);
+
+return;
+
+}
+
+updatePlaylistStatus(
+true
+);
+
+msg(
+"Playlist creada"
+);
+
+window.open(
+playlist.external_urls.spotify,
+"_blank"
+);
+
+}
+
 updateStatus();
+
+updatePlaylistStatus(
+false
+);
 
 getToken();
 
