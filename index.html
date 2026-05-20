@@ -6,6 +6,7 @@
 <title>Spotify Playlist Creator</title>
 
 <style>
+
 body{
 background:#121212;
 color:white;
@@ -15,7 +16,13 @@ margin:auto;
 padding:30px;
 }
 
-input,textarea{
+h1{
+color:#1DB954;
+margin-bottom:20px;
+}
+
+input,
+textarea{
 width:100%;
 padding:12px;
 margin:10px 0;
@@ -23,10 +30,12 @@ border:none;
 border-radius:10px;
 background:#222;
 color:white;
+font-size:15px;
 }
 
 textarea{
-height:250px;
+height:240px;
+resize:vertical;
 }
 
 button{
@@ -39,9 +48,21 @@ cursor:pointer;
 color:white;
 }
 
-.green{background:#1DB954;}
-.orange{background:#ff9800;}
-.blue{background:#2196F3;}
+.green{
+background:#1DB954;
+}
+
+.orange{
+background:#ff9800;
+}
+
+.blue{
+background:#2196F3;
+}
+
+.red{
+background:#e53935;
+}
 
 #log{
 margin-top:20px;
@@ -50,8 +71,12 @@ background:#1a1a1a;
 border-radius:10px;
 white-space:pre-wrap;
 font-family:monospace;
+max-height:350px;
+overflow:auto;
 }
+
 </style>
+
 </head>
 
 <body>
@@ -64,8 +89,9 @@ placeholder="Nombre playlist">
 
 <textarea
 id="songs"
-placeholder="Michael Jackson - Billie Jean
-Queen - Bohemian Rhapsody">
+placeholder="Queen - Bohemian Rhapsody
+Michael Jackson - Billie Jean
+ABBA - Dancing Queen">
 </textarea>
 
 <button class="green"
@@ -83,8 +109,13 @@ onclick="createPlaylist()">
 Crear Playlist
 </button>
 
+<button class="red"
+onclick="clearStorage()">
+Borrar almacenamiento
+</button>
+
 <div id="log">
-Esperando conexión
+Esperando conexión...
 </div>
 
 <script>
@@ -118,20 +149,51 @@ function msg(t){
 log.innerHTML +=
 "\n"+t;
 
+log.scrollTop=
+log.scrollHeight;
+
+}
+
+function clearStorage(){
+
+localStorage.removeItem(
+"spotify_token"
+);
+
+localStorage.removeItem(
+"spotify_verifier"
+);
+
+localStorage.removeItem(
+"spotify_refresh"
+);
+
+localStorage.clear();
+
+sessionStorage.clear();
+
+accessToken="";
+
+log.innerHTML="";
+
+msg(
+"Almacenamiento eliminado"
+);
+
+msg(
+"Spotify desconectado"
+);
+
+location.reload();
+
 }
 
 function resetSpotify(){
 
-localStorage.clear();
-
-accessToken="";
+clearStorage();
 
 msg(
-"Permisos eliminados"
-);
-
-msg(
-"Pulsa Conectar Spotify"
+"Vuelve a conectar Spotify"
 );
 
 }
@@ -286,6 +348,18 @@ body
 const data=
 await res.json();
 
+if(!data.access_token){
+
+msg(
+JSON.stringify(
+data
+)
+);
+
+return;
+
+}
+
 accessToken=
 data.access_token;
 
@@ -294,23 +368,52 @@ localStorage.setItem(
 accessToken
 );
 
-msg(
-"Spotify conectado"
-);
-
 history.replaceState(
 {},
 "",
 REDIRECT_URI
 );
 
+msg(
+"Spotify conectado"
+);
+
 }
 
 async function searchSong(song){
 
+try{
+
+let query=song;
+
+if(song.includes("-")){
+
+const p=
+song.split("-");
+
+const artist=
+p[0].trim();
+
+const track=
+p.slice(1)
+.join("-")
+.trim();
+
+query=
+`${track} ${artist}`;
+
+}
+
+msg(
+`Buscar:
+${query}`
+);
+
 const res=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(
+query
+)}&type=track&limit=5`,
 {
 headers:{
 Authorization:
@@ -322,9 +425,34 @@ Authorization:
 const data=
 await res.json();
 
+if(
+data.tracks &&
+data.tracks.items &&
+data.tracks.items.length
+){
+
+msg(
+`Encontrada:
+${data.tracks.items[0].name}`
+);
+
 return data.tracks
-?.items?.[0]
-?.uri||null;
+.items[0]
+.uri;
+
+}
+
+return null;
+
+}catch(e){
+
+msg(
+e.message
+);
+
+return null;
+
+}
 
 }
 
@@ -333,30 +461,18 @@ async function createPlaylist(){
 log.innerHTML="";
 
 msg(
-"Verificando usuario..."
-);
-
-const me=
-await fetch(
-"https://api.spotify.com/v1/me",
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-);
-
-const user=
-await me.json();
-
-msg(
-`Usuario:
-${user.display_name}`
-);
-
-msg(
 "Creando playlist..."
+);
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split("\n")
+.filter(
+x=>x.trim()
 );
 
 const playlistRes=
@@ -395,38 +511,37 @@ msg(
 "Playlist creada"
 );
 
-const songs=
-document
-.getElementById(
-"songs"
-)
-.value
-.split("\n")
-.filter(
-x=>x.trim()
-);
-
-const uris=[];
+let uris=[];
 
 for(const s of songs){
 
-const u=
+const uri=
 await searchSong(
 s
 );
 
-if(u){
+if(uri){
 
-uris.push(u);
+uris.push(uri);
 
 }
 
 }
 
 msg(
-`Encontradas:
+`Canciones encontradas:
 ${uris.length}`
 );
+
+if(!uris.length){
+
+msg(
+"No encontré canciones"
+);
+
+return;
+
+}
 
 const add=
 await fetch(
@@ -464,7 +579,12 @@ null,
 if(result.snapshot_id){
 
 msg(
-"Playlist finalizada correctamente"
+"Playlist finalizada"
+);
+
+window.open(
+playlist.external_urls.spotify,
+"_blank"
 );
 
 }
