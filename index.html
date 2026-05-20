@@ -4,14 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator AI v3.7</title>
+<title>Spotify Playlist Creator AI v3.8</title>
 
 <style>
 
 body{
 margin:0;
 font-family:Arial;
-background:linear-gradient(
+background:
+linear-gradient(
 135deg,
 #050505,
 #121212,
@@ -52,11 +53,6 @@ color:black;
 background:#e53935;
 }
 
-.orange{
-background:#ff9800;
-color:black;
-}
-
 input,
 textarea,
 select,
@@ -65,7 +61,6 @@ button{
 width:100%;
 padding:14px;
 margin-top:12px;
-
 border:none;
 border-radius:15px;
 
@@ -116,7 +111,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div>
-Versión v3.7
+Versión v3.8
 </div>
 
 <div class="statusBox">
@@ -147,59 +142,25 @@ Playlist 🔴
 
 </div>
 
-<!-- BOTONES ARRIBA -->
-
-<div class="buttons">
+<!-- SOLO SPOTIFY ARRIBA -->
 
 <button
-class="green"
 onclick="loginSpotify()">
 
 Conectar Spotify
 
 </button>
 
-<button
-class="orange"
-onclick="changeUser()">
-
-Cambiar cuenta
-
-</button>
-
-<button
-class="green"
-onclick="createPlaylist()">
-
-Crear Playlist
-
-</button>
-
-</div>
-
 <input
 id="deepseekKey"
 placeholder="DeepSeek API Key">
 
-<div class="buttons">
-
 <button
-class="green"
 onclick="saveDeepSeek()">
 
 Guardar DeepSeek
 
 </button>
-
-<button
-class="orange"
-onclick="testDeepSeek()">
-
-Probar DeepSeek
-
-</button>
-
-</div>
 
 <textarea
 id="promptAI"
@@ -222,7 +183,6 @@ placeholder="Rock carretera USA">
 <div class="buttons">
 
 <button
-class="orange"
 onclick="generateDeepSeek()">
 
 Generar Lista
@@ -230,7 +190,6 @@ Generar Lista
 </button>
 
 <button
-class="orange"
 onclick="generateDeepSeek(true)">
 
 Buscar Más
@@ -246,6 +205,26 @@ placeholder="Nombre playlist">
 <textarea
 id="songs">
 </textarea>
+
+<!-- BOTONES ABAJO -->
+
+<div class="buttons">
+
+<button
+onclick="createPlaylist()">
+
+Crear Playlist
+
+</button>
+
+<button
+onclick="changeUser()">
+
+Cambiar cuenta
+
+</button>
+
+</div>
 
 <div id="log">
 Esperando conexión
@@ -348,95 +327,6 @@ localStorage.getItem(
 "deepseek_key"
 )||"";
 
-async function testDeepSeek(){
-
-const key=
-localStorage.getItem(
-"deepseek_key"
-);
-
-if(!key){
-
-msg(
-"Guardar API"
-);
-
-return;
-
-}
-
-msg(
-"Probando..."
-);
-
-try{
-
-const r=
-await fetch(
-"https://api.deepseek.com/chat/completions",
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${key}`,
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-model:
-"deepseek-chat",
-
-messages:[
-{
-role:"user",
-content:
-"OK"
-}
-]
-
-})
-
-}
-);
-
-const d=
-await r.json();
-
-if(
-d.choices
-){
-
-msg(
-"DeepSeek conectada"
-);
-
-}else{
-
-msg(
-JSON.stringify(
-d,
-null,
-2
-)
-);
-
-}
-
-}
-catch(e){
-
-msg(
-e.message
-);
-
-}
-
-}
-
 async function generateDeepSeek(more=false){
 
 const key=
@@ -447,17 +337,12 @@ localStorage.getItem(
 if(!key){
 
 msg(
-"Guardar API"
+"Guardar DeepSeek"
 );
 
 return;
 
 }
-
-const count=
-document.getElementById(
-"songCount"
-).value;
 
 msg(
 more ?
@@ -465,6 +350,11 @@ more ?
 :
 "Generando..."
 );
+
+const count=
+document.getElementById(
+"songCount"
+).value;
 
 const r=
 await fetch(
@@ -495,7 +385,6 @@ content:
 `
 Genera EXACTAMENTE
 ${count}
-
 canciones.
 
 Formato:
@@ -559,7 +448,7 @@ await r.json();
 
 return d.tracks
 ?.items?.[0]
-?.uri||null;
+?.uri || null;
 
 }
 
@@ -611,7 +500,7 @@ public:false
 const playlist=
 await p.json();
 
-const songs=
+let songs=
 document
 .getElementById(
 "songs"
@@ -620,7 +509,7 @@ document
 .split(
 "\n"
 )
-filter(
+.filter(
 x=>x.trim()
 );
 
@@ -631,9 +520,14 @@ const s
 of songs
 ){
 
+msg(
+`Buscar:
+${s}`
+);
+
 const uri=
 await searchSong(
-s
+s.trim()
 );
 
 if(uri){
@@ -646,6 +540,24 @@ uri
 
 }
 
+msg(
+`Encontradas:
+${uris.length}`
+);
+
+if(
+uris.length===0
+){
+
+msg(
+"No encontré canciones"
+);
+
+return;
+
+}
+
+const add=
 await fetch(
 `https://api.spotify.com/v1/playlists/${playlist.id}/items`,
 {
@@ -666,8 +578,15 @@ uris
 }
 );
 
-window.open(
-playlist.external_urls.spotify
+const result=
+await add.json();
+
+msg(
+JSON.stringify(
+result,
+null,
+2
+)
 );
 
 document.getElementById(
@@ -679,6 +598,10 @@ document.getElementById(
 "playlistStatus"
 ).innerHTML=
 "Playlist 🟢";
+
+window.open(
+playlist.external_urls.spotify
+);
 
 msg(
 "Playlist creada"
