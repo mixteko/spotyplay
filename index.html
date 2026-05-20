@@ -2,14 +2,26 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spotify Playlist Creator AI v4.5</title>
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>
+Spotify Playlist Creator AI v4.6
+</title>
 
 <style>
+
 body{
 margin:0;
 font-family:Arial;
-background:linear-gradient(135deg,#050505,#121212,#1DB954);
+background:
+linear-gradient(
+135deg,
+#050505,
+#121212,
+#1DB954
+);
+
 padding:30px;
 color:white;
 }
@@ -44,7 +56,10 @@ color:black;
 background:#e53935;
 }
 
-input,textarea,select,button{
+input,
+textarea,
+select,
+button{
 width:100%;
 padding:14px;
 margin-top:12px;
@@ -52,7 +67,9 @@ border:none;
 border-radius:15px;
 }
 
-input,textarea,select{
+input,
+textarea,
+select{
 background:#222;
 color:white;
 }
@@ -81,29 +98,47 @@ white-space:pre-wrap;
 max-height:360px;
 overflow:auto;
 }
+
 </style>
+
 </head>
 
 <body>
 
 <div class="card">
 
-<h1>Spotify Playlist Creator AI</h1>
+<h1>
+Spotify Playlist Creator AI
+</h1>
 
-<div>Versión v4.5</div>
+<div>
+Versión v4.6
+</div>
 
 <div class="statusBox">
 
-<div id="spotifyStatus" class="status red">
+<div
+id="spotifyStatus"
+class="status red">
+
 Spotify 🔴
+
 </div>
 
-<div id="deepseekStatus" class="status red">
+<div
+id="deepseekStatus"
+class="status red">
+
 DeepSeek 🔴
+
 </div>
 
-<div id="playlistStatus" class="status red">
+<div
+id="playlistStatus"
+class="status red">
+
 Playlist 🔴
+
 </div>
 
 </div>
@@ -217,7 +252,6 @@ function refreshApp(){
 promptAI.value="";
 songs.value="";
 playlistName.value="";
-
 log.innerHTML=
 "Refrescado";
 
@@ -276,15 +310,60 @@ function cleanSong(song){
 
 song=song
 
-.replace(/^\d+\./,"")
-.replace(/\*\*/g,"")
-.replace(/\*/g,"")
-.replace(/\(.*?\)/g,"")
-.replace(/feat.*$/i,"")
-.replace(/ft.*$/i,"")
-.replace(/prod.*$/i,"")
-.replace(/•/g,"")
-.replace(/["']/g,"")
+.normalize(
+"NFKD"
+)
+
+.replace(
+/[\u2018\u2019]/g,
+"'"
+)
+
+.replace(
+/[\u201C\u201D]/g,
+'"'
+)
+
+.replace(
+/^\d+\./,
+""
+)
+
+.replace(
+/\*\*/g,
+""
+)
+
+.replace(
+/\*/g,
+""
+)
+
+.replace(
+/\(.*?\)/g,
+""
+)
+
+.replace(
+/feat.*$/i,
+""
+)
+
+.replace(
+/ft.*$/i,
+""
+)
+
+.replace(
+/prod.*$/i,
+""
+)
+
+.replace(
+/•/g,
+""
+)
+
 .trim();
 
 const lower=
@@ -352,7 +431,8 @@ Authorization:
 body:
 JSON.stringify({
 
-model:"deepseek-chat",
+model:
+"deepseek-chat",
 
 messages:[
 {
@@ -360,13 +440,12 @@ role:"user",
 
 content:
 `
-Genera EXACTAMENTE ${count}
+Genera EXACTAMENTE
+${count}
 
 SOLO:
 
 ARTISTA - CANCION
-
-Sin comentarios
 
 Tema:
 
@@ -426,10 +505,28 @@ p.slice(1)
 const queries=[
 
 `track:"${track}" artist:"${artist}"`,
+
 `${artist} ${track}`,
+
 `${track} ${artist}`,
+
 track,
-song
+
+song,
+
+track.replace(/'/g,""),
+
+song.replace(/'/g,""),
+
+track.replace(
+/[^a-zA-Z0-9 ]/g,
+""
+),
+
+song.replace(
+/[^a-zA-Z0-9 ]/g,
+""
+)
 
 ];
 
@@ -456,24 +553,17 @@ await r.json();
 
 const item=
 d.tracks
-?.items
-?.find(
+?.items?.find(
 x=>
 x.name &&
 x.artists?.length
-)
-||
-d.tracks?.items?.[0];
+);
 
 if(item){
 
 msg(
 `OK:
 ${song}`
-);
-
-msg(
-item.uri
 );
 
 return item.uri;
@@ -568,7 +658,7 @@ clean
 if(uri){
 
 uris.push(
-uri.trim()
+uri
 );
 
 }
@@ -708,15 +798,21 @@ new URLSearchParams({
 
 client_id:
 CLIENT_ID,
+
 response_type:
 "code",
+
 redirect_uri:
 REDIRECT_URI,
+
 scope:
 SCOPES,
+
 show_dialog:true,
+
 code_challenge_method:
 "S256",
+
 code_challenge:c
 
 });
@@ -762,14 +858,17 @@ verifier
 
 const r=
 await fetch(
-"https://accounts.spotify.com/api/token",
+"https://api.spotify.com/api/token".replace("/api",""),
 {
 method:"POST",
+
 headers:{
 "Content-Type":
 "application/x-www-form-urlencoded"
 },
+
 body
+
 }
 );
 
@@ -812,4 +911,5 @@ getToken();
 </script>
 
 </body>
+
 </html>
