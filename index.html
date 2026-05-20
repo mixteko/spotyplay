@@ -2,9 +2,12 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
 
-<title>Spotify Playlist Creator AI v2.3</title>
+<title>
+Spotify Playlist Creator AI v2.4
+</title>
 
 <style>
 
@@ -24,15 +27,22 @@ linear-gradient(
 );
 
 min-height:100vh;
+
 padding:30px;
+
 display:flex;
+
 justify-content:center;
+
 color:white;
 }
 
 .card{
+
 width:100%;
+
 max-width:1000px;
+
 background:
 rgba(
 15,
@@ -42,7 +52,9 @@ rgba(
 );
 
 padding:30px;
+
 border-radius:25px;
+
 }
 
 .version{
@@ -59,11 +71,17 @@ textarea,
 select{
 
 width:100%;
+
 padding:14px;
+
 margin-top:15px;
+
 border:none;
+
 border-radius:15px;
+
 background:#222;
+
 color:white;
 
 }
@@ -130,7 +148,7 @@ Spotify Playlist Creator AI
 </h1>
 
 <div class="version">
-Versión v2.3
+Versión v2.4
 </div>
 
 <input
@@ -145,26 +163,15 @@ Guardar IA
 
 <textarea
 id="promptAI"
-placeholder="Rock clásico carretera USA">
+placeholder="Rock clásico carretera">
 </textarea>
 
 <select id="songCount">
 
-<option value="10">
-10 canciones
-</option>
-
-<option value="25">
-25 canciones
-</option>
-
-<option value="50">
-50 canciones
-</option>
-
-<option value="100">
-100 canciones
-</option>
+<option value="10">10</option>
+<option value="25">25</option>
+<option value="50">50</option>
+<option value="100">100</option>
 
 </select>
 
@@ -205,7 +212,7 @@ Crear Playlist
 <button
 class="red"
 onclick="clearStorage()">
-Borrar datos
+Borrar
 </button>
 
 </div>
@@ -218,17 +225,15 @@ Esperando conexión
 
 <script>
 
-const APP_VERSION="v2.3";
-
 const CLIENT_ID=
 "6c398ae66eae4f84959cfce08bd0c74c";
 
 const REDIRECT_URI=
 "https://mixteko.github.io/spotyplay/";
 
-const SCOPES=[
+const SCOPES=
+[
 "user-read-private",
-"playlist-read-private",
 "playlist-modify-private",
 "playlist-modify-public"
 ].join(" ");
@@ -253,18 +258,17 @@ log.scrollHeight;
 
 }
 
-msg(APP_VERSION);
+msg(
+"v2.4"
+);
 
 function saveGeminiKey(){
 
-const key=
-document.getElementById(
-"geminiKey"
-).value.trim();
-
 localStorage.setItem(
 "gemini_key",
-key
+document.getElementById(
+"geminiKey"
+).value
 );
 
 msg(
@@ -287,20 +291,6 @@ localStorage.getItem(
 "gemini_key"
 );
 
-if(!key){
-
-msg(
-"Guardar Gemini primero"
-);
-
-return;
-
-}
-
-msg(
-"Generando IA..."
-);
-
 const prompt=
 document.getElementById(
 "promptAI"
@@ -311,30 +301,9 @@ document.getElementById(
 "songCount"
 ).value;
 
-const body={
-
-contents:[
-{
-parts:[
-{
-text:
-`Genera ${count} canciones.
-
-Formato:
-
-ARTISTA - CANCION
-
-Tema:
-
-${prompt}
-
-Sin numeración`
-}
-]
-}
-]
-
-};
+msg(
+"Generando IA..."
+);
 
 const r=
 await fetch(
@@ -348,7 +317,27 @@ headers:{
 },
 
 body:
-JSON.stringify(body)
+JSON.stringify({
+
+contents:[
+{
+parts:[
+{
+text:
+`Genera ${count} canciones.
+
+Formato:
+
+ARTISTA - CANCION
+
+Tema:
+${prompt}`
+}
+]
+}
+]
+
+})
 
 }
 );
@@ -356,16 +345,13 @@ JSON.stringify(body)
 const d=
 await r.json();
 
-const text=
+document.getElementById(
+"songs"
+).value=
 d.candidates?.[0]
 ?.content
 ?.parts?.[0]
 ?.text||"";
-
-document.getElementById(
-"songs"
-).value=
-text;
 
 msg(
 "IA lista"
@@ -373,184 +359,16 @@ msg(
 
 }
 
-function clearStorage(){
-
-localStorage.clear();
-
-sessionStorage.clear();
-
-location.reload();
-
-}
-
-function changeUser(){
-
-window.open(
-"https://www.spotify.com/logout/",
-"_blank"
-);
-
-clearStorage();
-
-}
-
-function randomString(n){
-
-const chars=
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-let r="";
-
-for(let i=0;i<n;i++){
-
-r+=chars[
-Math.floor(
-Math.random()*
-chars.length
-)
-];
-
-}
-
-return r;
-
-}
-
-async function challenge(v){
-
-const data=
-new TextEncoder()
-.encode(v);
-
-const hash=
-await crypto.subtle.digest(
-"SHA-256",
-data
-);
-
-return btoa(
-String.fromCharCode(
-...new Uint8Array(hash)
-))
-.replace(/\+/g,"-")
-.replace(/\//g,"_")
-.replace(/=/g,"");
-
-}
-
-async function loginSpotify(){
-
-const verifier=
-randomString(64);
-
-localStorage.setItem(
-"spotify_verifier",
-verifier
-);
-
-const c=
-await challenge(verifier);
-
-const params=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-response_type:
-"code",
-
-redirect_uri:
-REDIRECT_URI,
-
-scope:
-SCOPES,
-
-show_dialog:true,
-
-code_challenge_method:
-"S256",
-
-code_challenge:c
-
-});
-
-window.location.href=
-"https://accounts.spotify.com/authorize?"+
-params.toString();
-
-}
-
-async function getToken(){
-
-const code=
-new URLSearchParams(
-location.search
-).get("code");
-
-if(!code)return;
-
-const verifier=
-localStorage.getItem(
-"spotify_verifier"
-);
-
-const body=
-new URLSearchParams({
-
-client_id:
-CLIENT_ID,
-
-grant_type:
-"authorization_code",
-
-code,
-
-redirect_uri:
-REDIRECT_URI,
-
-code_verifier:
-verifier
-
-});
-
-const r=
-await fetch(
-"https://accounts.spotify.com/api/token",
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/x-www-form-urlencoded"
-},
-
-body
-}
-);
-
-const d=
-await r.json();
-
-accessToken=
-d.access_token;
-
-localStorage.setItem(
-"spotify_token",
-accessToken
-);
-
-msg(
-"Spotify conectado"
-);
-
-}
-
 async function searchSong(song){
 
+msg(
+`Buscar:
+${song}`
+);
+
 const r=
 await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&market=MX&limit=1`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(song)}&type=track&limit=1`,
 {
 headers:{
 Authorization:
@@ -570,9 +388,134 @@ return d.tracks
 
 async function createPlaylist(){
 
+log.innerHTML="";
+
 msg(
 "Creando playlist..."
 );
+
+const p=
+await fetch(
+"https://api.spotify.com/v1/me/playlists",
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+
+name:
+document.getElementById(
+"playlistName"
+).value,
+
+public:false
+
+})
+
+}
+);
+
+const playlist=
+await p.json();
+
+msg(
+"Playlist creada"
+);
+
+const songs=
+document
+.getElementById(
+"songs"
+)
+.value
+.split(
+"\n"
+)
+.filter(
+x=>x.trim()
+);
+
+let uris=[];
+
+for(
+let i=0;
+i<songs.length;
+i++
+){
+
+msg(
+`${i+1}/${songs.length}`
+);
+
+const uri=
+await searchSong(
+songs[i]
+);
+
+if(uri){
+
+uris.push(
+uri
+);
+
+}
+
+}
+
+msg(
+`Encontradas:
+${uris.length}`
+);
+
+const add=
+await fetch(
+`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
+{
+method:"POST",
+
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+
+},
+
+body:
+JSON.stringify({
+uris
+})
+
+}
+);
+
+msg(
+`HTTP:
+${add.status}`
+);
+
+if(add.ok){
+
+window.open(
+playlist.external_urls.spotify,
+"_blank"
+);
+
+msg(
+"Terminada"
+);
+
+}
 
 }
 
