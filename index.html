@@ -1,3 +1,8 @@
+# Spotify Playlist Creator AI v5.3 Gemini Edition
+
+Guarda TODO como `index.html`
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -218,6 +223,10 @@ log.scrollHeight;
 
 function refreshApp(){
 
+const promptAI=document.getElementById("promptAI");
+const songs=document.getElementById("songs");
+const playlistName=document.getElementById("playlistName");
+
 promptAI.value="";
 songs.value="";
 playlistName.value="";
@@ -249,12 +258,12 @@ localStorage.getItem(
 
 function updateStatus(){
 
-spotifyStatus.className=
+document.getElementById("spotifyStatus").className=
 accessToken?
 "status ok":
 "status off";
 
-spotifyStatus.innerHTML=
+document.getElementById("spotifyStatus").innerHTML=
 accessToken?
 "Spotify 🟢":
 "Spotify 🔴";
@@ -264,12 +273,12 @@ localStorage.getItem(
 "gemini_key"
 );
 
-geminiStatus.className=
+document.getElementById("geminiStatus").className=
 g?
 "status ok":
 "status off";
 
-geminiStatus.innerHTML=
+document.getElementById("geminiStatus").innerHTML=
 g?
 "Gemini 🟢":
 "Gemini 🔴";
@@ -631,8 +640,8 @@ return;
 
 }
 
-playlistStatus.className="status ok";
-playlistStatus.innerHTML="Playlist 🟢";
+document.getElementById("playlistStatus").className="status ok";
+document.getElementById("playlistStatus").innerHTML="Playlist 🟢";
 
 msg("Canciones agregadas correctamente");
 
@@ -775,4 +784,6 @@ getToken();
 
 </body>
 </html>
+```
+
 
