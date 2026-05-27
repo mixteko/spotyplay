@@ -441,15 +441,19 @@ contents:[
 parts:[
 {
 text:`
-Genera EXACTAMENTE ${songCount.value} canciones.
+Genera EXACTAMENTE ${parseInt(songCount.value)} canciones diferentes.
 
-Usa SOLAMENTE este formato:
+REGLAS OBLIGATORIAS:
+- Debes devolver EXACTAMENTE ${parseInt(songCount.value)} líneas.
+- Cada línea debe contener UNA canción.
+- No uses numeración.
+- No uses comentarios.
+- No uses títulos.
+- No uses texto extra.
+- No repitas canciones.
 
+Formato obligatorio:
 ARTISTA - CANCION
-
-Sin números.
-Sin comentarios.
-Sin explicaciones.
 
 Tema:
 ${promptAI.value}
@@ -485,7 +489,16 @@ msg("Gemini no devolvió canciones");
 return;
 }
 
-songs.value=text;
+const cleaned=text
+.split("
+")
+.map(x=>x.trim())
+.filter(x=>x.includes("-"));
+
+const limited=cleaned.slice(0,parseInt(songCount.value));
+
+songs.value=limited.join("
+");
 
 msg("Lista generada correctamente");
 
@@ -808,5 +821,6 @@ getToken();
 
 </body>
 </html>
+
 
 
