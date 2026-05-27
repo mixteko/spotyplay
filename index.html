@@ -783,39 +783,31 @@ window.location.href=
 "https://www.spotify.com/logout";
 }
 
-document.getElementById("spotifyBtn")
-.addEventListener("click",loginSpotify);
+window.addEventListener("DOMContentLoaded",()=>{
 
+const spotifyBtn=document.getElementById("spotifyBtn");
+const saveGeminiBtn=document.getElementById("saveGeminiBtn");
+const generateBtn=document.getElementById("generateBtn");
+const moreBtn=document.getElementById("moreBtn");
+const refreshBtn=document.getElementById("refreshBtn");
+const playlistBtn=document.getElementById("playlistBtn");
+const changeBtn=document.getElementById("changeBtn");
 
-document.getElementById("saveGeminiBtn")
-.addEventListener("click",saveGemini);
-
-
-document.getElementById("generateBtn")
-.addEventListener("click",()=>generateGemini(false));
-
-
-document.getElementById("moreBtn")
-.addEventListener("click",()=>generateGemini(true));
-
-
-document.getElementById("refreshBtn")
-.addEventListener("click",refreshApp);
-
-
-document.getElementById("playlistBtn")
-.addEventListener("click",createPlaylist);
-
-
-document.getElementById("changeBtn")
-.addEventListener("click",changeUser);
-
+spotifyBtn.onclick=loginSpotify;
+saveGeminiBtn.onclick=saveGemini;
+generateBtn.onclick=()=>generateGemini(false);
+moreBtn.onclick=()=>generateGemini(true);
+refreshBtn.onclick=refreshApp;
+playlistBtn.onclick=createPlaylist;
+changeBtn.onclick=changeUser;
 
 geminiKey.value=
 localStorage.getItem("gemini_key")||"";
 
 updateStatus();
 getToken();
+
+});
 
 </script>
 
