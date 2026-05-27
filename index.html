@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Spotify Playlist Creator AI v6.0</title>
+<title>Spotify Playlist Creator AI v1.11</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
 
@@ -20,24 +20,40 @@ box-sizing:border-box;
 body{
 font-family:'Inter',sans-serif;
 background:
-radial-gradient(circle at top,#1DB954 0%,#121212 40%,#050505 100%);
+radial-gradient(circle at top left,#00f0ff 0%,transparent 25%),
+radial-gradient(circle at top right,#ff00ea 0%,transparent 25%),
+linear-gradient(135deg,#050510,#09091f,#111827);
 min-height:100vh;
-color:white;
 padding:30px;
+color:white;
+overflow-x:hidden;
+}
+
+body::before{
+content:"";
+position:fixed;
+inset:0;
+background:
+linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+background-size:40px 40px;
+pointer-events:none;
 }
 
 .container{
-max-width:1200px;
+max-width:1300px;
 margin:auto;
 }
 
 .card{
-background:rgba(20,20,20,.9);
+background:rgba(10,10,25,.85);
+border:1px solid rgba(255,255,255,.08);
 backdrop-filter:blur(20px);
-border:1px solid rgba(255,255,255,.06);
-border-radius:30px;
-padding:30px;
-box-shadow:0 20px 50px rgba(0,0,0,.5);
+border-radius:35px;
+padding:35px;
+box-shadow:
+0 0 30px rgba(0,240,255,.15),
+0 0 60px rgba(255,0,234,.08);
 }
 
 .header{
@@ -50,148 +66,156 @@ margin-bottom:30px;
 }
 
 .title h1{
-font-size:38px;
-font-weight:700;
+font-family:'Orbitron',sans-serif;
+font-size:42px;
+background:linear-gradient(90deg,#00f0ff,#ff00ea);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
 }
 
 .title p{
-opacity:.7;
-margin-top:5px;
+opacity:.75;
+margin-top:8px;
 }
 
-.status-grid{
+.statusRow{
 display:flex;
 gap:12px;
 flex-wrap:wrap;
 }
 
 .status{
-padding:12px 18px;
-border-radius:16px;
+padding:14px 20px;
+border-radius:18px;
+font-weight:700;
 font-size:14px;
-font-weight:600;
+backdrop-filter:blur(10px);
 }
 
 .connected{
-background:#1DB954;
+background:linear-gradient(135deg,#00ff9d,#00d9ff);
 color:#000;
+box-shadow:0 0 20px rgba(0,255,157,.35);
 }
 
 .disconnected{
-background:#ff3b30;
+background:linear-gradient(135deg,#ff0055,#ff4d00);
 color:white;
+box-shadow:0 0 20px rgba(255,0,85,.25);
 }
 
 .grid{
 display:grid;
 grid-template-columns:1fr 1fr;
-gap:25px;
+gap:28px;
 }
 
 .panel{
-background:#181818;
-border-radius:24px;
-padding:24px;
-border:1px solid rgba(255,255,255,.05);
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.06);
+border-radius:28px;
+padding:28px;
+box-shadow:inset 0 0 20px rgba(255,255,255,.03);
 }
 
 .panel h2{
-margin-bottom:18px;
-font-size:20px;
+font-family:'Orbitron',sans-serif;
+margin-bottom:20px;
+font-size:22px;
+color:#00f0ff;
 }
 
 input,
 textarea,
 select{
 width:100%;
-background:#101010;
-border:1px solid rgba(255,255,255,.08);
-color:white;
-padding:16px;
+padding:18px;
+margin-top:12px;
+border:none;
 border-radius:18px;
+background:#0f172a;
+color:white;
 font-size:15px;
 outline:none;
-transition:.2s;
+border:1px solid rgba(255,255,255,.08);
+transition:.25s;
 }
 
 input:focus,
 textarea:focus,
 select:focus{
-border-color:#1DB954;
-box-shadow:0 0 0 3px rgba(29,185,84,.2);
+border-color:#00f0ff;
+box-shadow:
+0 0 0 3px rgba(0,240,255,.2),
+0 0 25px rgba(0,240,255,.2);
 }
 
 textarea{
-min-height:220px;
+min-height:240px;
 resize:vertical;
 }
 
-.space{
-height:16px;
-}
-
-.btn-group{
+.buttonGrid{
 display:flex;
-gap:12px;
 flex-wrap:wrap;
-margin-top:15px;
+gap:14px;
+margin-top:18px;
 }
 
 button{
 flex:1;
-min-width:140px;
+min-width:150px;
+padding:18px;
 border:none;
 border-radius:18px;
-padding:16px;
 font-weight:700;
 font-size:15px;
 cursor:pointer;
-transition:.2s;
+transition:.25s;
+position:relative;
+overflow:hidden;
 }
 
 button:hover{
-transform:translateY(-2px);
+transform:translateY(-3px) scale(1.02);
 }
 
 .primary{
-background:#1DB954;
-color:black;
+background:linear-gradient(135deg,#00f0ff,#0077ff);
+color:white;
+box-shadow:0 0 25px rgba(0,240,255,.35);
 }
 
 .secondary{
-background:#242424;
+background:linear-gradient(135deg,#7b00ff,#ff00ea);
 color:white;
+box-shadow:0 0 25px rgba(255,0,234,.25);
 }
 
 .danger{
-background:#ff3b30;
+background:linear-gradient(135deg,#ff0055,#ff4d00);
 color:white;
+box-shadow:0 0 25px rgba(255,0,85,.25);
 }
 
 .log{
-margin-top:25px;
-background:#0b0b0b;
-padding:20px;
-border-radius:20px;
-height:260px;
+margin-top:30px;
+background:#060b18;
+border:1px solid rgba(255,255,255,.08);
+padding:25px;
+border-radius:24px;
+height:280px;
 overflow:auto;
 white-space:pre-wrap;
 font-size:14px;
-line-height:1.5;
-border:1px solid rgba(255,255,255,.06);
+line-height:1.6;
+box-shadow:inset 0 0 30px rgba(0,240,255,.06);
 }
 
-@media(max-width:900px){
-
+@media(max-width:950px){
 .grid{
 grid-template-columns:1fr;
 }
-
-.header{
-flex-direction:column;
-align-items:flex-start;
-}
-
 }
 
 </style>
@@ -205,20 +229,14 @@ align-items:flex-start;
 <div class="header">
 
 <div class="title">
-<h1>Spotify Playlist Creator</h1>
-<p>Versión v6.0 Modern UI</p>
+<h1>SPOTIFY AI</h1>
+<p>Version 1.11 Neon Futuristic</p>
 </div>
 
-<div class="status-grid">
-<div id="spotifyStatus" class="status disconnected">
-Spotify 🔴
-</div>
-<div id="geminiStatus" class="status disconnected">
-Gemini 🔴
-</div>
-<div id="playlistStatus" class="status disconnected">
-Playlist 🔴
-</div>
+<div class="statusRow">
+<div id="spotifyStatus" class="status disconnected">Spotify 🔴</div>
+<div id="geminiStatus" class="status disconnected">Gemini 🔴</div>
+<div id="playlistStatus" class="status disconnected">Playlist 🔴</div>
 </div>
 
 </div>
@@ -226,35 +244,25 @@ Playlist 🔴
 <div class="grid">
 
 <div class="panel">
-<h2>Configuración IA</h2>
+<h2>IA GENERATOR</h2>
 
 <button id="spotifyBtn" class="primary">
 Conectar Spotify
 </button>
 
-<div class="space"></div>
+<input id="geminiKey" placeholder="Gemini API Key">
 
-<input
-id="geminiKey"
-placeholder="Gemini API Key">
-
-<div class="btn-group">
+<div class="buttonGrid">
 <button id="saveGeminiBtn" class="secondary">
 Guardar Gemini
 </button>
+
 <button id="refreshBtn" class="secondary">
 Refrescar
 </button>
 </div>
 
-<div class="space"></div>
-
-<textarea
-id="promptAI"
-placeholder="Ejemplo: Kpop relajante nocturno">
-</textarea>
-
-<div class="space"></div>
+<textarea id="promptAI" placeholder="Ejemplo: Kpop futurista nocturno"></textarea>
 
 <select id="songCount">
 <option value="10">10 canciones</option>
@@ -266,10 +274,11 @@ placeholder="Ejemplo: Kpop relajante nocturno">
 <option value="100">100 canciones</option>
 </select>
 
-<div class="btn-group">
+<div class="buttonGrid">
 <button id="generateBtn" class="primary">
 Generar Lista
 </button>
+
 <button id="moreBtn" class="secondary">
 Buscar Más
 </button>
@@ -278,20 +287,17 @@ Buscar Más
 </div>
 
 <div class="panel">
-<h2>Playlist Spotify</h2>
+<h2>PLAYLIST BUILDER</h2>
 
-<input
-id="playlistName"
-placeholder="Nombre playlist">
-
-<div class="space"></div>
+<input id="playlistName" placeholder="Nombre playlist">
 
 <textarea id="songs"></textarea>
 
-<div class="btn-group">
+<div class="buttonGrid">
 <button id="playlistBtn" class="primary">
 Crear Playlist
 </button>
+
 <button id="changeBtn" class="danger">
 Cambiar Cuenta
 </button>
@@ -310,11 +316,8 @@ Esperando conexión...
 
 <script>
 
-const CLIENT_ID=
-"6c398ae66eae4f84959cfce08bd0c74c";
-
-const REDIRECT_URI=
-"https://mixteko.github.io/spotyplay/";
+const CLIENT_ID="6c398ae66eae4f84959cfce08bd0c74c";
+const REDIRECT_URI="https://mixteko.github.io/spotyplay/";
 
 const SCOPES=[
 "user-read-private",
@@ -324,8 +327,7 @@ const SCOPES=[
 "playlist-modify-public"
 ].join(" ");
 
-let accessToken=
-localStorage.getItem("spotify_token")||"";
+let accessToken=localStorage.getItem("spotify_token")||"";
 
 const spotifyStatus=document.getElementById("spotifyStatus");
 const geminiStatus=document.getElementById("geminiStatus");
@@ -373,8 +375,8 @@ setDisconnected(geminiStatus,"Gemini 🔴");
 
 function refreshApp(){
 promptAI.value="";
-songs.value="";
 playlistName.value="";
+songs.value="";
 log.innerHTML="Refrescado";
 }
 
@@ -386,7 +388,6 @@ geminiKey.value.trim()
 );
 
 updateStatus();
-
 msg("Gemini guardada");
 
 }
@@ -441,18 +442,16 @@ contents:[
 parts:[
 {
 text:`
-Genera EXACTAMENTE ${parseInt(songCount.value)} canciones diferentes.
+Genera EXACTAMENTE ${parseInt(songCount.value)} canciones.
 
-REGLAS OBLIGATORIAS:
-- Debes devolver EXACTAMENTE ${parseInt(songCount.value)} líneas.
-- Cada línea debe contener UNA canción.
-- No uses numeración.
-- No uses comentarios.
-- No uses títulos.
-- No uses texto extra.
-- No repitas canciones.
+REGLAS:
+- EXACTAMENTE ${parseInt(songCount.value)} líneas
+- Una canción por línea
+- No usar números
+- No usar comentarios
+- No repetir canciones
 
-Formato obligatorio:
+Formato:
 ARTISTA - CANCION
 
 Tema:
@@ -466,7 +465,7 @@ ${more?"No repetir canciones":""}
 ],
 generationConfig:{
 temperature:0.9,
-maxOutputTokens:2048
+maxOutputTokens:4096
 }
 })
 }
@@ -479,10 +478,7 @@ msg(JSON.stringify(data.error,null,2));
 return;
 }
 
-const text=
-data.candidates?.[0]
-?.content?.parts?.[0]
-?.text||"";
+const text=data.candidates?.[0]?.content?.parts?.[0]?.text||"";
 
 if(!text){
 msg("Gemini no devolvió canciones");
@@ -490,15 +486,13 @@ return;
 }
 
 const cleaned=text
-.split("
-")
+.split("\n")
 .map(x=>x.trim())
 .filter(x=>x.includes("-"));
 
-const limited=cleaned.slice(0,parseInt(songCount.value));
-
-songs.value=limited.join("
-");
+songs.value=cleaned
+.slice(0,parseInt(songCount.value))
+.join("\n");
 
 msg("Lista generada correctamente");
 
@@ -521,7 +515,6 @@ Authorization:`Bearer ${accessToken}`
 );
 
 const d=await r.json();
-
 return d.tracks?.items||[];
 
 }
@@ -537,7 +530,6 @@ let queries=[song];
 if(song.includes("-")){
 
 const p=song.split("-");
-
 const artist=p[0].trim();
 const track=p.slice(1).join("-").trim();
 
@@ -565,7 +557,6 @@ console.log(e);
 }
 
 msg(`No encontrada: ${song}`);
-
 return null;
 
 }
@@ -701,10 +692,7 @@ localStorage.removeItem("spotify_token");
 
 const verifier=randomString(64);
 
-localStorage.setItem(
-"spotify_verifier",
-verifier
-);
+localStorage.setItem("spotify_verifier",verifier);
 
 const c=await challenge(verifier);
 
@@ -758,10 +746,7 @@ if(d.access_token){
 
 accessToken=d.access_token;
 
-localStorage.setItem(
-"spotify_token",
-accessToken
-);
+localStorage.setItem("spotify_token",accessToken);
 
 window.history.replaceState(
 {},
@@ -770,7 +755,6 @@ window.location.pathname
 );
 
 updateStatus();
-
 msg("Spotify conectado");
 
 }
@@ -779,8 +763,7 @@ msg("Spotify conectado");
 
 function changeUser(){
 localStorage.clear();
-window.location.href=
-"https://www.spotify.com/logout";
+window.location.href="https://www.spotify.com/logout";
 }
 
 window.addEventListener("DOMContentLoaded",()=>{
@@ -801,8 +784,7 @@ refreshBtn.onclick=refreshApp;
 playlistBtn.onclick=createPlaylist;
 changeBtn.onclick=changeUser;
 
-geminiKey.value=
-localStorage.getItem("gemini_key")||"";
+geminiKey.value=localStorage.getItem("gemini_key")||"";
 
 updateStatus();
 getToken();
