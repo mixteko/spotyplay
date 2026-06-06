@@ -402,8 +402,7 @@ window.location.pathname
 );
 
 updateStatus();
-const me =
-await fetch(
+
 const meResponse =
 await fetch(
 
@@ -425,10 +424,10 @@ console.log(
 "SPOTIFY USER:",
 me.id
 );
+
 msg(
 "Spotify conectado"
 );
-
 }else{
 
 msg(
