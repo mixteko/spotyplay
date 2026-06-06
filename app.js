@@ -1085,7 +1085,7 @@ i+100
 const addResponse =
 await fetch(
 
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks?position=0`,
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 
 {
 method:"POST",
@@ -1110,6 +1110,16 @@ uris:chunk
 
 const result =
 await addResponse.json();
+
+console.log(
+"ADD STATUS:",
+addResponse.status
+);
+
+console.log(
+"ADD RESPONSE:",
+result
+);
 
 if(
 result.error
