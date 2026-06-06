@@ -1113,7 +1113,6 @@ resolve,
    AGREGAR CANCIONES
 ========================== */
 
-
 if(
 !uris.length
 ){
@@ -1134,6 +1133,11 @@ msg(
 "Agregando canciones..."
 );
 
+console.log(
+"URIS:",
+uris
+);
+
 for(
 let i=0;
 i<uris.length;
@@ -1144,6 +1148,11 @@ const chunk =
 uris.slice(
 i,
 i+100
+);
+
+console.log(
+"CHUNK:",
+chunk
 );
 
 const addResponse =
@@ -1157,7 +1166,6 @@ method:"POST",
 headers:{
 Authorization:
 `Bearer ${accessToken}`,
-
 "Content-Type":
 "application/json"
 },
@@ -1176,27 +1184,20 @@ const result =
 await addResponse.json();
 
 console.log(
-"PLAYLIST ID:",
-playlist.id
-);
-
-console.log(
-"PLAYLIST RESPONSE:",
-playlist
-);
-
-console.log(
 "ADD STATUS:",
 addResponse.status
 );
 
 console.log(
 "ADD RESPONSE:",
-JSON.stringify(
-result,
-null,
-2
-)
+result
+);
+
+console.log(
+"REQUEST BODY:",
+JSON.stringify({
+uris:chunk
+})
 );
 
 if(
