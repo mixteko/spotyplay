@@ -879,6 +879,7 @@ return null;
 }
 
 }
+
 /* =========================================
    CREAR PLAYLIST
 ========================================= */
@@ -967,19 +968,6 @@ msg(
 `Playlist creada: ${playlist.name}`
 );
 
-}catch(error){
-
-console.error(
-error
-);
-
-msg(
-"Error creando playlist"
-);
-
-}
-
-}
 /* ==========================
    LEER CANCIONES
 ========================== */
@@ -1015,6 +1003,7 @@ msg(
 /* ==========================
    BUSCAR CANCIONES
 ========================== */
+
 const uris = [];
 
 for(const line of lines){
@@ -1119,16 +1108,6 @@ uris:chunk
 const result =
 await addResponse.json();
 
-console.log(
-"ADD STATUS:",
-addResponse.status
-);
-
-console.log(
-"ADD RESPONSE:",
-result
-);
-
 if(
 result.error
 ){
@@ -1158,7 +1137,7 @@ uris.length
 
 }
 
-   /* ==========================
+/* ==========================
    FINALIZAR
 ========================== */
 
@@ -1179,6 +1158,20 @@ window.open(
 playlist.external_urls.spotify,
 "_blank"
 );
+
+}
+
+}catch(error){
+
+console.error(
+error
+);
+
+msg(
+"Error creando playlist"
+);
+
+}
 
 }
 /* =========================================
