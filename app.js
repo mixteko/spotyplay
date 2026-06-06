@@ -1118,16 +1118,16 @@ addResponse.status
 
 console.log(
 "ADD RESPONSE:",
-result
+JSON.stringify(
+result,
+null,
+2
+)
 );
-
-if(
-result.error
-){
 
 msg(
 JSON.stringify(
-result.error,
+result,
 null,
 2
 )
