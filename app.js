@@ -965,6 +965,16 @@ console.log(
 playlist
 );
 
+console.log(
+"PLAYLIST OWNER:",
+playlist.owner
+);
+
+console.log(
+"PLAYLIST OWNER ID:",
+playlist.owner?.id
+);
+
 if(
 playlist.error
 ){
@@ -983,6 +993,16 @@ return;
 
 msg(
 `Playlist creada: ${playlist.name}`
+);
+
+console.log(
+"PLAYLIST ID:",
+playlist.id
+);
+
+console.log(
+"PLAYLIST URL:",
+playlist.external_urls?.spotify
 );
 /* ==========================
    LEER CANCIONES
