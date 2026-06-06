@@ -961,6 +961,8 @@ return null;
 
 async function createPlaylist(){
 
+console.log("PASO 0");
+
 if(!accessToken){
 
 msg(
@@ -971,21 +973,18 @@ return;
 
 }
 
+console.log("PASO 1");
+
 msg(
 "Creando playlist..."
 );
 
 const finalName =
-
-playlistName
-.value
-.trim()
-
+playlistName.value.trim()
 ||
-
 `${promptAI.value || "Playlist"} Mix`;
 
-try{
+console.log("PASO 2");
 
 const playlistResponse =
 await fetch(
@@ -1010,7 +1009,7 @@ name:finalName,
 public:false,
 
 description:
-"Generada con Spotify AI Cloud"
+"Generada con Spotify AI v1.15"
 
 })
 
@@ -1018,12 +1017,24 @@ description:
 
 );
 
+console.log("PASO 3");
+
 const playlist =
 await playlistResponse.json();
+
+console.log(
+"PASO 4",
+playlist
+);
 
 if(
 playlist.error
 ){
+
+console.log(
+"ERROR PLAYLIST",
+playlist.error
+);
 
 msg(
 JSON.stringify(
@@ -1037,10 +1048,38 @@ return;
 
 }
 
+console.log("PASO 5");
+
 msg(
 `Playlist creada: ${playlist.name}`
 );
 
+const songs =
+songsArea.value
+.split("\n")
+.filter(
+s=>s.trim()
+);
+
+console.log(
+"PASO 6",
+songs.length
+);
+
+const uris = [];
+
+for(const song of songs){
+
+console.log(
+"BUSCANDO",
+song
+);
+
+}
+
+console.log("PASO FINAL");
+
+}
 /* ==========================
    LEER CANCIONES
 ========================== */
