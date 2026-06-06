@@ -730,6 +730,7 @@ document.getElementById(
 /* =========================================
    SPOTIFY SEARCH
 ========================================= */
+
 async function spotifySearch(query){
 
 try{
@@ -743,7 +744,7 @@ query
 const response =
 await fetch(
 
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=3`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
 
 {
 headers:{
@@ -756,6 +757,11 @@ Authorization:
 
 if(response.status === 429){
 
+console.warn(
+"Spotify 429:",
+cleanQuery
+);
+
 msg(
 `Spotify limit: ${cleanQuery}`
 );
@@ -764,7 +770,7 @@ await new Promise(
 resolve =>
 setTimeout(
 resolve,
-2000
+5000
 )
 );
 
@@ -807,6 +813,7 @@ return [];
 /* =========================================
    BUSQUEDA PRECISA
 ========================================= */
+
 async function searchSong(
 song
 ){
@@ -821,6 +828,14 @@ return null;
 }
 
 try{
+
+await new Promise(
+resolve =>
+setTimeout(
+resolve,
+1500
+)
+);
 
 const results =
 await spotifySearch(
@@ -840,16 +855,23 @@ return null;
 
 }
 
+const bestTrack =
+results[0];
+
 msg(
-`Exacta: ${song}`
+`Encontrada: ${song}`
 );
 
-return results[0].uri;
+return bestTrack.uri;
 
 }catch(error){
 
 console.error(
 error
+);
+
+msg(
+`Error: ${song}`
 );
 
 return null;
