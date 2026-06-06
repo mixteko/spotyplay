@@ -820,148 +820,39 @@ return null;
 
 }
 
-let queries =
-[
-song
-];
-
-if(song.includes("-")){
-
-const parts =
-song.split("-");
-
-const artist =
-parts[0]
-.trim();
-
-const track =
-parts
-.slice(1)
-.join("-")
-.trim();
-
-queries.push(
-`${artist} ${track}`
-);
-
-queries.push(
-track
-);
-
-}
-
-for(const q of queries){
-
-try{
-
 await new Promise(
 resolve =>
 setTimeout(
 resolve,
-300
+1200
 )
 );
 
+try{
+
 const results =
 await spotifySearch(
-q
+song
 );
 
 if(!results.length){
 
-continue;
+msg(
+`No encontrada: ${song}`
+);
+
+return null;
 
 }
 
-const wanted =
-song.toLowerCase();
-
-const exact =
-results.find(track=>{
-
-const artists =
-track.artists
-.map(
-a=>a.name
-)
-.join(" ")
-.toLowerCase();
-
-const title =
-track.name
-.toLowerCase();
-
-return (
-
-wanted.includes(title)
-
-&&
-
-wanted.includes(artists)
-
-);
-
-});
-
-if(exact){
+const track =
+results[0];
 
 msg(
 `Exacta: ${song}`
 );
 
-return exact.uri;
-
-}
-
-const artistMatch =
-results.find(track=>{
-
-const artists =
-track.artists
-.map(
-a=>a.name
-)
-.join(" ")
-.toLowerCase();
-
-return wanted.includes(
-artists
-);
-
-});
-
-if(artistMatch){
-
-msg(
-`Artista: ${song}`
-);
-
-return artistMatch.uri;
-
-}
-
-const titleMatch =
-results.find(track=>{
-
-const title =
-track.name
-.toLowerCase();
-
-return wanted.includes(
-title
-);
-
-});
-
-if(titleMatch){
-
-msg(
-`Titulo: ${song}`
-);
-
-return titleMatch.uri;
-
-}
+return track.uri;
 
 }catch(error){
 
@@ -969,15 +860,9 @@ console.error(
 error
 );
 
-}
-
-}
-
-msg(
-`No encontrada: ${song}`
-);
-
 return null;
+
+}
 
 }
 /* =========================================
