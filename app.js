@@ -1068,7 +1068,20 @@ return;
 msg(
 `Playlist creada: ${playlist.name}`
 );
+console.log(
+"OWNER:",
+playlist.owner
+);
 
+console.log(
+"EXTERNAL:",
+playlist.external_urls
+);
+
+console.log(
+"SNAPSHOT:",
+playlist.snapshot_id
+);
 const lines =
 
 songs.value
