@@ -302,6 +302,16 @@ localStorage.getItem(
 "spotify_verifier"
 );
 
+console.log(
+"VERIFIER:",
+verifier
+);
+
+console.log(
+"LOCALSTORAGE:",
+Object.keys(localStorage)
+);
+
 if(!verifier){
 
 msg(
