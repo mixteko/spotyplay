@@ -1265,89 +1265,11 @@ msg(
 }
 
 );
-
-/* =========================
-   VALIDAR ELEMENTOS
-========================= */
-
-if(
-!spotifyBtn ||
-!generateBtn ||
-!moreBtn ||
-!refreshBtn ||
-!playlistBtn ||
-!changeBtn
-){
-
-console.error(
-"Faltan elementos HTML"
-);
-
-return;
-
-}
-
-/* =========================
-   EVENTOS
-========================= */
-
-spotifyBtn.onclick =
-async ()=>{
-
-try{
-
-await loginSpotify();
-
-}catch(error){
-
-console.error(
-error
-);
-
-msg(
-"Error Spotify Login"
-);
-
-}
-
-};
-
-generateBtn.onclick =
-()=>generateGemini(false);
-
-moreBtn.onclick =
-()=>generateGemini(true);
-
-refreshBtn.onclick =
-refreshApp;
-
-playlistBtn.onclick =
-async ()=>{
-
-try{
-
-await createPlaylist();
-
-}catch(error){
-
-console.error(
-error
-);
-
-msg(
-"Error Playlist"
-);
-
-}
-
-};
-
+/* =========================================
+   CAMBIO FINAL 
+========================================= */
 changeBtn.onclick =
 changeUser;
-
-/* =========================
-   INICIO
-========================= */
 
 updateStatus();
 
@@ -1360,6 +1282,8 @@ msg(
 }
 
 );
+
+
 
 /* =========================================
    FIN APP.JS
