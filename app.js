@@ -404,6 +404,8 @@ window.location.pathname
 updateStatus();
 const me =
 await fetch(
+const meResponse =
+await fetch(
 
 "https://api.spotify.com/v1/me",
 
@@ -416,12 +418,12 @@ Authorization:
 
 );
 
-const meData =
-await me.json();
+const me =
+await meResponse.json();
 
 console.log(
-"USUARIO:",
-meData.id
+"SPOTIFY USER:",
+me.id
 );
 msg(
 "Spotify conectado"
@@ -1068,8 +1070,19 @@ return;
 msg(
 `Playlist creada: ${playlist.name}`
 );
+   
 console.log(
-"OWNER:",
+"PLAYLIST:",
+playlist
+);
+
+console.log(
+"OWNER ID:",
+playlist.owner?.id
+);
+
+console.log(
+"CURRENT USER:",
 playlist.owner
 );
 
