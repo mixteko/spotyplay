@@ -1125,9 +1125,13 @@ null,
 )
 );
 
+if(
+result.error
+){
+
 msg(
 JSON.stringify(
-result,
+result.error,
 null,
 2
 )
@@ -1149,7 +1153,6 @@ uris.length
 );
 
 }
-
 /* ==========================
    FINALIZAR
 ========================== */
