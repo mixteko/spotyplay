@@ -741,11 +741,9 @@ query
 const response =
 await fetch(
 
-`https://api.spotify.com/v1/search?type=track&limit=20&q=${encodeURIComponent(cleanQuery)}`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=10`,
 
 {
-method:"GET",
-
 headers:{
 Authorization:
 `Bearer ${accessToken}`
