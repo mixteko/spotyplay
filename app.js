@@ -964,6 +964,8 @@ name:finalName,
 
 public:false,
 
+collaborative:false,
+
 description:
 "Generada con Spotify AI Cloud"
 
@@ -971,6 +973,18 @@ description:
 
 }
 
+);
+
+console.log(
+"CREATE STATUS:",
+playlistResponse.status
+);
+
+console.log(
+"CREATE HEADERS:",
+Object.fromEntries(
+playlistResponse.headers.entries()
+)
 );
 
 const playlist =
