@@ -1183,7 +1183,23 @@ msg(
 }
 
 }
+/* =====================================
+   LOGIN SPOTIFY
+===================================== */
 
+function loginSpotify(){
+
+const scope =
+"playlist-modify-public playlist-modify-private";
+
+const authUrl =
+
+`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}`;
+
+window.location.href =
+authUrl;
+
+}
 /* =========================================
    INICIALIZACION
 ========================================= */
