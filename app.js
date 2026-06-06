@@ -926,10 +926,32 @@ playlistName.value.trim()
    CREAR PLAYLIST SPOTIFY
 ========================== */
 
+const meResponse =
+await fetch(
+
+"https://api.spotify.com/v1/me",
+
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+
+);
+
+const me =
+await meResponse.json();
+
+console.log(
+"USER ID:",
+me.id
+);
+
 const playlistResponse =
 await fetch(
 
-"https://api.spotify.com/v1/me/playlists",
+`https://api.spotify.com/v1/users/${me.id}/playlists`,
 
 {
 method:"POST",
@@ -960,6 +982,11 @@ description:
 const playlist =
 await playlistResponse.json();
 
+console.log(
+"PLAYLIST OWNER:",
+playlist.owner?.id
+);
+
 if(
 playlist.error
 ){
@@ -979,7 +1006,6 @@ return;
 msg(
 `Playlist creada: ${playlist.name}`
 );
-
 /* ==========================
    LEER CANCIONES
 ========================== */
