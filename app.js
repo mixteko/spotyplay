@@ -1263,18 +1263,6 @@ playlist.external_urls.spotify,
 
 }
 
-}catch(error){
-
-console.error(
-error
-);
-
-msg(
-"Error creando playlist"
-);
-
-}
-
 }
 /* =========================================
    INICIALIZACION
