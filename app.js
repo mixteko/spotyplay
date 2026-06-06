@@ -1,6 +1,5 @@
 /* =========================================
    SPOTIFY AI v1.15 CLOUD SECURE
-   PARTE 1
 ========================================= */
 
 const CLIENT_ID =
@@ -185,8 +184,7 @@ length
 
 return [...Array(length)]
 .map(
-()=>Math
-.random()
+()=>Math.random()
 .toString(36)[2]
 )
 .join("");
@@ -202,9 +200,7 @@ new TextEncoder()
 .encode(verifier);
 
 const digest =
-await crypto
-.subtle
-.digest(
+await crypto.subtle.digest(
 "SHA-256",
 data
 );
@@ -274,6 +270,7 @@ challengeCode
 });
 
 }
+
 /* =========================================
    TOKEN SPOTIFY
 ========================================= */
@@ -304,10 +301,17 @@ const verifier =
 localStorage.getItem(
 "spotify_verifier"
 );
-console.log(
-"VERIFIER:",
-verifier
+
+if(!verifier){
+
+msg(
+"No existe spotify_verifier"
 );
+
+return;
+
+}
+
 const body =
 new URLSearchParams({
 
@@ -349,6 +353,11 @@ body
 const data =
 await response.json();
 
+console.log(
+"SPOTIFY TOKEN RESPONSE:",
+data
+);
+
 if(data.access_token){
 
 accessToken =
@@ -374,16 +383,18 @@ msg(
 }else{
 
 msg(
-"Error obteniendo token Spotify"
+JSON.stringify(
+data,
+null,
+2
+)
 );
 
 }
 
 }catch(error){
 
-console.error(
-error
-);
+console.error(error);
 
 msg(
 "Error Spotify"
@@ -392,7 +403,6 @@ msg(
 }
 
 }
-
 /* =========================================
    CAMBIAR CUENTA
 ========================================= */
@@ -470,6 +480,7 @@ REGLAS:
 - No explicar
 - No comentar
 - No repetir canciones
+- Respetar exactamente el artista solicitado
 
 Formato:
 
@@ -491,9 +502,9 @@ ${more
 
 generationConfig:{
 
-temperature:0.9,
+temperature:0.7,
 
-topP:0.95,
+topP:0.9,
 
 topK:40,
 
@@ -602,6 +613,7 @@ msg(
 }
 
 }
+
 /* =========================================
    LIMPIEZA CANCIONES
 ========================================= */
@@ -709,11 +721,6 @@ query
 .replace(/"/g,"")
 .trim();
 
-console.log(
-"BUSCANDO:",
-cleanQuery
-);
-
 const response =
 await fetch(
 
@@ -772,10 +779,15 @@ song =
 cleanSong(song);
 
 if(!song){
+
 return null;
+
 }
 
-let queries=[song];
+let queries =
+[
+song
+];
 
 if(song.includes("-")){
 
@@ -784,7 +796,6 @@ song.split("-");
 
 const artist =
 parts[0]
-.replace(/'/g,"")
 .trim();
 
 const track =
@@ -793,20 +804,12 @@ parts
 .join("-")
 .trim();
 
-if(artist.length>2){
-
 queries.push(
-artist
+`${artist} ${track}`
 );
-
-}
 
 queries.push(
 track
-);
-
-queries.push(
-artist
 );
 
 }
@@ -815,16 +818,15 @@ for(const q of queries){
 
 try{
 
-console.log(
-"BUSCANDO:",
+const results =
+await spotifySearch(
 q
 );
 
-const results =
-await spotifySearch(q);
-
 if(!results.length){
+
 continue;
+
 }
 
 const wanted =
@@ -833,9 +835,11 @@ song.toLowerCase();
 const exact =
 results.find(track=>{
 
-const artist =
+const artists =
 track.artists
-.map(a=>a.name)
+.map(
+a=>a.name
+)
 .join(" ")
 .toLowerCase();
 
@@ -844,9 +848,17 @@ track.name
 .toLowerCase();
 
 return (
-wanted.includes(artist)
+
+wanted.includes(
+title
+)
+
 &&
-wanted.includes(title)
+
+wanted.includes(
+artists
+)
+
 );
 
 });
@@ -861,39 +873,61 @@ return exact.uri;
 
 }
 
-const partial =
+const artistMatch =
 results.find(track=>{
 
-const artist =
-track.artists[0]
-.name
+const artists =
+track.artists
+.map(
+a=>a.name
+)
+.join(" ")
 .toLowerCase();
+
+return wanted.includes(
+artists
+);
+
+});
+
+if(artistMatch){
+
+msg(
+`Artista: ${song}`
+);
+
+return artistMatch.uri;
+
+}
+
+const titleMatch =
+results.find(track=>{
 
 const title =
 track.name
 .toLowerCase();
 
-return (
-wanted.includes(artist)
-||
-wanted.includes(title)
+return wanted.includes(
+title
 );
 
 });
 
-if(partial){
+if(titleMatch){
 
 msg(
-`Aproximada: ${song}`
+`Titulo: ${song}`
 );
 
-return partial.uri;
+return titleMatch.uri;
 
 }
 
 }catch(error){
 
-console.error(error);
+console.error(
+error
+);
 
 }
 
@@ -906,9 +940,10 @@ msg(
 return null;
 
 }
-/*=========================================
+/* =========================================
    CREAR PLAYLIST
 ========================================= */
+
 async function createPlaylist(){
 
 if(!accessToken){
@@ -936,9 +971,7 @@ playlistName
 `${promptAI.value || "Playlist"} Mix`;
 
 try{
-/* =====================================
-   CREAR PLAYLIST
-===================================== */
+
 const playlistResponse =
 await fetch(
 
@@ -962,7 +995,7 @@ name:finalName,
 public:false,
 
 description:
-"Generada con Spotify AI v1.15"
+"Generada con Spotify AI Cloud"
 
 })
 
@@ -993,9 +1026,9 @@ msg(
 `Playlist creada: ${playlist.name}`
 );
 
-/* =====================================
-   LEER LISTA
-===================================== */
+/* ==========================
+   LEER CANCIONES
+========================== */
 
 const lines =
 
@@ -1025,9 +1058,9 @@ msg(
 `Buscando ${lines.length} canciones...`
 );
 
-/* =====================================
-   BUSQUEDA PARALELA
-===================================== */
+/* ==========================
+   BUSCAR CANCIONES
+========================== */
 
 const uris =
 
@@ -1064,9 +1097,9 @@ return;
 
 }
 
-/* =====================================
+/* ==========================
    AGREGAR CANCIONES
-===================================== */
+========================== */
 
 msg(
 "Agregando canciones..."
@@ -1130,18 +1163,21 @@ return;
 }
 
 updateProgress(
+
 Math.min(
 i+100,
 uniqueUris.length
 ),
+
 uniqueUris.length
+
 );
 
 }
 
-/* =====================================
+/* ==========================
    FINALIZAR
-===================================== */
+========================== */
 
 setConnected(
 playlistStatus,
@@ -1149,7 +1185,7 @@ playlistStatus,
 );
 
 msg(
-"Playlist completada"
+`Playlist completada con ${uniqueUris.length} canciones`
 );
 
 if(
@@ -1165,30 +1201,15 @@ playlist.external_urls.spotify,
 
 }catch(error){
 
-console.error(error);
+console.error(
+error
+);
 
 msg(
 "Error creando playlist"
 );
 
 }
-
-}
-/* =====================================
-   LOGIN SPOTIFY
-===================================== */
-
-function loginSpotify(){
-
-const scope =
-"playlist-modify-public playlist-modify-private";
-
-const authUrl =
-
-`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}`;
-
-window.location.href =
-authUrl;
 
 }
 /* =========================================
@@ -1199,7 +1220,7 @@ window.addEventListener(
 
 "DOMContentLoaded",
 
-()=>{
+async ()=>{
 
 const spotifyBtn =
 document.getElementById(
@@ -1231,10 +1252,44 @@ document.getElementById(
 "changeBtn"
 );
 
-/* ============================= */
+/* =========================
+   VALIDAR ELEMENTOS
+========================= */
+
+if(!spotifyBtn){
+
+console.error(
+"No existe spotifyBtn"
+);
+
+return;
+
+}
+
+/* =========================
+   EVENTOS
+========================= */
 
 spotifyBtn.onclick =
-loginSpotify;
+async ()=>{
+
+try{
+
+await loginSpotify();
+
+}catch(error){
+
+console.error(
+error
+);
+
+msg(
+"Error Spotify Login"
+);
+
+}
+
+};
 
 generateBtn.onclick =
 ()=>generateGemini(false);
@@ -1251,11 +1306,13 @@ createPlaylist;
 changeBtn.onclick =
 changeUser;
 
-/* ============================= */
+/* =========================
+   INICIO
+========================= */
 
 updateStatus();
 
-getToken();
+await getToken();
 
 msg(
 "Spotify AI v1.15 Cloud Secure iniciado"
