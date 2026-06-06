@@ -287,6 +287,11 @@ location.search
 
 if(!code){
 
+accessToken =
+localStorage.getItem(
+"spotify_token"
+) || "";
+
 updateStatus();
 
 return;
@@ -692,7 +697,10 @@ document.getElementById(
 ========================================= */
 
 async function spotifySearch(query){
-
+console.log(
+"TOKEN:",
+accessToken
+);
 try{
 
 const response =
