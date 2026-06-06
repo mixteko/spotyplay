@@ -1,18 +1,29 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Spotify Playlist Creator AI v1.14 Turbo</title>
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<title>
+Spotify AI v1.15 Cloud Secure
+</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect"
+href="https://fonts.googleapis.com">
 
-<link rel="stylesheet" href="style.css">
+<link rel="preconnect"
+href="https://fonts.gstatic.com"
+crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap"
+rel="stylesheet">
+
+<link rel="stylesheet"
+href="style.css">
 
 </head>
 
@@ -22,33 +33,44 @@
 
 <div class="card">
 
+<!-- =========================
+HEADER
+========================= -->
+
 <div class="header">
 
 <div class="title">
 
-<h1>SPOTIFY AI</h1>
+<h1>
+SPOTIFY AI
+</h1>
 
-<p>Version 1.13 Turbo</p>
+<p>
+Version 1.15 Cloud Secure
+</p>
 
 </div>
 
 <div class="statusRow">
 
-<div id="spotifyStatus"
+<div
+id="spotifyStatus"
 class="status disconnected">
 
 Spotify 🔴
 
 </div>
 
-<div id="geminiStatus"
+<div
+id="geminiStatus"
 class="status disconnected">
 
 Gemini 🔴
 
 </div>
 
-<div id="playlistStatus"
+<div
+id="playlistStatus"
 class="status disconnected">
 
 Playlist 🔴
@@ -59,11 +81,21 @@ Playlist 🔴
 
 </div>
 
+<!-- =========================
+GRID
+========================= -->
+
 <div class="grid">
+
+<!-- =========================
+IA PANEL
+========================= -->
 
 <div class="panel">
 
-<h2>IA GENERATOR</h2>
+<h2>
+IA GENERATOR
+</h2>
 
 <button
 id="spotifyBtn"
@@ -73,19 +105,7 @@ Conectar Spotify
 
 </button>
 
-<input
-id="geminiKey"
-placeholder="Gemini API Key">
-
 <div class="buttonGrid">
-
-<button
-id="saveGeminiBtn"
-class="secondary">
-
-Guardar Gemini
-
-</button>
 
 <button
 id="refreshBtn"
@@ -104,13 +124,37 @@ placeholder="Ejemplo: Kpop relajante nocturno">
 
 <select id="songCount">
 
-<option value="10">10 canciones</option>
-<option value="20">20 canciones</option>
-<option value="40">40 canciones</option>
-<option value="50">50 canciones</option>
-<option value="60">60 canciones</option>
-<option value="80">80 canciones</option>
-<option value="100">100 canciones</option>
+<option value="10">
+10 canciones
+</option>
+
+<option value="20">
+20 canciones
+</option>
+
+<option value="40">
+40 canciones
+</option>
+
+<option value="50">
+50 canciones
+</option>
+
+<option value="60">
+60 canciones
+</option>
+
+<option value="80">
+80 canciones
+</option>
+
+<option value="100">
+100 canciones
+</option>
+
+<option value="200">
+200 canciones
+</option>
 
 </select>
 
@@ -124,7 +168,9 @@ placeholder="Ejemplo: Kpop relajante nocturno">
 
 <div class="progress">
 
-<div id="progressBar"></div>
+<div
+id="progressBar">
+</div>
 
 </div>
 
@@ -152,16 +198,23 @@ Buscar Más
 
 </div>
 
+<!-- =========================
+PLAYLIST PANEL
+========================= -->
+
 <div class="panel">
 
-<h2>PLAYLIST BUILDER</h2>
+<h2>
+PLAYLIST BUILDER
+</h2>
 
 <input
 id="playlistName"
 placeholder="Nombre playlist">
 
 <textarea
-id="songs">
+id="songs"
+placeholder="Las canciones aparecerán aquí">
 </textarea>
 
 <div class="buttonGrid">
@@ -188,6 +241,10 @@ Cambiar Cuenta
 
 </div>
 
+<!-- =========================
+LOG
+========================= -->
+
 <div
 id="log"
 class="log">
@@ -203,4 +260,5 @@ Esperando conexión...
 <script src="app.js"></script>
 
 </body>
+
 </html>
