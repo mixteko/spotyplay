@@ -691,14 +691,14 @@ document.getElementById(
    SPOTIFY SEARCH
 ========================================= */
 
-async function spotifySearch(
-query
-){
+async function spotifySearch(query){
+
+try{
 
 const response =
 await fetch(
 
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=50`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
 
 {
 headers:{
@@ -709,12 +709,30 @@ Authorization:
 
 );
 
+if(!response.ok){
+
+console.error(
+"Spotify Error:",
+response.status,
+query
+);
+
+return [];
+
+}
+
 const data =
 await response.json();
 
-return (
-data.tracks?.items || []
-);
+return data?.tracks?.items || [];
+
+}catch(error){
+
+console.error(error);
+
+return [];
+
+}
 
 }
 
