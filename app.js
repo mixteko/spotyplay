@@ -968,9 +968,7 @@ return null;
 /* =========================================
    CREAR PLAYLIST
 ========================================= */
-/* =========================================
-   CREAR PLAYLIST
-========================================= */
+
 
 async function createPlaylist(){
 
@@ -1165,16 +1163,33 @@ addResponse.status
 
 console.log(
 "ADD RESPONSE:",
-result
+JSON.stringify(
+result,
+null,
+2
+)
+);
+
+console.log(
+"TOKEN:",
+accessToken?.substring(0,20)
 );
 
 if(
 result.error
 ){
 
+alert(
+JSON.stringify(
+result,
+null,
+2
+)
+);
+
 msg(
 JSON.stringify(
-result.error,
+result,
 null,
 2
 )
