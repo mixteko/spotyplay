@@ -926,32 +926,10 @@ playlistName.value.trim()
    CREAR PLAYLIST SPOTIFY
 ========================== */
 
-const meResponse =
-await fetch(
-
-"https://api.spotify.com/v1/me",
-
-{
-headers:{
-Authorization:
-`Bearer ${accessToken}`
-}
-}
-
-);
-
-const me =
-await meResponse.json();
-
-console.log(
-"USER ID:",
-me.id
-);
-
 const playlistResponse =
 await fetch(
 
-`https://api.spotify.com/v1/users/${me.id}/playlists`,
+"https://api.spotify.com/v1/me/playlists",
 
 {
 method:"POST",
@@ -983,8 +961,8 @@ const playlist =
 await playlistResponse.json();
 
 console.log(
-"PLAYLIST OWNER:",
-playlist.owner?.id
+"PLAYLIST RESPONSE:",
+playlist
 );
 
 if(
@@ -1085,6 +1063,7 @@ resolve,
    AGREGAR CANCIONES
 ========================== */
 
+
 if(
 !uris.length
 ){
@@ -1145,6 +1124,16 @@ uris:chunk
 
 const result =
 await addResponse.json();
+
+console.log(
+"PLAYLIST ID:",
+playlist.id
+);
+
+console.log(
+"PLAYLIST RESPONSE:",
+playlist
+);
 
 console.log(
 "ADD STATUS:",
