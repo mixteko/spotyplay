@@ -881,7 +881,15 @@ return null;
 /* =========================================
    CREAR PLAYLIST
 ========================================= */
+if(!accessToken){
 
+msg(
+"Reconecta Spotify"
+);
+
+return;
+
+}
 async function createPlaylist(){
 
 if(!accessToken){
