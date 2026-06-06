@@ -1045,18 +1045,34 @@ resolve,
    AGREGAR CANCIONES
 ========================== */
 
+if(
+!uris.length
+){
+
+msg(
+"No agregué canciones"
+);
+
+return;
+
+}
+
+msg(
+`Encontradas: ${uris.length}`
+);
+
 msg(
 "Agregando canciones..."
 );
 
 for(
 let i=0;
-i<uniqueUris.length;
+i<uris.length;
 i+=100
 ){
 
 const chunk =
-uniqueUris.slice(
+uris.slice(
 i,
 i+100
 );
@@ -1120,16 +1136,16 @@ updateProgress(
 
 Math.min(
 i+100,
-uniqueUris.length
+uris.length
 ),
 
-uniqueUris.length
+uris.length
 
 );
 
 }
 
-/* ==========================
+   /* ==========================
    FINALIZAR
 ========================== */
 
@@ -1139,7 +1155,7 @@ playlistStatus,
 );
 
 msg(
-`Playlist completada con ${uniqueUris.length} canciones`
+`Playlist completada con ${uris.length} canciones`
 );
 
 if(
@@ -1150,20 +1166,6 @@ window.open(
 playlist.external_urls.spotify,
 "_blank"
 );
-
-}
-
-}catch(error){
-
-console.error(
-error
-);
-
-msg(
-"Error creando playlist"
-);
-
-}
 
 }
 /* =========================================
