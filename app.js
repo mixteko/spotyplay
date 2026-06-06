@@ -304,7 +304,10 @@ const verifier =
 localStorage.getItem(
 "spotify_verifier"
 );
-
+console.log(
+"VERIFIER:",
+verifier
+);
 const body =
 new URLSearchParams({
 
