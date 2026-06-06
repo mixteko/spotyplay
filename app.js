@@ -820,14 +820,6 @@ return null;
 
 }
 
-await new Promise(
-resolve =>
-setTimeout(
-resolve,
-1200
-)
-);
-
 try{
 
 const results =
@@ -835,7 +827,10 @@ await spotifySearch(
 song
 );
 
-if(!results.length){
+if(
+!results ||
+!results.length
+){
 
 msg(
 `No encontrada: ${song}`
@@ -845,14 +840,11 @@ return null;
 
 }
 
-const track =
-results[0];
-
 msg(
 `Exacta: ${song}`
 );
 
-return track.uri;
+return results[0].uri;
 
 }catch(error){
 
@@ -988,39 +980,42 @@ msg(
 /* ==========================
    BUSCAR CANCIONES
 ========================== */
+const uris = [];
 
-const uris =
-
-(
-await Promise.all(
-lines.map(
-searchSong
-)
-)
-)
-
-.filter(Boolean);
-
-const uniqueUris =
-[
-...new Set(
-uris
-)
-];
+for(const line of lines){
 
 msg(
-`Encontradas: ${uniqueUris.length}`
+`Buscando: ${line}`
 );
 
-if(
-!uniqueUris.length
-){
+try{
 
-msg(
-"No agregué canciones"
+const uri =
+await searchSong(
+line
 );
 
-return;
+if(uri){
+
+uris.push(uri);
+
+}
+
+}catch(error){
+
+console.error(
+error
+);
+
+}
+
+await new Promise(
+resolve =>
+setTimeout(
+resolve,
+2000
+)
+);
 
 }
 
