@@ -1171,7 +1171,15 @@ uniqueUris.slice(
 i,
 i+100
 );
+console.log(
+"TOKEN ACTUAL:",
+accessToken
+);
 
+console.log(
+"PLAYLIST OWNER:",
+playlist.owner?.id
+);
 const addResponse =
 await fetch(
 
