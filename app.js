@@ -750,15 +750,15 @@ parts
 .trim();
 
 queries.push(
-`artist:${artist} track:${track}`
-);
-
-queries.push(
 `${artist} ${track}`
 );
 
 queries.push(
 track
+);
+
+queries.push(
+artist
 );
 
 }
