@@ -703,7 +703,9 @@ await fetch(
 {
 headers:{
 Authorization:
-`Bearer ${accessToken}`
+`Bearer ${accessToken}`,
+"Content-Type":
+"application/json"
 }
 }
 
