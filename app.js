@@ -730,7 +730,6 @@ document.getElementById(
 /* =========================================
    SPOTIFY SEARCH
 ========================================= */
-
 async function spotifySearch(query){
 
 try{
@@ -744,7 +743,7 @@ query
 const response =
 await fetch(
 
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=10`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=3`,
 
 {
 headers:{
@@ -754,6 +753,24 @@ Authorization:
 }
 
 );
+
+if(response.status === 429){
+
+msg(
+`Spotify limit: ${cleanQuery}`
+);
+
+await new Promise(
+resolve =>
+setTimeout(
+resolve,
+2000
+)
+);
+
+return [];
+
+}
 
 if(!response.ok){
 
@@ -787,11 +804,9 @@ return [];
 }
 
 }
-
 /* =========================================
    BUSQUEDA PRECISA
 ========================================= */
-
 async function searchSong(
 song
 ){
@@ -839,6 +854,14 @@ for(const q of queries){
 
 try{
 
+await new Promise(
+resolve =>
+setTimeout(
+resolve,
+300
+)
+);
+
 const results =
 await spotifySearch(
 q
@@ -870,15 +893,11 @@ track.name
 
 return (
 
-wanted.includes(
-title
-)
+wanted.includes(title)
 
 &&
 
-wanted.includes(
-artists
-)
+wanted.includes(artists)
 
 );
 
