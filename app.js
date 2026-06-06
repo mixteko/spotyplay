@@ -968,10 +968,13 @@ return null;
 /* =========================================
    CREAR PLAYLIST
 ========================================= */
+/* =========================================
+   CREAR PLAYLIST
+========================================= */
 
 async function createPlaylist(){
 
-console.log("PASO 0");
+try{
 
 if(!accessToken){
 
@@ -983,20 +986,18 @@ return;
 
 }
 
-console.log("PASO 1");
-
 msg(
 "Creando playlist..."
 );
 
 const finalName =
+
 playlistName.value.trim()
+
 ||
+
 `${promptAI.value || "Playlist"} Mix`;
-
-console.log("PASO 2");
-
-const playlistResponse =
+   const playlistResponse =
 await fetch(
 
 "https://api.spotify.com/v1/me/playlists",
@@ -1019,7 +1020,7 @@ name:finalName,
 public:false,
 
 description:
-"Generada con Spotify AI v1.15"
+"Generada con Spotify AI Cloud"
 
 })
 
@@ -1027,24 +1028,12 @@ description:
 
 );
 
-console.log("PASO 3");
-
 const playlist =
 await playlistResponse.json();
-
-console.log(
-"PASO 4",
-playlist
-);
 
 if(
 playlist.error
 ){
-
-console.log(
-"ERROR PLAYLIST",
-playlist.error
-);
 
 msg(
 JSON.stringify(
@@ -1058,16 +1047,9 @@ return;
 
 }
 
-console.log("PASO 5");
-
 msg(
 `Playlist creada: ${playlist.name}`
 );
-
-
-/* ==========================
-   LEER CANCIONES
-========================== */
 
 const lines =
 
@@ -1092,14 +1074,9 @@ msg(
 return;
 
 }
-
 msg(
 `Buscando ${lines.length} canciones...`
 );
-
-/* ==========================
-   BUSCAR CANCIONES
-========================== */
 
 const uris =
 
@@ -1135,10 +1112,6 @@ msg(
 return;
 
 }
-
-/* ==========================
-   AGREGAR CANCIONES
-========================== */
 
 msg(
 "Agregando canciones..."
@@ -1195,21 +1168,6 @@ console.log(
 result
 );
 
-console.log(
-"PLAYLIST ID:",
-playlist.id
-);
-
-console.log(
-"ADD RESPONSE:",
-result
-);
-
-console.log(
-"PLAYLIST ID:",
-playlist.id
-);
-
 if(
 result.error
 ){
@@ -1239,10 +1197,6 @@ uniqueUris.length
 
 }
 
-/* ==========================
-   FINALIZAR
-========================== */
-
 setConnected(
 playlistStatus,
 "Playlist 🟢"
@@ -1263,7 +1217,18 @@ playlist.external_urls.spotify,
 
 }
 
+}catch(error){
+
+console.error(error);
+
+msg(
+"Error creando playlist"
+);
+
 }
+
+}
+
 /* =========================================
    INICIALIZACION
 ========================================= */
