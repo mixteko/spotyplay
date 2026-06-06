@@ -697,23 +697,31 @@ document.getElementById(
 ========================================= */
 
 async function spotifySearch(query){
-console.log(
-"TOKEN:",
-accessToken
-);
+
 try{
+
+const cleanQuery =
+query
+.replace(/'/g,"")
+.replace(/"/g,"")
+.trim();
+
+console.log(
+"BUSCANDO:",
+cleanQuery
+);
 
 const response =
 await fetch(
 
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
+`https://api.spotify.com/v1/search?type=track&limit=20&q=${encodeURIComponent(cleanQuery)}`,
 
 {
+method:"GET",
+
 headers:{
 Authorization:
-`Bearer ${accessToken}`,
-"Content-Type":
-"application/json"
+`Bearer ${accessToken}`
 }
 }
 
@@ -721,10 +729,14 @@ Authorization:
 
 if(!response.ok){
 
+const txt =
+await response.text();
+
 console.error(
 "Spotify Error:",
 response.status,
-query
+cleanQuery,
+txt
 );
 
 return [];
@@ -745,7 +757,6 @@ return [];
 }
 
 }
-
 /* =========================================
    BUSQUEDA PRECISA
 ========================================= */
@@ -769,7 +780,9 @@ const parts =
 song.split("-");
 
 const artist =
-parts[0].trim();
+parts[0]
+.replace(/'/g,"")
+.trim();
 
 const track =
 parts
@@ -777,9 +790,13 @@ parts
 .join("-")
 .trim();
 
+if(artist.length>2){
+
 queries.push(
-`${artist} ${track}`
+artist
 );
+
+}
 
 queries.push(
 track
