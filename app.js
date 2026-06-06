@@ -3,7 +3,7 @@
 ========================================= */
 
 const CLIENT_ID =
-"6c398ae66eae4f84959cfce08bd0c74c";
+"6f2af5f678674eff85c3b3cb45a06080";
 
 const REDIRECT_URI =
 "https://mixteko.github.io/spotyplay/";
