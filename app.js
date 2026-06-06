@@ -726,7 +726,85 @@ document.getElementById(
 )}%`;
 
 }
+/* =========================================
+   SPOTIFY SEARCH
+========================================= */
 
+async function spotifySearch(query){
+
+try{
+
+const cleanQuery =
+query
+.replace(/'/g,"")
+.replace(/"/g,"")
+.trim();
+
+const response =
+await fetch(
+
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
+
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+
+);
+
+console.log(
+"STATUS:",
+response.status
+);
+
+console.log(
+"RETRY AFTER:",
+response.headers.get(
+"Retry-After"
+)
+);
+
+if(response.status === 429){
+
+msg(
+`Spotify limit: ${cleanQuery}`
+);
+
+return [];
+
+}
+
+if(!response.ok){
+
+const txt =
+await response.text();
+
+console.error(
+txt
+);
+
+return [];
+
+}
+
+const data =
+await response.json();
+
+return data?.tracks?.items || [];
+
+}catch(error){
+
+console.error(
+error
+);
+
+return [];
+
+}
+
+}
 
 /* =========================================
    BUSQUEDA PRECISA
