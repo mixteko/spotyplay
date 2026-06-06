@@ -78,6 +78,8 @@ document.getElementById(
 
 function msg(text){
 
+if(!log) return;
+
 log.innerHTML +=
 "\n" + text;
 
@@ -95,6 +97,8 @@ element,
 text
 ){
 
+if(!element) return;
+
 element.className =
 "status connected";
 
@@ -107,6 +111,8 @@ function setDisconnected(
 element,
 text
 ){
+
+if(!element) return;
 
 element.className =
 "status disconnected";
@@ -236,13 +242,6 @@ localStorage.setItem(
 verifier
 );
 
-console.log(
-"GUARDADO:",
-localStorage.getItem(
-"spotify_verifier"
-)
-);
-
 const challengeCode =
 await challenge(
 verifier
@@ -277,7 +276,6 @@ challengeCode
 });
 
 }
-
 /* =========================================
    TOKEN SPOTIFY
 ========================================= */
@@ -307,16 +305,6 @@ try{
 const verifier =
 localStorage.getItem(
 "spotify_verifier"
-);
-
-console.log(
-"VERIFIER:",
-verifier
-);
-
-console.log(
-"LOCALSTORAGE:",
-Object.keys(localStorage)
 );
 
 if(!verifier){
@@ -370,25 +358,10 @@ body
 const data =
 await response.json();
 
-console.log(
-"SPOTIFY TOKEN RESPONSE:",
-data
-);
-
 if(data.access_token){
 
 accessToken =
 data.access_token;
-
-console.log(
-"TOKEN TYPE:",
-data.token_type
-);
-
-console.log(
-"TOKEN SCOPES:",
-data.scope
-);
 
 localStorage.setItem(
 "spotify_token",
@@ -428,6 +401,7 @@ me.id
 msg(
 "Spotify conectado"
 );
+
 }else{
 
 msg(
@@ -442,7 +416,9 @@ null,
 
 }catch(error){
 
-console.error(error);
+console.error(
+error
+);
 
 msg(
 "Error Spotify"
@@ -451,21 +427,18 @@ msg(
 }
 
 }
+
 /* =========================================
    CAMBIAR CUENTA
 ========================================= */
 
 function changeUser(){
 
-localStorage.removeItem(
-"spotify_token"
-);
+localStorage.clear();
 
-localStorage.removeItem(
-"spotify_verifier"
-);
-
-location.reload();
+window.location.href =
+window.location.origin +
+window.location.pathname;
 
 }
 
@@ -661,7 +634,6 @@ msg(
 }
 
 }
-
 /* =========================================
    LIMPIEZA CANCIONES
 ========================================= */
@@ -806,13 +778,16 @@ return data?.tracks?.items || [];
 
 }catch(error){
 
-console.error(error);
+console.error(
+error
+);
 
 return [];
 
 }
 
 }
+
 /* =========================================
    BUSQUEDA PRECISA
 ========================================= */
@@ -990,7 +965,6 @@ return null;
    CREAR PLAYLIST
 ========================================= */
 
-
 async function createPlaylist(){
 
 try{
@@ -1016,7 +990,12 @@ playlistName.value.trim()
 ||
 
 `${promptAI.value || "Playlist"} Mix`;
-   const playlistResponse =
+
+/* ==========================
+   CREAR PLAYLIST SPOTIFY
+========================== */
+
+const playlistResponse =
 await fetch(
 
 "https://api.spotify.com/v1/me/playlists",
@@ -1069,31 +1048,11 @@ return;
 msg(
 `Playlist creada: ${playlist.name}`
 );
-   
-console.log(
-"PLAYLIST:",
-playlist
-);
 
-console.log(
-"OWNER ID:",
-playlist.owner?.id
-);
+/* ==========================
+   LEER CANCIONES
+========================== */
 
-console.log(
-"CURRENT USER:",
-playlist.owner
-);
-
-console.log(
-"EXTERNAL:",
-playlist.external_urls
-);
-
-console.log(
-"SNAPSHOT:",
-playlist.snapshot_id
-);
 const lines =
 
 songs.value
@@ -1117,9 +1076,14 @@ msg(
 return;
 
 }
+
 msg(
 `Buscando ${lines.length} canciones...`
 );
+
+/* ==========================
+   BUSCAR CANCIONES
+========================== */
 
 const uris =
 
@@ -1156,6 +1120,10 @@ return;
 
 }
 
+/* ==========================
+   AGREGAR CANCIONES
+========================== */
+
 msg(
 "Agregando canciones..."
 );
@@ -1171,19 +1139,11 @@ uniqueUris.slice(
 i,
 i+100
 );
-console.log(
-"TOKEN ACTUAL:",
-accessToken
-);
 
-console.log(
-"PLAYLIST OWNER:",
-playlist.owner?.id
-);
 const addResponse =
 await fetch(
 
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks?position=0`,
 
 {
 method:"POST",
@@ -1216,38 +1176,16 @@ addResponse.status
 
 console.log(
 "ADD RESPONSE:",
-JSON.stringify(
-result,
-null,
-2
-)
+result
 );
 
-console.log(
-"PLAYLIST ID:",
-playlist.id
-);
-
-console.log(
-"USER TOKEN:",
-accessToken.substring(0,25)
-);
-   
 if(
 result.error
 ){
 
-alert(
-JSON.stringify(
-result,
-null,
-2
-)
-);
-
 msg(
 JSON.stringify(
-result,
+result.error,
 null,
 2
 )
@@ -1269,6 +1207,10 @@ uniqueUris.length
 );
 
 }
+
+/* ==========================
+   FINALIZAR
+========================== */
 
 setConnected(
 playlistStatus,
@@ -1292,7 +1234,9 @@ playlist.external_urls.spotify,
 
 }catch(error){
 
-console.error(error);
+console.error(
+error
+);
 
 msg(
 "Error creando playlist"
@@ -1301,7 +1245,6 @@ msg(
 }
 
 }
-
 /* =========================================
    INICIALIZACION
 ========================================= */
@@ -1346,10 +1289,17 @@ document.getElementById(
    VALIDAR ELEMENTOS
 ========================= */
 
-if(!spotifyBtn){
+if(
+!spotifyBtn ||
+!generateBtn ||
+!moreBtn ||
+!refreshBtn ||
+!playlistBtn ||
+!changeBtn
+){
 
 console.error(
-"No existe spotifyBtn"
+"Faltan elementos HTML"
 );
 
 return;
@@ -1391,7 +1341,25 @@ refreshBtn.onclick =
 refreshApp;
 
 playlistBtn.onclick =
-createPlaylist;
+async ()=>{
+
+try{
+
+await createPlaylist();
+
+}catch(error){
+
+console.error(
+error
+);
+
+msg(
+"Error Playlist"
+);
+
+}
+
+};
 
 changeBtn.onclick =
 changeUser;
