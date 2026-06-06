@@ -870,6 +870,21 @@ return null;
 const bestTrack =
 results[0];
 
+console.log(
+"TRACK:",
+bestTrack
+);
+
+console.log(
+"TRACK URI:",
+bestTrack.uri
+);
+
+console.log(
+"TRACK ID:",
+bestTrack.id
+);
+
 msg(
 `Encontrada: ${song}`
 );
@@ -891,7 +906,6 @@ return null;
 }
 
 }
-
 /* =========================================
    CREAR PLAYLIST
 ========================================= */
