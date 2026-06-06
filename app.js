@@ -967,6 +967,19 @@ msg(
 `Playlist creada: ${playlist.name}`
 );
 
+}catch(error){
+
+console.error(
+error
+);
+
+msg(
+"Error creando playlist"
+);
+
+}
+
+}
 /* ==========================
    LEER CANCIONES
 ========================== */
@@ -1206,6 +1219,58 @@ document.getElementById(
 const changeBtn =
 document.getElementById(
 "changeBtn"
+);
+
+if(!spotifyBtn){
+
+console.error(
+"No existe spotifyBtn"
+);
+
+return;
+
+}
+
+spotifyBtn.onclick =
+async ()=>{
+
+try{
+
+await loginSpotify();
+
+}catch(error){
+
+console.error(error);
+
+}
+
+};
+
+generateBtn.onclick =
+()=>generateGemini(false);
+
+moreBtn.onclick =
+()=>generateGemini(true);
+
+refreshBtn.onclick =
+refreshApp;
+
+playlistBtn.onclick =
+createPlaylist;
+
+changeBtn.onclick =
+changeUser;
+
+updateStatus();
+
+await getToken();
+
+msg(
+"Spotify AI v1.15 Cloud Secure iniciado"
+);
+
+}
+
 );
 
 /* =========================
