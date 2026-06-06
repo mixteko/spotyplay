@@ -1,5 +1,5 @@
 /* =========================================
-   SPOTIFY AI v1.13 TURBO
+   SPOTIFY AI v1.15 CLOUD SECURE
    PARTE 1
 ========================================= */
 
@@ -8,6 +8,9 @@ const CLIENT_ID =
 
 const REDIRECT_URI =
 "https://mixteko.github.io/spotyplay/";
+
+const WORKER_URL =
+"https://spotify-ai-gemini.mixteko.workers.dev";
 
 const SCOPES = [
 
@@ -43,11 +46,6 @@ document.getElementById(
 const playlistStatus =
 document.getElementById(
 "playlistStatus"
-);
-
-const geminiKey =
-document.getElementById(
-"geminiKey"
 );
 
 const promptAI =
@@ -137,26 +135,10 @@ spotifyStatus,
 
 }
 
-const key =
-localStorage.getItem(
-"gemini_key"
-);
-
-if(key){
-
 setConnected(
 geminiStatus,
-"Gemini 🟢"
+"Gemini Cloud 🟢"
 );
-
-}else{
-
-setDisconnected(
-geminiStatus,
-"Gemini 🔴"
-);
-
-}
 
 }
 
@@ -166,43 +148,30 @@ geminiStatus,
 
 function refreshApp(){
 
-promptAI.value = "";
+promptAI.value="";
 
-playlistName.value = "";
+playlistName.value="";
 
-songs.value = "";
+songs.value="";
 
 document.getElementById(
 "songCounter"
-).innerText =
+).innerText=
 "0 / 0 canciones";
 
 document.getElementById(
 "progressBar"
-).style.width =
+).style.width=
 "0%";
+
+playlistStatus.className =
+"status disconnected";
+
+playlistStatus.innerHTML =
+"Playlist 🔴";
 
 log.innerHTML =
 "Refrescado";
-
-}
-
-/* =========================================
-   GEMINI KEY
-========================================= */
-
-function saveGemini(){
-
-localStorage.setItem(
-"gemini_key",
-geminiKey.value.trim()
-);
-
-updateStatus();
-
-msg(
-"Gemini guardada"
-);
 
 }
 
@@ -305,7 +274,6 @@ challengeCode
 });
 
 }
-
 /* =========================================
    TOKEN SPOTIFY
 ========================================= */
@@ -324,6 +292,8 @@ updateStatus();
 return;
 
 }
+
+try{
 
 const verifier =
 localStorage.getItem(
@@ -363,6 +333,7 @@ headers:{
 },
 
 body
+
 }
 
 );
@@ -392,6 +363,24 @@ msg(
 "Spotify conectado"
 );
 
+}else{
+
+msg(
+"Error obteniendo token Spotify"
+);
+
+}
+
+}catch(error){
+
+console.error(
+error
+);
+
+msg(
+"Error Spotify"
+);
+
 }
 
 }
@@ -402,38 +391,25 @@ msg(
 
 function changeUser(){
 
-localStorage.clear();
+localStorage.removeItem(
+"spotify_token"
+);
 
-window.location.href =
-"https://www.spotify.com/logout";
+localStorage.removeItem(
+"spotify_verifier"
+);
+
+location.reload();
 
 }
 
 /* =========================================
-   FIN PARTE 1
-========================================= */
-/* =========================================
-   GEMINI 2.5 FLASH TURBO
+   GEMINI CLOUD
 ========================================= */
 
 async function generateGemini(
 more=false
 ){
-
-const key =
-localStorage.getItem(
-"gemini_key"
-);
-
-if(!key){
-
-msg(
-"Guardar Gemini primero"
-);
-
-return;
-
-}
 
 const target =
 parseInt(
@@ -453,13 +429,13 @@ document.getElementById(
 try{
 
 msg(
-"Conectando Gemini..."
+"Conectando Gemini Cloud..."
 );
 
 const response =
 await fetch(
 
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+WORKER_URL,
 
 {
 method:"POST",
@@ -479,17 +455,15 @@ text:`
 
 Genera EXACTAMENTE ${target} canciones.
 
-REGLAS OBLIGATORIAS:
+REGLAS:
 
-- EXACTAMENTE ${target} canciones
 - Una canción por línea
 - No numerar
 - No explicar
 - No comentar
-- No agregar encabezados
 - No repetir canciones
 
-Formato obligatorio:
+Formato:
 
 ARTISTA - CANCION
 
@@ -544,8 +518,7 @@ return;
 
 const text =
 
-data
-?.candidates?.[0]
+data?.candidates?.[0]
 ?.content?.parts?.[0]
 ?.text || "";
 
@@ -558,10 +531,6 @@ msg(
 return;
 
 }
-
-msg(
-"Procesando lista..."
-);
 
 let lines =
 
@@ -619,13 +588,12 @@ error
 );
 
 msg(
-"Error Gemini"
+"Error Gemini Cloud"
 );
 
 }
 
 }
-
 /* =========================================
    LIMPIEZA CANCIONES
 ========================================= */
@@ -635,9 +603,7 @@ function cleanSong(song){
 song =
 song
 
-.normalize(
-"NFKC"
-)
+.normalize("NFKC")
 
 .replace(
 /[\u2018\u2019]/g,
@@ -684,25 +650,13 @@ song
 const low =
 song.toLowerCase();
 
-if(
-low.includes(
-"aquí tienes"
-)
-)
+if(low.includes("aquí tienes"))
 return "";
 
-if(
-low.includes(
-"exactamente"
-)
-)
+if(low.includes("exactamente"))
 return "";
 
-if(
-low.includes(
-"canciones"
-)
-)
+if(low.includes("canciones"))
 return "";
 
 return song;
@@ -710,7 +664,7 @@ return song;
 }
 
 /* =========================================
-   BARRA DE PROGRESO
+   PROGRESO
 ========================================= */
 
 function updateProgress(
@@ -733,9 +687,6 @@ document.getElementById(
 
 }
 
-/* =========================================
-   FIN PARTE 2
-========================================= */
 /* =========================================
    SPOTIFY SEARCH
 ========================================= */
@@ -768,12 +719,15 @@ data.tracks?.items || []
 }
 
 /* =========================================
-   BUSCAR CANCION
+   BUSQUEDA PRECISA
 ========================================= */
 
-async function searchSong(song){
+async function searchSong(
+song
+){
 
-song = cleanSong(song);
+song =
+cleanSong(song);
 
 if(!song){
 return null;
@@ -783,11 +737,14 @@ let queries=[song];
 
 if(song.includes("-")){
 
-const parts=song.split("-");
+const parts =
+song.split("-");
 
-const artist=parts[0].trim();
+const artist =
+parts[0].trim();
 
-const track=parts
+const track =
+parts
 .slice(1)
 .join("-")
 .trim();
@@ -810,26 +767,26 @@ for(const q of queries){
 
 try{
 
-const results=
+const results =
 await spotifySearch(q);
 
 if(!results.length){
 continue;
 }
 
-const wanted=
+const wanted =
 song.toLowerCase();
 
-const exact=
+const exact =
 results.find(track=>{
 
-const artist=
+const artist =
 track.artists
 .map(a=>a.name)
 .join(" ")
 .toLowerCase();
 
-const title=
+const title =
 track.name
 .toLowerCase();
 
@@ -851,15 +808,15 @@ return exact.uri;
 
 }
 
-const partial=
+const partial =
 results.find(track=>{
 
-const artist=
+const artist =
 track.artists[0]
 .name
 .toLowerCase();
 
-const title=
+const title =
 track.name
 .toLowerCase();
 
@@ -896,7 +853,6 @@ msg(
 return null;
 
 }
-
 /* =========================================
    CREAR PLAYLIST
 ========================================= */
@@ -927,6 +883,12 @@ playlistName
 
 `${promptAI.value || "Playlist"} Mix`;
 
+try{
+
+/* =====================================
+   CREAR PLAYLIST
+===================================== */
+
 const playlistResponse =
 await fetch(
 
@@ -947,7 +909,10 @@ body:JSON.stringify({
 
 name:finalName,
 
-public:false
+public:false,
+
+description:
+"Generada con Spotify AI v1.15"
 
 })
 
@@ -1050,8 +1015,12 @@ return;
 }
 
 /* =====================================
-   AGREGAR A PLAYLIST
+   AGREGAR CANCIONES
 ===================================== */
+
+msg(
+"Agregando canciones..."
+);
 
 for(
 let i=0;
@@ -1068,7 +1037,7 @@ i+100
 const addResponse =
 await fetch(
 
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
+`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
 
 {
 method:"POST",
@@ -1110,27 +1079,49 @@ return;
 
 }
 
+updateProgress(
+Math.min(
+i+100,
+uniqueUris.length
+),
+uniqueUris.length
+);
+
 }
 
+/* =====================================
+   FINALIZAR
+===================================== */
+
 setConnected(
-
 playlistStatus,
-
 "Playlist 🟢"
-
 );
 
 msg(
 "Playlist completada"
 );
 
+if(
+playlist.external_urls?.spotify
+){
+
 window.open(
-
 playlist.external_urls.spotify,
-
 "_blank"
-
 );
+
+}
+
+}catch(error){
+
+console.error(error);
+
+msg(
+"Error creando playlist"
+);
+
+}
 
 }
 
@@ -1147,11 +1138,6 @@ window.addEventListener(
 const spotifyBtn =
 document.getElementById(
 "spotifyBtn"
-);
-
-const saveGeminiBtn =
-document.getElementById(
-"saveGeminiBtn"
 );
 
 const generateBtn =
@@ -1184,9 +1170,6 @@ document.getElementById(
 spotifyBtn.onclick =
 loginSpotify;
 
-saveGeminiBtn.onclick =
-saveGemini;
-
 generateBtn.onclick =
 ()=>generateGemini(false);
 
@@ -1204,27 +1187,15 @@ changeUser;
 
 /* ============================= */
 
-geminiKey.value =
-
-localStorage.getItem(
-"gemini_key"
-)
-
-|| "";
-
-/* ============================= */
-
 updateStatus();
 
 getToken();
 
 msg(
-"Spotify AI v1.13 Turbo iniciado"
+"Spotify AI v1.15 Cloud Secure iniciado"
 );
 
 }
-
-/* fin DOMContentLoaded */
 
 );
 
