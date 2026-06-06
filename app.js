@@ -747,7 +747,7 @@ query
 const response =
 await fetch(
 
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=50`,
 
 {
 headers:{
@@ -771,41 +771,33 @@ data.tracks?.items || []
    BUSCAR CANCION
 ========================================= */
 
-async function searchSong(
-song
-){
+async function searchSong(song){
 
-song =
-cleanSong(song);
+song = cleanSong(song);
 
 if(!song){
 return null;
 }
 
-let queries = [song];
+let queries=[song];
 
-if(
-song.includes("-")
-){
+if(song.includes("-")){
 
-const parts =
-song.split("-");
+const parts=song.split("-");
 
-const artist =
-parts[0].trim();
+const artist=parts[0].trim();
 
-const track =
-parts
+const track=parts
 .slice(1)
 .join("-")
 .trim();
 
 queries.push(
-`${artist} ${track}`
+`artist:${artist} track:${track}`
 );
 
 queries.push(
-`${track} ${artist}`
+`${artist} ${track}`
 );
 
 queries.push(
@@ -814,32 +806,84 @@ track
 
 }
 
-for(
-const q of queries
-){
+for(const q of queries){
 
 try{
 
-const results =
+const results=
 await spotifySearch(q);
 
-if(
-results.length
-){
+if(!results.length){
+continue;
+}
 
-msg(
-`OK: ${song}`
+const wanted=
+song.toLowerCase();
+
+const exact=
+results.find(track=>{
+
+const artist=
+track.artists
+.map(a=>a.name)
+.join(" ")
+.toLowerCase();
+
+const title=
+track.name
+.toLowerCase();
+
+return (
+wanted.includes(artist)
+&&
+wanted.includes(title)
 );
 
-return results[0].uri;
+});
+
+if(exact){
+
+msg(
+`Exacta: ${song}`
+);
+
+return exact.uri;
+
+}
+
+const partial=
+results.find(track=>{
+
+const artist=
+track.artists[0]
+.name
+.toLowerCase();
+
+const title=
+track.name
+.toLowerCase();
+
+return (
+wanted.includes(artist)
+||
+wanted.includes(title)
+);
+
+});
+
+if(partial){
+
+msg(
+`Aproximada: ${song}`
+);
+
+return partial.uri;
 
 }
 
 }catch(error){
 
-console.error(
-error
-);
+console.error(error);
 
 }
 
