@@ -740,6 +740,10 @@ query
 .replace(/"/g,"")
 .trim();
 
+msg(
+`TOKEN: ${accessToken ? "OK" : "NO"}`
+);
+
 const response =
 await fetch(
 
@@ -754,16 +758,12 @@ Authorization:
 
 );
 
-console.log(
-"STATUS:",
-response.status
+msg(
+`STATUS: ${response.status}`
 );
 
-console.log(
-"RETRY AFTER:",
-response.headers.get(
-"Retry-After"
-)
+msg(
+`RETRY: ${response.headers.get("Retry-After") || "NULL"}`
 );
 
 if(response.status === 429){
@@ -781,9 +781,11 @@ if(!response.ok){
 const txt =
 await response.text();
 
-console.error(
-txt
+msg(
+`ERROR: ${response.status}`
 );
+
+console.error(txt);
 
 return [];
 
@@ -792,12 +794,18 @@ return [];
 const data =
 await response.json();
 
+msg(
+`TRACKS: ${data?.tracks?.items?.length || 0}`
+);
+
 return data?.tracks?.items || [];
 
 }catch(error){
 
-console.error(
-error
+console.error(error);
+
+msg(
+`ERROR JS: ${error.message}`
 );
 
 return [];
@@ -805,7 +813,6 @@ return [];
 }
 
 }
-
 /* =========================================
    BUSQUEDA PRECISA
 ========================================= */
