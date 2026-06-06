@@ -358,6 +358,11 @@ body
 const data =
 await response.json();
 
+console.log(
+"TOKEN RESPONSE:",
+data
+);
+
 if(data.access_token){
 
 accessToken =
@@ -366,6 +371,11 @@ data.access_token;
 localStorage.setItem(
 "spotify_token",
 accessToken
+);
+
+console.log(
+"SCOPES:",
+data.scope
 );
 
 window.history.replaceState(
@@ -427,7 +437,6 @@ msg(
 }
 
 }
-
 /* =========================================
    CAMBIAR CUENTA
 ========================================= */
