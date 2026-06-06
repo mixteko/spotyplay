@@ -236,6 +236,13 @@ localStorage.setItem(
 verifier
 );
 
+console.log(
+"GUARDADO:",
+localStorage.getItem(
+"spotify_verifier"
+)
+);
+
 const challengeCode =
 await challenge(
 verifier
