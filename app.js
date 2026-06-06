@@ -1265,16 +1265,6 @@ msg(
 }
 
 );
-/* =========================================
-   CAMBIO FINAL 
-========================================= */
-changeBtn.onclick =
-changeUser;
-
-updateStatus();
-
-await getToken();
-
 msg(
 "Spotify AI v1.15 Cloud Secure iniciado"
 );
@@ -1282,8 +1272,6 @@ msg(
 }
 
 );
-
-
 
 /* =========================================
    FIN APP.JS
