@@ -1171,10 +1171,15 @@ null,
 );
 
 console.log(
-"TOKEN:",
-accessToken?.substring(0,20)
+"PLAYLIST ID:",
+playlist.id
 );
 
+console.log(
+"USER TOKEN:",
+accessToken.substring(0,25)
+);
+   
 if(
 result.error
 ){
