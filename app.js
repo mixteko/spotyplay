@@ -380,6 +380,16 @@ if(data.access_token){
 accessToken =
 data.access_token;
 
+console.log(
+"TOKEN TYPE:",
+data.token_type
+);
+
+console.log(
+"TOKEN SCOPES:",
+data.scope
+);
+
 localStorage.setItem(
 "spotify_token",
 accessToken
@@ -1199,6 +1209,16 @@ uris:chunk
 
 const result =
 await addResponse.json();
+
+console.log(
+"ADD RESPONSE:",
+result
+);
+
+console.log(
+"PLAYLIST ID:",
+playlist.id
+);
 
 if(
 result.error
