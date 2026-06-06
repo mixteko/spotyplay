@@ -785,6 +785,11 @@ for(const q of queries){
 
 try{
 
+console.log(
+"BUSCANDO:",
+q
+);
+
 const results =
 await spotifySearch(q);
 
