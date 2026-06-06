@@ -1064,30 +1064,6 @@ msg(
 `Playlist creada: ${playlist.name}`
 );
 
-const songs =
-songsArea.value
-.split("\n")
-.filter(
-s=>s.trim()
-);
-
-console.log(
-"PASO 6",
-songs.length
-);
-
-const uris = [];
-
-for(const song of songs){
-
-console.log(
-"BUSCANDO",
-song
-);
-
-}
-
-console.log("PASO FINAL");
 
 /* ==========================
    LEER CANCIONES
