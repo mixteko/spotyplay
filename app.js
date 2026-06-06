@@ -1265,13 +1265,6 @@ msg(
 }
 
 );
-msg(
-"Spotify AI v1.15 Cloud Secure iniciado"
-);
-
-}
-
-);
 
 /* =========================================
    FIN APP.JS
