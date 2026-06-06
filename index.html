@@ -1,242 +1,60 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Spotify Playlist Creator AI v1.12</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Spotify Playlist Creator AI v1.13 Turbo</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-<style>
+<link rel="stylesheet" href="css/style.css">
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-}
-
-body{
-font-family:'Inter',sans-serif;
-background:
-radial-gradient(circle at top left,#00f0ff 0%,transparent 25%),
-radial-gradient(circle at top right,#ff00ea 0%,transparent 25%),
-linear-gradient(135deg,#050510,#09091f,#111827);
-min-height:100vh;
-padding:30px;
-color:white;
-overflow-x:hidden;
-}
-
-body::before{
-content:"";
-position:fixed;
-inset:0;
-background:
-linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
-linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
-background-size:40px 40px;
-pointer-events:none;
-}
-
-.container{
-max-width:1300px;
-margin:auto;
-}
-
-.card{
-background:rgba(10,10,25,.85);
-border:1px solid rgba(255,255,255,.08);
-backdrop-filter:blur(20px);
-border-radius:35px;
-padding:35px;
-box-shadow:
-0 0 30px rgba(0,240,255,.15),
-0 0 60px rgba(255,0,234,.08);
-}
-
-.header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-flex-wrap:wrap;
-gap:20px;
-margin-bottom:30px;
-}
-
-.title h1{
-font-family:'Orbitron',sans-serif;
-font-size:42px;
-background:linear-gradient(90deg,#00f0ff,#ff00ea);
--webkit-background-clip:text;
--webkit-text-fill-color:transparent;
-}
-
-.title p{
-opacity:.75;
-margin-top:8px;
-}
-
-.statusRow{
-display:flex;
-gap:12px;
-flex-wrap:wrap;
-}
-
-.status{
-padding:14px 20px;
-border-radius:18px;
-font-weight:700;
-font-size:14px;
-backdrop-filter:blur(10px);
-}
-
-.connected{
-background:linear-gradient(135deg,#00ff9d,#00d9ff);
-color:#000;
-box-shadow:0 0 20px rgba(0,255,157,.35);
-}
-
-.disconnected{
-background:linear-gradient(135deg,#ff0055,#ff4d00);
-color:white;
-box-shadow:0 0 20px rgba(255,0,85,.25);
-}
-
-.grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:28px;
-}
-
-.panel{
-background:rgba(255,255,255,.03);
-border:1px solid rgba(255,255,255,.06);
-border-radius:28px;
-padding:28px;
-box-shadow:inset 0 0 20px rgba(255,255,255,.03);
-}
-
-.panel h2{
-font-family:'Orbitron',sans-serif;
-margin-bottom:20px;
-font-size:22px;
-color:#00f0ff;
-}
-
-input,
-textarea,
-select{
-width:100%;
-padding:18px;
-margin-top:12px;
-border:none;
-border-radius:18px;
-background:#0f172a;
-color:white;
-font-size:15px;
-outline:none;
-border:1px solid rgba(255,255,255,.08);
-transition:.25s;
-}
-
-input:focus,
-textarea:focus,
-select:focus{
-border-color:#00f0ff;
-box-shadow:
-0 0 0 3px rgba(0,240,255,.2),
-0 0 25px rgba(0,240,255,.2);
-}
-
-textarea{
-min-height:240px;
-resize:vertical;
-}
-
-.buttonGrid{
-display:flex;
-flex-wrap:wrap;
-gap:14px;
-margin-top:18px;
-}
-
-button{
-flex:1;
-min-width:150px;
-padding:18px;
-border:none;
-border-radius:18px;
-font-weight:700;
-font-size:15px;
-cursor:pointer;
-transition:.25s;
-position:relative;
-overflow:hidden;
-}
-
-button:hover{
-transform:translateY(-3px) scale(1.02);
-}
-
-.primary{
-background:linear-gradient(135deg,#00f0ff,#0077ff);
-color:white;
-box-shadow:0 0 25px rgba(0,240,255,.35);
-}
-
-.secondary{
-background:linear-gradient(135deg,#7b00ff,#ff00ea);
-color:white;
-box-shadow:0 0 25px rgba(255,0,234,.25);
-}
-
-.danger{
-background:linear-gradient(135deg,#ff0055,#ff4d00);
-color:white;
-box-shadow:0 0 25px rgba(255,0,85,.25);
-}
-
-.log{
-margin-top:30px;
-background:#060b18;
-border:1px solid rgba(255,255,255,.08);
-padding:25px;
-border-radius:24px;
-height:280px;
-overflow:auto;
-white-space:pre-wrap;
-font-size:14px;
-line-height:1.6;
-box-shadow:inset 0 0 30px rgba(0,240,255,.06);
-}
-
-@media(max-width:950px){
-.grid{
-grid-template-columns:1fr;
-}
-}
-
-</style>
 </head>
 
 <body>
 
 <div class="container">
+
 <div class="card">
 
 <div class="header">
 
 <div class="title">
+
 <h1>SPOTIFY AI</h1>
-<p>Version 1.11 Neon Futuristic</p>
+
+<p>Version 1.13 Turbo</p>
+
 </div>
 
 <div class="statusRow">
-<div id="spotifyStatus" class="status disconnected">Spotify 🔴</div>
-<div id="geminiStatus" class="status disconnected">Gemini 🔴</div>
-<div id="playlistStatus" class="status disconnected">Playlist 🔴</div>
+
+<div id="spotifyStatus"
+class="status disconnected">
+
+Spotify 🔴
+
+</div>
+
+<div id="geminiStatus"
+class="status disconnected">
+
+Gemini 🔴
+
+</div>
+
+<div id="playlistStatus"
+class="status disconnected">
+
+Playlist 🔴
+
+</div>
+
 </div>
 
 </div>
@@ -244,27 +62,48 @@ grid-template-columns:1fr;
 <div class="grid">
 
 <div class="panel">
+
 <h2>IA GENERATOR</h2>
 
-<button id="spotifyBtn" class="primary">
+<button
+id="spotifyBtn"
+class="primary">
+
 Conectar Spotify
+
 </button>
 
-<input id="geminiKey" placeholder="Gemini API Key">
+<input
+id="geminiKey"
+placeholder="Gemini API Key">
 
 <div class="buttonGrid">
-<button id="saveGeminiBtn" class="secondary">
+
+<button
+id="saveGeminiBtn"
+class="secondary">
+
 Guardar Gemini
+
 </button>
 
-<button id="refreshBtn" class="secondary">
+<button
+id="refreshBtn"
+class="secondary">
+
 Refrescar
+
 </button>
+
 </div>
 
-<textarea id="promptAI" placeholder="Ejemplo: Kpop futurista nocturno"></textarea>
+<textarea
+id="promptAI"
+placeholder="Ejemplo: Kpop relajante nocturno">
+</textarea>
 
 <select id="songCount">
+
 <option value="10">10 canciones</option>
 <option value="20">20 canciones</option>
 <option value="40">40 canciones</option>
@@ -272,533 +111,96 @@ Refrescar
 <option value="60">60 canciones</option>
 <option value="80">80 canciones</option>
 <option value="100">100 canciones</option>
+
 </select>
 
-<div style="margin-top:12px">
-<div id="songCounter">0 / 0 canciones</div>
-<div style="height:10px;background:#111827;border-radius:999px;margin-top:8px;overflow:hidden">
-<div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00f0ff,#ff00ea)"></div>
+<div class="progressWrap">
+
+<div id="songCounter">
+
+0 / 0 canciones
+
 </div>
+
+<div class="progress">
+
+<div id="progressBar"></div>
+
+</div>
+
 </div>
 
 <div class="buttonGrid">
-<button id="generateBtn" class="primary">
+
+<button
+id="generateBtn"
+class="primary">
+
 Generar Lista
+
 </button>
 
-<button id="moreBtn" class="secondary">
+<button
+id="moreBtn"
+class="secondary">
+
 Buscar Más
+
 </button>
+
 </div>
 
 </div>
 
 <div class="panel">
+
 <h2>PLAYLIST BUILDER</h2>
 
-<input id="playlistName" placeholder="Nombre playlist">
+<input
+id="playlistName"
+placeholder="Nombre playlist">
 
-<textarea id="songs"></textarea>
+<textarea
+id="songs">
+</textarea>
 
 <div class="buttonGrid">
-<button id="playlistBtn" class="primary">
+
+<button
+id="playlistBtn"
+class="primary">
+
 Crear Playlist
+
 </button>
 
-<button id="changeBtn" class="danger">
+<button
+id="changeBtn"
+class="danger">
+
 Cambiar Cuenta
+
 </button>
-</div>
 
 </div>
 
 </div>
 
-<div id="log" class="log">
+</div>
+
+<div
+id="log"
+class="log">
+
 Esperando conexión...
+
+</div>
+
 </div>
 
 </div>
-</div>
 
-<script>
-
-const CLIENT_ID="6c398ae66eae4f84959cfce08bd0c74c";
-const REDIRECT_URI="https://mixteko.github.io/spotyplay/";
-
-const SCOPES=[
-"user-read-private",
-"user-read-email",
-"playlist-read-private",
-"playlist-modify-private",
-"playlist-modify-public"
-].join(" ");
-
-let accessToken=localStorage.getItem("spotify_token")||"";
-
-const spotifyStatus=document.getElementById("spotifyStatus");
-const geminiStatus=document.getElementById("geminiStatus");
-const playlistStatus=document.getElementById("playlistStatus");
-
-const geminiKey=document.getElementById("geminiKey");
-const promptAI=document.getElementById("promptAI");
-const songCount=document.getElementById("songCount");
-const playlistName=document.getElementById("playlistName");
-const songs=document.getElementById("songs");
-const log=document.getElementById("log");
-
-function msg(text){
-log.innerHTML += "\n" + text;
-log.scrollTop=log.scrollHeight;
-}
-
-function setConnected(el,text){
-el.className="status connected";
-el.innerHTML=text;
-}
-
-function setDisconnected(el,text){
-el.className="status disconnected";
-el.innerHTML=text;
-}
-
-function updateStatus(){
-
-if(accessToken){
-setConnected(spotifyStatus,"Spotify 🟢");
-}else{
-setDisconnected(spotifyStatus,"Spotify 🔴");
-}
-
-const key=localStorage.getItem("gemini_key");
-
-if(key){
-setConnected(geminiStatus,"Gemini 🟢");
-}else{
-setDisconnected(geminiStatus,"Gemini 🔴");
-}
-
-}
-
-function refreshApp(){
-promptAI.value="";
-playlistName.value="";
-songs.value="";
-log.innerHTML="Refrescado";
-}
-
-function saveGemini(){
-
-localStorage.setItem(
-"gemini_key",
-geminiKey.value.trim()
-);
-
-updateStatus();
-msg("Gemini guardada");
-
-}
-
-function cleanSong(song){
-
-song=song
-.normalize("NFKC")
-.replace(/[\u2018\u2019]/g,"'")
-.replace(/[\u201C\u201D]/g,'"')
-.replace(/[\u2013\u2014\u2212]/g,"-")
-.replace(/^\d+\./,"")
-.replace(/\*\*/g,"")
-.replace(/\*/g,"")
-.replace(/•/g,"")
-.replace(/\(.*?\)/g,"")
-.trim();
-
-const low=song.toLowerCase();
-
-if(low.includes("aquí tienes")) return "";
-if(low.includes("exactamente")) return "";
-if(low.includes("canciones")) return "";
-
-return song;
-
-}
-
-async function generateGemini(more=false){
-
-const key=localStorage.getItem("gemini_key");
-
-if(!key){
-msg("Guardar Gemini primero");
-return;
-}
-
-const target=parseInt(songCount.value);
-let collected=[];
-
-document.getElementById("songCounter").innerText=`0 / ${target} canciones`;
-document.getElementById("progressBar").style.width="0%";
-
-try{
-
-while(collected.length < target){
-
-const missing=target-collected.length;
-
-msg(`Generando ${missing} canciones restantes...`);
-
-const response=await fetch(
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-contents:[{
-parts:[{
-text:`Genera EXACTAMENTE ${Math.min(missing,50)} canciones.
-Formato obligatorio:
-ARTISTA - CANCION
-
-Tema:
-${promptAI.value}
-
-No repitas ninguna de estas:
-${collected.join("\n")}`
-}]
-}],
-generationConfig:{
-temperature:0.9,
-maxOutputTokens:4096
-}
-})
-}
-);
-
-const data=await response.json();
-
-if(data.error){
-msg(JSON.stringify(data.error,null,2));
-return;
-}
-
-const text=data.candidates?.[0]?.content?.parts?.[0]?.text||"";
-
-const batch=text.split("\\n")
-.map(x=>x.trim())
-.filter(x=>x.includes("-"));
-
-collected=[...new Set([...collected,...batch])];
-
-document.getElementById("songCounter").innerText=`${collected.length} / ${target} canciones`;
-document.getElementById("progressBar").style.width=`${Math.min(100,(collected.length/target)*100)}%`;
-
-if(batch.length===0) break;
-}
-
-songs.value=collected.slice(0,target).join("\\n");
-
-msg(`Lista generada: ${Math.min(collected.length,target)} canciones`);
-
-}catch(e){
-console.log(e);
-msg("Error Gemini");
-}
-
-}
-
-async function spotifySearch(query){
-
-const r=await fetch(
-`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
-{
-headers:{
-Authorization:`Bearer ${accessToken}`
-}
-}
-);
-
-const d=await r.json();
-return d.tracks?.items||[];
-
-}
-
-async function searchSong(song){
-
-song=cleanSong(song);
-
-if(!song) return null;
-
-let queries=[song];
-
-if(song.includes("-")){
-
-const p=song.split("-");
-const artist=p[0].trim();
-const track=p.slice(1).join("-").trim();
-
-queries.push(`${artist} ${track}`);
-queries.push(`${track} ${artist}`);
-queries.push(track);
-
-}
-
-for(const q of queries){
-
-try{
-
-const items=await spotifySearch(q);
-
-if(items.length){
-msg(`OK: ${song}`);
-return items[0].uri;
-}
-
-}catch(e){
-console.log(e);
-}
-
-}
-
-msg(`No encontrada: ${song}`);
-return null;
-
-}
-
-async function createPlaylist(){
-
-if(!accessToken){
-msg("Spotify no conectado");
-return;
-}
-
-msg("Creando playlist...");
-
-const finalName=
-playlistName.value.trim()||
-`${promptAI.value||"Playlist"} Mix`;
-
-const playlistResponse=await fetch(
-"https://api.spotify.com/v1/me/playlists",
-{
-method:"POST",
-headers:{
-Authorization:`Bearer ${accessToken}`,
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-name:finalName,
-public:false
-})
-}
-);
-
-const playlist=await playlistResponse.json();
-
-if(playlist.error){
-msg(JSON.stringify(playlist.error,null,2));
-return;
-}
-
-msg(`Playlist creada: ${playlist.name}`);
-
-const lines=songs.value
-.split("\n")
-.map(cleanSong)
-.filter(x=>x);
-
-let uris=[];
-
-for(const line of lines){
-
-const uri=await searchSong(line);
-
-if(uri){
-uris.push(uri);
-}
-
-}
-
-uris=[...new Set(uris)];
-
-msg(`Encontradas: ${uris.length}`);
-
-if(!uris.length){
-msg("No agregué canciones");
-return;
-}
-
-for(let i=0;i<uris.length;i+=100){
-
-const chunk=uris.slice(i,i+100);
-
-const addResponse=await fetch(
-`https://api.spotify.com/v1/playlists/${playlist.id}/items`,
-{
-method:"POST",
-headers:{
-Authorization:`Bearer ${accessToken}`,
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-uris:chunk
-})
-}
-);
-
-const result=await addResponse.json();
-
-if(result.error){
-msg(JSON.stringify(result.error,null,2));
-return;
-}
-
-}
-
-setConnected(playlistStatus,"Playlist 🟢");
-
-msg("Canciones agregadas correctamente");
-
-window.open(
-playlist.external_urls.spotify,
-"_blank"
-);
-
-}
-
-function randomString(n){
-return [...Array(n)]
-.map(()=>Math.random().toString(36)[2])
-.join("");
-}
-
-async function challenge(v){
-
-const d=new TextEncoder().encode(v);
-
-const h=await crypto.subtle.digest(
-"SHA-256",
-d
-);
-
-return btoa(
-String.fromCharCode(...new Uint8Array(h))
-)
-.replace(/\+/g,"-")
-.replace(/\//g,"_")
-.replace(/=/g,"");
-
-}
-
-async function loginSpotify(){
-
-localStorage.removeItem("spotify_token");
-
-const verifier=randomString(64);
-
-localStorage.setItem("spotify_verifier",verifier);
-
-const c=await challenge(verifier);
-
-window.location=
-"https://accounts.spotify.com/authorize?"+
-new URLSearchParams({
-client_id:CLIENT_ID,
-response_type:"code",
-redirect_uri:REDIRECT_URI,
-scope:SCOPES,
-show_dialog:true,
-code_challenge_method:"S256",
-code_challenge:c
-});
-
-}
-
-async function getToken(){
-
-const code=new URLSearchParams(location.search).get("code");
-
-if(!code){
-updateStatus();
-return;
-}
-
-const verifier=localStorage.getItem("spotify_verifier");
-
-const body=new URLSearchParams({
-client_id:CLIENT_ID,
-grant_type:"authorization_code",
-code,
-redirect_uri:REDIRECT_URI,
-code_verifier:verifier
-});
-
-const r=await fetch(
-"https://accounts.spotify.com/api/token",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/x-www-form-urlencoded"
-},
-body
-}
-);
-
-const d=await r.json();
-
-if(d.access_token){
-
-accessToken=d.access_token;
-
-localStorage.setItem("spotify_token",accessToken);
-
-window.history.replaceState(
-{},
-document.title,
-window.location.pathname
-);
-
-updateStatus();
-msg("Spotify conectado");
-
-}
-
-}
-
-function changeUser(){
-localStorage.clear();
-window.location.href="https://www.spotify.com/logout";
-}
-
-window.addEventListener("DOMContentLoaded",()=>{
-
-const spotifyBtn=document.getElementById("spotifyBtn");
-const saveGeminiBtn=document.getElementById("saveGeminiBtn");
-const generateBtn=document.getElementById("generateBtn");
-const moreBtn=document.getElementById("moreBtn");
-const refreshBtn=document.getElementById("refreshBtn");
-const playlistBtn=document.getElementById("playlistBtn");
-const changeBtn=document.getElementById("changeBtn");
-
-spotifyBtn.onclick=loginSpotify;
-saveGeminiBtn.onclick=saveGemini;
-generateBtn.onclick=()=>generateGemini(false);
-moreBtn.onclick=()=>generateGemini(true);
-refreshBtn.onclick=refreshApp;
-playlistBtn.onclick=createPlaylist;
-changeBtn.onclick=changeUser;
-
-geminiKey.value=localStorage.getItem("gemini_key")||"";
-
-updateStatus();
-getToken();
-
-});
-
-</script>
+<script src="js/app.js"></script>
 
 </body>
 </html>
-
-
-
-
-
