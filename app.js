@@ -1186,6 +1186,21 @@ const result =
 await addResponse.json();
 
 console.log(
+"ADD STATUS:",
+addResponse.status
+);
+
+console.log(
+"ADD RESPONSE:",
+result
+);
+
+console.log(
+"PLAYLIST ID:",
+playlist.id
+);
+
+console.log(
 "ADD RESPONSE:",
 result
 );
