@@ -402,7 +402,27 @@ window.location.pathname
 );
 
 updateStatus();
+const me =
+await fetch(
 
+"https://api.spotify.com/v1/me",
+
+{
+headers:{
+Authorization:
+`Bearer ${accessToken}`
+}
+}
+
+);
+
+const meData =
+await me.json();
+
+console.log(
+"USUARIO:",
+meData.id
+);
 msg(
 "Spotify conectado"
 );
