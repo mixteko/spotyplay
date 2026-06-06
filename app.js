@@ -230,9 +230,9 @@ digest
 
 async function loginSpotify(){
 
-localStorage.removeItem(
-"spotify_token"
-);
+localStorage.clear();
+
+sessionStorage.clear();
 
 const verifier =
 randomString(64);
@@ -247,7 +247,7 @@ await challenge(
 verifier
 );
 
-window.location =
+const authUrl =
 "https://accounts.spotify.com/authorize?"
 +
 new URLSearchParams({
@@ -264,8 +264,7 @@ REDIRECT_URI,
 scope:
 SCOPES,
 
-show_dialog:
-true,
+show_dialog:"true",
 
 code_challenge_method:
 "S256",
@@ -274,6 +273,9 @@ code_challenge:
 challengeCode
 
 });
+
+window.location.href =
+authUrl;
 
 }
 /* =========================================
