@@ -907,16 +907,6 @@ return null;
    CREAR PLAYLIST
 ========================================= */
 async function createPlaylist(){
-if(!accessToken){
-
-msg(
-"Reconecta Spotify"
-);
-
-return;
-
-}
-async function createPlaylist(){
 
 if(!accessToken){
 
@@ -943,11 +933,9 @@ playlistName
 `${promptAI.value || "Playlist"} Mix`;
 
 try{
-}
 /* =====================================
    CREAR PLAYLIST
 ===================================== */
-
 const playlistResponse =
 await fetch(
 
