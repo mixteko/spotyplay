@@ -748,6 +748,7 @@ document.getElementById(
 )}%`;
 
 }
+
 /* =========================================
    SPOTIFY SEARCH
 ========================================= */
@@ -766,6 +767,7 @@ msg(
 `TOKEN: ${accessToken ? "OK" : "NO"}`
 );
 
+// CORREGIDO: Se añadió el signo '$' antes de la llave
 const response =
 await fetch(
 
@@ -835,6 +837,7 @@ return [];
 }
 
 }
+
 /* =========================================
    BUSQUEDA PRECISA
 ========================================= */
@@ -1166,6 +1169,7 @@ console.log(
 chunk
 );
 
+// CORREGIDO: Se añadió el signo '$' antes de {playlist.id}
 const addResponse =
 await fetch(
 
@@ -1239,6 +1243,7 @@ uris.length
 );
 
 }
+
 /* ==========================
    FINALIZAR
 ========================== */
