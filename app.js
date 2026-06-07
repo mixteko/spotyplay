@@ -230,9 +230,13 @@ digest
 
 async function loginSpotify(){
 
-localStorage.clear();
+localStorage.removeItem(
+"spotify_token"
+);
 
-sessionStorage.clear();
+localStorage.removeItem(
+"spotify_verifier"
+);
 
 const verifier =
 randomString(64);
@@ -445,7 +449,13 @@ msg(
 
 function changeUser(){
 
-localStorage.clear();
+localStorage.removeItem(
+"spotify_token"
+);
+
+localStorage.removeItem(
+"spotify_verifier"
+);
 
 window.location.href =
 window.location.origin +
