@@ -1,8 +1,8 @@
 /* =========================================
-   SPOTIFY AI v2.0 - COMPLETO Y FUNCIONANDO
+   SPOTIFY AI v2.1 - CON OAUTH COMPLETO
 ========================================= */
 
-// 🔒 URLs de los Workers (CLIENT_ID oculto en Cloudflare)
+// 🔒 URLs de los Workers
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
@@ -55,67 +55,79 @@ function updateStatus() {
 }
 
 /* =========================================
-   AUTENTICACIÓN SEGURA CON WORKER - MEJORADA
+   AUTENTICACIÓN CON OAUTH
 ========================================= */
 async function loginSpotify() {
     try {
         msg("🔐 Pidiendo URL de autenticación segura...");
-        console.log("Auth Worker URL:", AUTH_WORKER);
         
         const response = await fetch(AUTH_WORKER + "/spotify-login-url");
-        
-        console.log("Response status:", response.status);
-        console.log("Response ok:", response.ok);
         
         if (!response.ok) {
             throw new Error(`Worker error: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log("Response data:", data);
-        
         const authUrl = data.authUrl;
-        console.log("Auth URL completa:", authUrl);
-        console.log("Auth URL length:", authUrl.length);
         
         if (!authUrl) {
             throw new Error("No se recibió authUrl del Worker");
         }
         
         msg("✅ Redirigiendo a Spotify...");
-        console.log("Haciendo redirect a:", authUrl);
         
         setTimeout(() => {
-            console.log("Ejecutando redirect ahora...");
             window.location.assign(authUrl);
         }, 300);
         
     } catch (error) {
-        console.error("Error completo en loginSpotify:", error);
-        console.error("Stack:", error.stack);
+        console.error("Error en loginSpotify:", error);
         setDisconnected(spotifyStatus, "Spotify Error 🔴");
         msg(`❌ Error de autenticación: ${error.message}`);
     }
 }
 
 async function getToken() {
-    // Intenta obtener el código de los parámetros (?code=...)
+    // ✅ Obtener código de los parámetros (?code=...)
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     
-    // También intenta obtener el token del hash (#access_token=...)
+    // También obtener token del hash (#access_token=...) por compatibilidad
     const hash = window.location.hash.substring(1);
     const hashParams = new URLSearchParams(hash);
     const token = hashParams.get("access_token");
 
     if (code) {
-        // Si recibimos un código, necesitamos hacer un intercambio
-        msg("✅ Código de Spotify recibido, procesando...");
-        console.log("Code recibido:", code);
-        // Nota: El intercambio del código necesita un backend
-        // Por ahora, mostramos el código
-        msg("⚠️ Nota: Se necesita backend para procesar el código de autorización");
-        window.location.search = ""; // Limpiar URL
+        // ✅ Si recibimos código, intercambiarlo por token
+        msg("🔐 Intercambiando código por token...");
+        try {
+            const response = await fetch(AUTH_WORKER + "/spotify-callback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Error al obtener token");
+            }
+
+            const tokenData = await response.json();
+            accessToken = tokenData.access_token;
+            localStorage.setItem("spotify_token", accessToken);
+            
+            // Limpiar URL
+            window.history.replaceState({}, document.title, REDIRECT_URI);
+            
+            updateStatus();
+            msg("✅ ¡Conectado a Spotify correctamente!");
+            
+        } catch (error) {
+            console.error("Error intercambiando código:", error);
+            setDisconnected(spotifyStatus, "Spotify Error 🔴");
+            msg(`❌ Error: ${error.message}`);
+            window.history.replaceState({}, document.title, REDIRECT_URI);
+        }
         return;
     }
 
@@ -125,11 +137,15 @@ async function getToken() {
         window.location.hash = "";
         updateStatus();
         msg("✅ Conectado a Spotify correctamente.");
-    } else if (accessToken) {
-        msg("✅ Usando sesión existente de Spotify.");
-    } else {
-        msg("⚠️ Falta conectar cuenta de Spotify.");
+        return;
     }
+
+    if (accessToken) {
+        msg("✅ Usando sesión existente de Spotify.");
+        return;
+    }
+
+    msg("⚠️ Falta conectar cuenta de Spotify.");
 }
 
 function changeUser() {
@@ -187,8 +203,6 @@ async function generateGemini(moreTracks = false) {
         if (!moreTracks && songs) songs.innerHTML = "";
 
         let found = 0;
-        let notFound = 0;
-
         for (const trackStr of data.tracks) {
             msg(`🔍 Buscando: "${trackStr}"`);
             const spotifyTrack = await spotifySearch(trackStr);
@@ -196,7 +210,6 @@ async function generateGemini(moreTracks = false) {
                 appendSongToList(spotifyTrack);
                 found++;
             } else {
-                notFound++;
                 msg(`⚠️ No encontrada: ${trackStr}`);
             }
         }
@@ -215,7 +228,6 @@ async function generateGemini(moreTracks = false) {
 ========================================= */
 async function spotifySearch(query) {
     if (!accessToken) {
-        console.error("No hay token de Spotify");
         return null;
     }
 
@@ -263,7 +275,6 @@ function appendSongToList(track) {
     li.dataset.uri = track.uri;
     
     const artistNames = track.artists.map(a => a.name).join(", ");
-    const duration = Math.floor(track.duration_ms / 60000);
     
     li.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -382,9 +393,6 @@ async function createPlaylist() {
     }
 }
 
-/* =========================================
-   FUNCIONES AUXILIARES
-========================================= */
 function refreshApp() {
     if (songs) songs.innerHTML = "";
     if (promptAI) promptAI.value = "";
@@ -412,7 +420,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             try {
                 await loginSpotify();
             } catch (e) {
-                console.error("Error en loginSpotify:", e);
+                console.error("Error:", e);
                 msg(`❌ Error: ${e.message}`);
             }
         };
