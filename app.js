@@ -87,7 +87,7 @@ async function loginSpotify() {
         
         // Usar setTimeout para dar tiempo al navegador
         setTimeout(() => {
-            window.location.href = authUrl;
+            window.location.assign(authUrl);
         }, 500);
         
     } catch (error) {
