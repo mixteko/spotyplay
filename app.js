@@ -234,72 +234,170 @@ function changeUser() {
    GENERADOR DE CANCIONES CON GEMINI
 ========================================= */
 async function generateGemini(moreTracks = false) {
-    if (!promptAI || !promptAI.value.trim()) {
-        msg("❌ Escribe una descripción para la Playlist");
+
+    accessToken =
+        localStorage.getItem(
+            "spotify_token"
+        ) || "";
+
+    if (
+        !promptAI ||
+        !promptAI.value.trim()
+    ) {
+
+        msg(
+            "❌ Escribe una descripción para la Playlist"
+        );
+
         return;
+
     }
 
     if (!accessToken) {
-        msg("❌ Primero conecta tu cuenta de Spotify");
+
+        msg(
+            "❌ Primero conecta tu cuenta de Spotify"
+        );
+
         return;
+
     }
 
     try {
-        setConnected(geminiStatus, "Procesando con Gemini AI... ⏳");
-        msg("📡 Conectando con Gemini Cloud...");
 
-        const count = songCount ? parseInt(songCount.value) : 20;
+        setConnected(
+            geminiStatus,
+            "Procesando con Gemini AI... ⏳"
+        );
 
-        const response = await fetch(GEMINI_WORKER, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                prompt: promptAI.value,
-                count: Math.min(count, 100),
-                more: moreTracks
-            })
-        });
+        msg(
+            "📡 Conectando con Gemini Cloud..."
+        );
+
+        const count =
+            songCount
+                ? parseInt(
+                    songCount.value
+                )
+                : 20;
+
+        const response =
+            await fetch(
+                GEMINI_WORKER,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        prompt:
+                            promptAI.value,
+
+                        count:
+                            Math.min(
+                                count,
+                                100
+                            ),
+
+                        more:
+                            moreTracks
+                    })
+                }
+            );
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Worker error: ${response.status} - ${errorData.error || "desconocido"}`);
+
+            const errorData =
+                await response
+                    .json()
+                    .catch(
+                        () => ({})
+                    );
+
+            throw new Error(
+                `Worker error: ${response.status} - ${errorData.error || "desconocido"}`
+            );
+
         }
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
-        if (!data.tracks || data.tracks.length === 0) {
-            throw new Error("Gemini no devolvió canciones. Intenta otra descripción.");
+        console.log(
+            "GEMINI RESPONSE:",
+            data
+        );
+
+        if (
+            !data.tracks ||
+            data.tracks.length === 0
+        ) {
+
+            throw new Error(
+                "Gemini no devolvió canciones. Intenta otra descripción."
+            );
+
         }
 
-        setConnected(geminiStatus, "Gemini AI 🟢");
-        msg(`✅ Gemini sugirió ${data.tracks.length} canciones.`);
+        setConnected(
+            geminiStatus,
+            "Gemini AI 🟢"
+        );
 
-        if (!moreTracks && songs) songs.innerHTML = "";
+        msg(
+            `✅ Gemini sugirió ${data.tracks.length} canciones.`
+        );
+
+        if (
+            !moreTracks &&
+            songs
+        ) {
+
+            songs.innerHTML = "";
+
+        }
 
         let found = 0;
 
-        for (const trackStr of data.tracks) {
+        for (
+            const trackStr of data.tracks
+        ) {
 
-            msg(`🔍 Buscando: "${trackStr}"`);
+            msg(
+                `🔍 Buscando: ${trackStr}`
+            );
 
             const spotifyTrack =
-                await spotifySearch(trackStr);
+                await spotifySearch(
+                    trackStr
+                );
 
-            if (spotifyTrack) {
+            if (
+                spotifyTrack
+            ) {
 
-                appendSongToList(spotifyTrack);
+                appendSongToList(
+                    spotifyTrack
+                );
 
                 found++;
 
             } else {
 
-                msg(`⚠️ No encontrada: ${trackStr}`);
+                msg(
+                    `⚠️ No encontrada: ${trackStr}`
+                );
 
             }
 
         }
 
-        msg(`✨ Encontradas ${found}/${data.tracks.length} canciones.`);
+        msg(
+            `✨ Encontradas ${found}/${data.tracks.length} canciones.`
+        );
 
     } catch (error) {
 
