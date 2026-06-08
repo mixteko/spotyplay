@@ -99,9 +99,25 @@ async function loginSpotify() {
 }
 
 async function getToken() {
+    // Intenta obtener el código de los parámetros (?code=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    
+    // También intenta obtener el token del hash (#access_token=...)
     const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const token = params.get("access_token");
+    const hashParams = new URLSearchParams(hash);
+    const token = hashParams.get("access_token");
+
+    if (code) {
+        // Si recibimos un código, necesitamos hacer un intercambio
+        msg("✅ Código de Spotify recibido, procesando...");
+        console.log("Code recibido:", code);
+        // Nota: El intercambio del código necesita un backend
+        // Por ahora, mostramos el código
+        msg("⚠️ Nota: Se necesita backend para procesar el código de autorización");
+        window.location.search = ""; // Limpiar URL
+        return;
+    }
 
     if (token) {
         accessToken = token;
