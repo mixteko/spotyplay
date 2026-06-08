@@ -1,5 +1,5 @@
 /* =========================================
-   SPOTIFY AI v1.15 CLOUD SECURE - CORREGIDO
+   SPOTIFY AI v1.15 CLOUD SECURE
 ========================================= */
 
 const CLIENT_ID = "6f2af5f678674eff85c3b3cb45a06080";
@@ -29,7 +29,7 @@ const songs = document.getElementById("songs");
 const log = document.getElementById("log");
 
 /* =========================================
-   SISTEMA DE LOGS Y ESTADOS
+   LOGS Y ESTADOS
 ========================================= */
 function msg(text) {
     if (!log) return;
@@ -60,10 +60,10 @@ function updateStatus() {
 }
 
 /* =========================================
-   FLUJO DE AUTENTICACIÓN (URLS REALES DE PRODUCTION)
+   AUTENTICACIÓN OFICIAL DE SPOTIFY
 ========================================= */
 async function loginSpotify() {
-    // CORREGIDO: URL real de inicio de sesión oficial de Spotify
+    // CORREGIDO: URL real de autenticación oficial en producción
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
     window.location.href = authUrl;
 }
@@ -78,11 +78,11 @@ async function getToken() {
         localStorage.setItem("spotify_token", token);
         window.location.hash = "";
         updateStatus();
-        msg("Conectado a Spotify con éxito.");
+        msg("Token de Spotify cargado correctamente de la URL");
     } else if (accessToken) {
-        msg("Usando sesión existente de Spotify.");
+        msg("Usando token de Spotify existente en caché");
     } else {
-        msg("Falta conectar cuenta de Spotify.");
+        msg("No se encontró token de Spotify. Por favor, inicia sesión.");
     }
 }
 
@@ -90,22 +90,22 @@ function changeUser() {
     localStorage.removeItem("spotify_token");
     accessToken = "";
     updateStatus();
-    msg("Cambiando de cuenta de Spotify...");
+    msg("Sesión cerrada de Spotify. Cambiando de cuenta...");
     loginSpotify();
 }
 
 /* =========================================
-   CONEXIÓN CON GEMINI AI WORKER
+   CONEXIÓN CON GEMINI WORKER AI
 ========================================= */
 async function generateGemini(moreTracks = false) {
     if (!promptAI || !promptAI.value.trim()) {
-        msg("Escribe una descripción para la Playlist.");
+        msg("Escribe una descripción o género para la Playlist");
         return;
     }
 
     try {
         setConnected(geminiStatus, "Procesando con Gemini AI... ⏳");
-        msg("Generando lista de canciones recomendadas...");
+        msg("Conectando con Gemini Cloud para generar sugerencias musicales...");
 
         const count = songCount ? songCount.value : "20";
 
@@ -119,40 +119,44 @@ async function generateGemini(moreTracks = false) {
             })
         });
 
-        if (!response.ok) throw new Error("Error en el Worker de Gemini");
+        if (!response.ok) throw new Error("Error en la respuesta de Gemini Worker");
         
         const data = await response.json();
-        if (!data.tracks || data.tracks.length === 0) throw new Error("No se recibieron canciones.");
+        
+        if (!data.tracks || data.tracks.length === 0) {
+            throw new Error("No se devolvieron pistas válidas");
+        }
 
         setConnected(geminiStatus, "Gemini AI 🟢");
-        msg(`Gemini encontró ${data.tracks.length} canciones.`);
+        msg(`Gemini sugirió ${data.tracks.length} canciones con éxito.`);
 
         if (!moreTracks && songs) songs.innerHTML = "";
 
         for (const trackStr of data.tracks) {
-            msg(`Buscando: "${trackStr}"`);
+            msg(`Buscando en Spotify: "${trackStr}"`);
             const spotifyTrack = await spotifySearch(trackStr);
             if (spotifyTrack) {
                 appendSongToList(spotifyTrack);
             } else {
-                msg(`⚠️ No encontrada: ${trackStr}`);
+                msg(`⚠️ No encontrada en Spotify: ${trackStr}`);
             }
         }
+
     } catch (error) {
         console.error(error);
         setDisconnected(geminiStatus, "Gemini Error 🔴");
-        msg("Error: " + error.message);
+        msg("Error procesando la solicitud de IA: " + error.message);
     }
 }
 
 /* =========================================
-   BUSCADOR DE TRACKS (API REAL DE SPOTIFY)
+   BUSCADOR DE CANCIONES (API REAL)
 ========================================= */
 async function spotifySearch(query) {
     if (!accessToken) return null;
     const cleanQuery = query.replace(/"/g, "");
 
-    // CORREGIDO: Endpoint oficial real de búsqueda de Spotify
+    // CORREGIDO: Endpoint oficial de búsqueda de Spotify con template literals correctos
     const response = await fetch(
         `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
         {
@@ -164,6 +168,7 @@ async function spotifySearch(query) {
     );
 
     if (response.status === 401) {
+        msg("🚨 El Token expiró. Limpiando caché, inicia sesión de nuevo.");
         localStorage.removeItem("spotify_token");
         accessToken = "";
         updateStatus();
@@ -171,6 +176,7 @@ async function spotifySearch(query) {
     }
 
     if (!response.ok) return null;
+
     const data = await response.json();
     return data.tracks?.items?.[0] || null;
 }
@@ -187,11 +193,11 @@ function appendSongToList(track) {
 }
 
 /* =========================================
-   CREACIÓN DE PLAYLIST (API REAL DE SPOTIFY)
+   CREACIÓN DE PLAYLISTS (API REAL)
 ========================================= */
 async function createPlaylist() {
     if (!accessToken) {
-        msg("Primero debes conectar Spotify.");
+        msg("Primero debes conectarte a Spotify");
         return;
     }
 
@@ -199,16 +205,18 @@ async function createPlaylist() {
         setConnected(playlistStatus, "Creando... ⏳");
         const finalName = (playlistName && playlistName.value.trim()) ? playlistName.value : "Mi Playlist AI";
 
-        // 1. Obtener ID del usuario actual de la API real
+        msg("Consultando datos de tu perfil de Spotify...");
+        // CORREGIDO: Endpoint oficial para obtener los datos del perfil actual
         const meResponse = await fetch("https://api.spotify.com/v1/me", {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
 
-        if (!meResponse.ok) throw new Error("No se pudo obtener tu perfil de Spotify.");
+        if (!meResponse.ok) throw new Error("No se pudo obtener el ID del usuario actual de Spotify.");
         const meData = await meResponse.json();
         const userId = meData.id;
 
-        // 2. Crear Playlist Vacía usando la URL real inyectando el userId
+        msg(`Creando playlist vacía: "${finalName}"...`);
+        // CORREGIDO: Endpoint oficial de creación usando el userId real de producción
         const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
             method: "POST",
             headers: {
@@ -223,21 +231,21 @@ async function createPlaylist() {
             })
         });
 
-        if (!playlistResponse.ok) throw new Error("Error al crear la playlist en Spotify.");
+        if (!playlistResponse.ok) throw new Error("Error creando la estructura de la playlist.");
         const playlist = await playlistResponse.json();
 
-        // 3. Agregar las canciones añadidas en la interfaz
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
         if (uris.length === 0) {
             setConnected(playlistStatus, "Vacía 🟢");
-            msg("Playlist creada vacía porque no agregaste canciones.");
+            msg("Playlist creada, pero no tenías canciones en la lista para agregar.");
             if (playlist.external_urls?.spotify) window.open(playlist.external_urls.spotify, "_blank");
             return;
         }
 
         const chunk = uris.slice(0, 100);
+        msg(`Inyectando ${chunk.length} canciones en la Playlist...`);
 
-        // CORREGIDO: Endpoint oficial real para inyectar canciones con la sintaxis ${playlist.id}
+        // CORREGIDO: Endpoint oficial para volcar tracks en la lista usando su id dinámico
         const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
             method: "POST",
             headers: {
@@ -247,10 +255,10 @@ async function createPlaylist() {
             body: JSON.stringify({ uris: chunk })
         });
 
-        if (!addResponse.ok) throw new Error("No se pudieron inyectar las canciones.");
+        if (!addResponse.ok) throw new Error("Error volcando los tracks en la lista de reproducción.");
 
         setConnected(playlistStatus, "Playlist 🟢");
-        msg(`¡Éxito! Playlist creada con ${uris.length} canciones.`);
+        msg(`¡Éxito! Playlist completada con ${uris.length} canciones.`);
 
         if (playlist.external_urls?.spotify) {
             window.open(playlist.external_urls.spotify, "_blank");
@@ -259,20 +267,21 @@ async function createPlaylist() {
     } catch (error) {
         console.error(error);
         setDisconnected(playlistStatus, "Error 🔴");
-        msg("Error: " + error.message);
+        msg("Error creando playlist: " + error.message);
     }
 }
 
+// CORREGIDO: Añadida la función que faltaba para evitar el Uncaught ReferenceError
 function refreshApp() {
     if (songs) songs.innerHTML = "";
     if (promptAI) promptAI.value = "";
     if (playlistName) playlistName.value = "";
     updateStatus();
-    msg("App reseteada correctamente.");
+    msg("Aplicación reseteada. Lista limpia.");
 }
 
 /* =========================================
-   INICIALIZACIÓN ASYNC Y ASIGNACIÓN
+   INICIALIZACIÓN DE LA APLICACIÓN
 ========================================= */
 window.addEventListener("DOMContentLoaded", async () => {
     const spotifyBtn = document.getElementById("spotifyBtn");
@@ -282,11 +291,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     const playlistBtn = document.getElementById("playlistBtn");
     const changeBtn = document.getElementById("changeBtn");
 
-    if (spotifyBtn) {
-        spotifyBtn.onclick = async () => {
-            try { await loginSpotify(); } catch (e) { console.error(e); }
-        };
+    if (!spotifyBtn) {
+        console.error("No existe un botón con ID: spotifyBtn en el HTML");
+        return;
     }
+
+    spotifyBtn.onclick = async () => {
+        try {
+            await loginSpotify();
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     if (generateBtn) generateBtn.onclick = () => generateGemini(false);
     if (moreBtn) moreBtn.onclick = () => generateGemini(true);
@@ -296,4 +312,5 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     updateStatus();
     await getToken();
+    msg("Spotify AI v1.15 Cloud Secure cargado e iniciado correctamente.");
 });
