@@ -59,6 +59,50 @@ function updateStatus() {
 /* =========================================
    AUTENTICACIÓN CON OAUTH
 ========================================= */
+async function loginSpotify() {
+
+    try {
+
+        msg(
+            "🔐 Pidiendo URL de autenticación..."
+        );
+
+        const response =
+            await fetch(
+                AUTH_WORKER +
+                "/spotify-login-url"
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !data.authUrl
+        ) {
+
+            throw new Error(
+                "No se recibió authUrl"
+            );
+
+        }
+
+        window.location.href =
+            data.authUrl;
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+
+        msg(
+            `❌ ${error.message}`
+        );
+
+    }
+
+}
+
 async function getToken() {
 
     const urlParams =
@@ -101,7 +145,9 @@ async function getToken() {
                 responseData
             );
 
-            if (!response.ok) {
+            if (
+                !response.ok
+            ) {
 
                 throw new Error(
                     JSON.stringify(
@@ -132,11 +178,6 @@ async function getToken() {
 
             localStorage.setItem(
                 "spotify_token",
-                accessToken
-            );
-
-            console.log(
-                "TOKEN GUARDADO:",
                 accessToken
             );
 
@@ -175,7 +216,9 @@ async function getToken() {
             "spotify_token"
         );
 
-    if (savedToken) {
+    if (
+        savedToken
+    ) {
 
         accessToken =
             savedToken;
@@ -193,6 +236,24 @@ async function getToken() {
     msg(
         "⚠️ Spotify no conectado"
     );
+
+}
+
+function changeUser() {
+
+    localStorage.removeItem(
+        "spotify_token"
+    );
+
+    accessToken = "";
+
+    updateStatus();
+
+    msg(
+        "🔄 Cambiando cuenta Spotify..."
+    );
+
+    loginSpotify();
 
 }
 
