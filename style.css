@@ -502,3 +502,37 @@ min-width:100%;
 }
 
 }
+/* PLAYLIST BUILDER */
+.songsList {
+
+    min-height: 220px;
+
+    max-height: 220px;
+
+    overflow-y: auto;
+
+    list-style: none;
+
+    padding: 15px;
+
+    margin: 0;
+
+    border: 1px solid rgba(255,255,255,.1);
+
+    border-radius: 14px;
+
+    background: rgba(0,20,60,.35);
+
+}
+
+.songsList li {
+
+    padding: 10px;
+
+    margin-bottom: 8px;
+
+    border-radius: 10px;
+
+    background: rgba(255,255,255,.05);
+
+}
