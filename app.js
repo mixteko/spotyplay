@@ -1,5 +1,5 @@
 /* =========================================
-   SPOTIFY AI v1.15 CLOUD SECURE (COMPLETO)
+   SPOTIFY AI v1.15 CLOUD SECURE - CORREGIDO
 ========================================= */
 
 const CLIENT_ID = "6f2af5f678674eff85c3b3cb45a06080";
@@ -60,10 +60,10 @@ function updateStatus() {
 }
 
 /* =========================================
-   AUTENTICACIÓN (URLS OFICIALES CORREGIDAS)
+   FLUJO DE AUTENTICACIÓN (URLS REALES DE PRODUCTION)
 ========================================= */
 async function loginSpotify() {
-    // CORREGIDO: Apunta al servidor real de login de Spotify, no a googleusercontent
+    // CORREGIDO: URL real de inicio de sesión oficial de Spotify
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
     window.location.href = authUrl;
 }
@@ -90,7 +90,7 @@ function changeUser() {
     localStorage.removeItem("spotify_token");
     accessToken = "";
     updateStatus();
-    msg("Cambiando de cuenta...");
+    msg("Cambiando de cuenta de Spotify...");
     loginSpotify();
 }
 
@@ -146,13 +146,13 @@ async function generateGemini(moreTracks = false) {
 }
 
 /* =========================================
-   BUSCADOR DE TRACKS (API OFICIAL)
+   BUSCADOR DE TRACKS (API REAL DE SPOTIFY)
 ========================================= */
 async function spotifySearch(query) {
     if (!accessToken) return null;
     const cleanQuery = query.replace(/"/g, "");
 
-    // CORREGIDO: Endpoint oficial de búsqueda de la API de Spotify
+    // CORREGIDO: Endpoint oficial real de búsqueda de Spotify
     const response = await fetch(
         `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
         {
@@ -187,7 +187,7 @@ function appendSongToList(track) {
 }
 
 /* =========================================
-   CREACIÓN DE PLAYLIST (API OFICIAL)
+   CREACIÓN DE PLAYLIST (API REAL DE SPOTIFY)
 ========================================= */
 async function createPlaylist() {
     if (!accessToken) {
@@ -199,7 +199,7 @@ async function createPlaylist() {
         setConnected(playlistStatus, "Creando... ⏳");
         const finalName = (playlistName && playlistName.value.trim()) ? playlistName.value : "Mi Playlist AI";
 
-        // 1. Obtener ID del usuario actual
+        // 1. Obtener ID del usuario actual de la API real
         const meResponse = await fetch("https://api.spotify.com/v1/me", {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
@@ -208,7 +208,7 @@ async function createPlaylist() {
         const meData = await meResponse.json();
         const userId = meData.id;
 
-        // 2. Crear Playlist Vacía
+        // 2. Crear Playlist Vacía usando la URL real inyectando el userId
         const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
             method: "POST",
             headers: {
@@ -237,7 +237,7 @@ async function createPlaylist() {
 
         const chunk = uris.slice(0, 100);
 
-        // CORREGIDO: Endpoint oficial para agregar canciones usando el ID real obtenido
+        // CORREGIDO: Endpoint oficial real para inyectar canciones con la sintaxis ${playlist.id}
         const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
             method: "POST",
             headers: {
@@ -272,7 +272,7 @@ function refreshApp() {
 }
 
 /* =========================================
-   INICIALIZACIÓN ASYNC
+   INICIALIZACIÓN ASYNC Y ASIGNACIÓN
 ========================================= */
 window.addEventListener("DOMContentLoaded", async () => {
     const spotifyBtn = document.getElementById("spotifyBtn");
