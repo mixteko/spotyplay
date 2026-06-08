@@ -1016,14 +1016,15 @@ async function spotifySearch(query) {
     return data.tracks.items[0];
 }
 /* ==========================
-   CREAR PLAYLIST
+   CREAR Y LLENAR PLAYLIST
 ========================== */
 async function createPlaylist() {
     try {
         const finalName = playlistName.value || "Mi Playlist AI";
         
-        // 1. Crear playlist
-        const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`, {
+        // 1. Crear playlist (Endpoint OFICIAL de Spotify)
+        // Nota: Endpoint oficial es https://api.spotify.com/v1/users/{user_id}/playlists
+        const playlistResponse = await fetch(`https://api.spotify.com/v1/me/playlists`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${accessToken}`,
@@ -1037,10 +1038,10 @@ async function createPlaylist() {
             })
         });
 
-        if (!playlistResponse.ok) throw new Error("Error creando la playlist");
+        if (!playlistResponse.ok) throw new Error("Error creando la playlist: " + playlistResponse.statusText);
         const playlist = await playlistResponse.json();
 
-        // 2. Agregar canciones
+        // 2. Agregar canciones (Endpoint OFICIAL)
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
         const chunk = uris.slice(0, 100);
 
@@ -1053,44 +1054,21 @@ async function createPlaylist() {
             body: JSON.stringify({ uris: chunk })
         });
 
-        if (!addResponse.ok) throw new Error("Error agregando canciones");
-
-/* ==========================
-   FINALIZAR
-========================== */
-
-setConnected(
-playlistStatus,
-"Playlist 🟢"
-);
-
-msg(
-`Playlist completada con ${uris.length} canciones`
-);
-
-if(
-playlist.external_urls?.spotify
-){
-
-window.open(
-playlist.external_urls.spotify,
-"_blank"
-);
-
-}
-
-}catch(error){
-
-console.error(
-error
-);
-
-msg(
-"Error creando playlist"
-);
-
-}
-
+        if (!addResponse.ok) throw new Error("Error agregando canciones: " + addResponse.statusText);
+        
+        /* ==========================
+           FINALIZAR
+        ========================== */
+        setConnected(playlistStatus, "Playlist 🟢");
+        msg(`Playlist completada con ${uris.length} canciones`);
+        
+        if (playlist.external_urls?.spotify) {
+            window.open(playlist.external_urls.spotify, "_blank");
+        }
+    } catch(error) {
+        console.error(error);
+        msg("Error creando playlist: " + error.message);
+    }
 }
 /* =========================================
    INICIALIZACION
