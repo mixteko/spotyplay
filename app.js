@@ -1092,16 +1092,13 @@ msg(
 /* ==========================
    BUSCAR CANCIONES
 ========================== */
-
 async function spotifySearch(query) {
     const cleanQuery = query.replace(/"/g, "");
-    
-    // CORREGIDO: URL oficial y sintaxis ${}
     const response = await fetch(
         `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
         {
             headers: { 
-                Authorization: `Bearer ${accessToken}`,
+                "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json"
             }
         }
@@ -1111,21 +1108,18 @@ async function spotifySearch(query) {
     const data = await response.json();
     return data.tracks.items[0];
 }
-
 /* ==========================
    CREAR PLAYLIST
 ========================== */
-
 async function createPlaylist() {
     try {
         const finalName = playlistName.value || "Mi Playlist AI";
         
-        // 1. Crear la playlist (Endpoint oficial)
-        // Necesitas el user_id (me.id) obtenido previamente
+        // 1. Crear playlist
         const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -1139,21 +1133,20 @@ async function createPlaylist() {
         if (!playlistResponse.ok) throw new Error("Error creando la playlist");
         const playlist = await playlistResponse.json();
 
-        // 2. Agregar las canciones (Endpoint oficial)
+        // 2. Agregar canciones
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
-        const chunk = uris.slice(0, 100); // Spotify permite máximo 100 por petición
+        const chunk = uris.slice(0, 100);
 
         const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({ uris: chunk })
         });
 
         if (!addResponse.ok) throw new Error("Error agregando canciones");
-
 
 /* ==========================
    FINALIZAR
