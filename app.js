@@ -85,10 +85,10 @@ async function loginSpotify() {
         msg("✅ Redirigiendo a Spotify...");
         console.log("Haciendo redirect a:", authUrl);
         
-        // Usar setTimeout para dar tiempo al navegador
         setTimeout(() => {
+            console.log("Ejecutando redirect ahora...");
             window.location.assign(authUrl);
-        }, 500);
+        }, 300);
         
     } catch (error) {
         console.error("Error completo en loginSpotify:", error);
@@ -280,7 +280,6 @@ async function createPlaylist() {
 
         msg(`📝 Nombre de la playlist: "${finalName}"`);
 
-        // 1. Obtener ID del usuario
         const meResponse = await fetch("https://api.spotify.com/v1/me", {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
@@ -291,7 +290,6 @@ async function createPlaylist() {
         const userId = meData.id;
         msg(`👤 Usuario: ${meData.display_name}`);
 
-        // 2. Crear playlist
         const playlistResponse = await fetch(
             `https://api.spotify.com/v1/users/${userId}/playlists`,
             {
@@ -314,7 +312,6 @@ async function createPlaylist() {
         const playlist = await playlistResponse.json();
         msg(`✅ Playlist creada: ${playlist.id}`);
 
-        // 3. Obtener URIs de canciones
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
         
         if (uris.length === 0) {
@@ -326,7 +323,6 @@ async function createPlaylist() {
             return;
         }
 
-        // 4. Agregar canciones (máximo 100 por request)
         const chunks = [];
         for (let i = 0; i < uris.length; i += 100) {
             chunks.push(uris.slice(i, i + 100));
@@ -395,7 +391,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     const playlistBtn = document.getElementById("playlistBtn");
     const changeBtn = document.getElementById("changeBtn");
 
-    // Event listeners
     if (spotifyBtn) {
         spotifyBtn.onclick = async () => {
             try {
@@ -413,7 +408,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (playlistBtn) playlistBtn.onclick = createPlaylist;
     if (changeBtn) changeBtn.onclick = changeUser;
 
-    // Inicializar
     updateStatus();
     await getToken();
     msg("✅ Listo para usar!");
