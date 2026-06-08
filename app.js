@@ -922,35 +922,44 @@ return null;
 }
 
 }
-/* =========================================
-   CREAR PLAYLIST
-========================================= */
 
-async function createPlaylist(){
+/* ==========================
+   CREAR PLAYLIST SPOTIFY
+========================== */
 
-try{
+// SE REQUIERE EL ID DEL USUARIO OBLIGATORIAMENTE EN LA URL
+const playlistResponse =
+await fetch(
 
-if(!accessToken){
+`https://api.spotify.com/v1/me/playlists`,
 
-msg(
-"Spotify no conectado"
-);
+{
+method:"POST",
 
-return;
+headers:{
+Authorization:
+`Bearer ${accessToken}`,
+
+"Content-Type":
+"application/json"
+},
+
+body:JSON.stringify({
+
+name:finalName,
+
+public:false,
+
+collaborative:false,
+
+description:
+"Generada con Spotify AI Cloud"
+
+})
 
 }
 
-msg(
-"Creando playlist..."
 );
-
-const finalName =
-
-playlistName.value.trim()
-
-||
-
-`${promptAI.value || "Playlist"} Mix`;
 
 /* ==========================
    CREAR PLAYLIST SPOTIFY
@@ -1084,165 +1093,67 @@ msg(
    BUSCAR CANCIONES
 ========================== */
 
-const uris = [];
+async function spotifySearch(query) {
+    const cleanQuery = query.replace(/"/g, "");
+    
+    // CORREGIDO: URL oficial y sintaxis ${}
+    const response = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
+        {
+            headers: { 
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            }
+        }
+    );
 
-for(const line of lines){
-
-msg(
-`Buscando: ${line}`
-);
-
-try{
-
-const uri =
-await searchSong(
-line
-);
-
-if(uri){
-
-uris.push(uri);
-
-}
-
-}catch(error){
-
-console.error(
-error
-);
-
-}
-
-await new Promise(
-resolve =>
-setTimeout(
-resolve,
-2000
-)
-);
-
+    if (!response.ok) throw new Error("Error buscando canción");
+    const data = await response.json();
+    return data.tracks.items[0];
 }
 
 /* ==========================
-   AGREGAR CANCIONES
+   CREAR PLAYLIST
 ========================== */
 
-if(
-!uris.length
-){
+async function createPlaylist() {
+    try {
+        const finalName = playlistName.value || "Mi Playlist AI";
+        
+        // 1. Crear la playlist (Endpoint oficial)
+        // Necesitas el user_id (me.id) obtenido previamente
+        const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: finalName,
+                public: false,
+                collaborative: false,
+                description: "Generada con Spotify AI Cloud"
+            })
+        });
 
-msg(
-"No agregué canciones"
-);
+        if (!playlistResponse.ok) throw new Error("Error creando la playlist");
+        const playlist = await playlistResponse.json();
 
-return;
+        // 2. Agregar las canciones (Endpoint oficial)
+        const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
+        const chunk = uris.slice(0, 100); // Spotify permite máximo 100 por petición
 
-}
+        const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ uris: chunk })
+        });
 
-msg(
-`Encontradas: ${uris.length}`
-);
+        if (!addResponse.ok) throw new Error("Error agregando canciones");
 
-msg(
-"Agregando canciones..."
-);
-
-console.log(
-"URIS:",
-uris
-);
-
-for(
-let i=0;
-i<uris.length;
-i+=100
-){
-
-const chunk =
-uris.slice(
-i,
-i+100
-);
-
-console.log(
-"CHUNK:",
-chunk
-);
-
-// CORREGIDO: Se añadió el signo '$' antes de {playlist.id}
-const addResponse =
-await fetch(
-
-`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
-
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-"Content-Type":
-"application/json"
-},
-
-body:JSON.stringify({
-
-uris:chunk
-
-})
-
-}
-
-);
-
-const result =
-await addResponse.json();
-
-console.log(
-"ADD STATUS:",
-addResponse.status
-);
-
-console.log(
-"ADD RESPONSE:",
-result
-);
-
-console.log(
-"REQUEST BODY:",
-JSON.stringify({
-uris:chunk
-})
-);
-
-if(
-result.error
-){
-
-msg(
-JSON.stringify(
-result.error,
-null,
-2
-)
-);
-
-return;
-
-}
-
-updateProgress(
-
-Math.min(
-i+100,
-uris.length
-),
-
-uris.length
-
-);
-
-}
 
 /* ==========================
    FINALIZAR
