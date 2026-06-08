@@ -3,7 +3,7 @@
 ========================================= */
 
 // 🔒 URLs de los Workers (CLIENT_ID oculto en Cloudflare)
-const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
+const AUTH_WORKER = "https://spotify-auth-worker.abc123def456.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
 
