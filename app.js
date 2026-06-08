@@ -516,115 +516,266 @@ function appendSongToList(track) {
    CREAR PLAYLIST EN SPOTIFY
 ========================================= */
 async function createPlaylist() {
+
     if (!accessToken) {
-        msg("❌ Primero debes conectar Spotify.");
+
+        msg(
+            "❌ Primero debes conectar Spotify."
+        );
+
         return;
+
     }
 
     try {
-        setConnected(playlistStatus, "Creando... ⏳");
-        
-        const finalName = (playlistName && playlistName.value.trim()) 
-            ? playlistName.value 
-            : "Mi Playlist AI";
 
-        msg(`📝 Nombre de la playlist: "${finalName}"`);
-
-        const meResponse = await fetch("https://api.spotify.com/v1/me", {
-            headers: { "Authorization": `Bearer ${accessToken}` }
-        });
-
-        if (!meResponse.ok) throw new Error("No se pudo obtener tu perfil.");
-        
-        const meData = await meResponse.json();
-        const userId = meData.id;
-        msg(`👤 Usuario: ${meData.display_name}`);
-
-        const playlistResponse = await fetch(
-            `https://api.spotify.com/v1/users/${userId}/playlists`,
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    name: finalName,
-                    public: false,
-                    collaborative: false,
-                    description: "Generada con Spotify AI"
-                })
-            }
+        setConnected(
+            playlistStatus,
+            "Creando... ⏳"
         );
 
-        if (!playlistResponse.ok) throw new Error("Error al crear la playlist.");
-        
-        const playlist = await playlistResponse.json();
-        msg(`✅ Playlist creada: ${playlist.id}`);
+        const finalName =
+            (
+                playlistName &&
+                playlistName.value.trim()
+            )
+                ? playlistName.value.trim()
+                : "Mi Playlist AI";
 
-        const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
-        
-        if (uris.length === 0) {
-            setConnected(playlistStatus, "Vacía 🟢");
-            msg("⚠️ Playlist creada sin canciones.");
-            if (playlist.external_urls?.spotify) {
-                window.open(playlist.external_urls.spotify, "_blank");
-            }
-            return;
-        }
+        msg(
+            `📝 Nombre de la playlist: "${finalName}"`
+        );
 
-        const chunks = [];
-        for (let i = 0; i < uris.length; i += 100) {
-            chunks.push(uris.slice(i, i + 100));
-        }
-
-        let addedCount = 0;
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            msg(`🎵 Agregando canciones (${i + 1}/${chunks.length})...`);
-
-            const addResponse = await fetch(
-                `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+        const meResponse =
+            await fetch(
+                "https://api.spotify.com/v1/me",
                 {
-                    method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${accessToken}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ uris: chunk })
+                        Authorization:
+                            `Bearer ${accessToken}`
+                    }
                 }
             );
 
-            if (!addResponse.ok) {
-                throw new Error(`Error al agregar canciones (lote ${i + 1})`);
-            }
+        const meText =
+            await meResponse.text();
 
-            addedCount += chunk.length;
+        console.log(
+            "ME STATUS:",
+            meResponse.status
+        );
+
+        console.log(
+            "ME RESPONSE:",
+            meText
+        );
+
+        if (!meResponse.ok) {
+
+            throw new Error(
+                "No se pudo obtener tu perfil Spotify."
+            );
+
         }
 
-        setConnected(playlistStatus, "Playlist 🟢");
-        msg(`✨ ¡Éxito! Playlist creada con ${addedCount} canciones.`);
+        const meData =
+            JSON.parse(
+                meText
+            );
 
-        if (playlist.external_urls?.spotify) {
-            window.open(playlist.external_urls.spotify, "_blank");
+        msg(
+            `👤 Usuario: ${meData.display_name || meData.id}`
+        );
+
+        const playlistResponse =
+            await fetch(
+                "https://api.spotify.com/v1/me/playlists",
+                {
+                    method: "POST",
+
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`,
+
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        name:
+                            finalName,
+
+                        public:
+                            false,
+
+                        description:
+                            "Generada con Spotify AI"
+
+                    })
+
+                }
+            );
+
+        const playlistText =
+            await playlistResponse.text();
+
+        console.log(
+            "PLAYLIST STATUS:",
+            playlistResponse.status
+        );
+
+        console.log(
+            "PLAYLIST RESPONSE:",
+            playlistText
+        );
+
+        if (!playlistResponse.ok) {
+
+            throw new Error(
+                `Spotify respondió ${playlistResponse.status}: ${playlistText}`
+            );
+
+        }
+
+        const playlist =
+            JSON.parse(
+                playlistText
+            );
+
+        msg(
+            `✅ Playlist creada: ${playlist.name}`
+        );
+
+        const uris =
+            [
+                ...songs.querySelectorAll(
+                    "li"
+                )
+            ].map(
+                li => li.dataset.uri
+            );
+
+        if (!uris.length) {
+
+            setConnected(
+                playlistStatus,
+                "Vacía 🟢"
+            );
+
+            msg(
+                "⚠️ Playlist creada sin canciones."
+            );
+
+            if (
+                playlist.external_urls?.spotify
+            ) {
+
+                window.open(
+                    playlist.external_urls.spotify,
+                    "_blank"
+                );
+
+            }
+
+            return;
+
+        }
+
+        for (
+            let i = 0;
+            i < uris.length;
+            i += 100
+        ) {
+
+            const chunk =
+                uris.slice(
+                    i,
+                    i + 100
+                );
+
+            const addResponse =
+                await fetch(
+                    `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            Authorization:
+                                `Bearer ${accessToken}`,
+
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            uris: chunk
+                        })
+                    }
+                );
+
+            const addText =
+                await addResponse.text();
+
+            console.log(
+                "ADD STATUS:",
+                addResponse.status
+            );
+
+            console.log(
+                "ADD RESPONSE:",
+                addText
+            );
+
+            if (!addResponse.ok) {
+
+                throw new Error(
+                    `Error agregando canciones: ${addText}`
+                );
+
+            }
+
+        }
+
+        setConnected(
+            playlistStatus,
+            "Playlist 🟢"
+        );
+
+        msg(
+            `✨ Playlist creada con ${uris.length} canciones`
+        );
+
+        if (
+            playlist.external_urls?.spotify
+        ) {
+
+            window.open(
+                playlist.external_urls.spotify,
+                "_blank"
+            );
+
         }
 
     } catch (error) {
-        console.error("Error en createPlaylist:", error);
-        setDisconnected(playlistStatus, "Error 🔴");
-        msg(`❌ Error: ${error.message}`);
+
+        console.error(
+            "Error en createPlaylist:",
+            error
+        );
+
+        setDisconnected(
+            playlistStatus,
+            "Error 🔴"
+        );
+
+        msg(
+            `❌ ${error.message}`
+        );
+
     }
-}
 
-function refreshApp() {
-    if (songs) songs.innerHTML = "";
-    if (promptAI) promptAI.value = "";
-    if (playlistName) playlistName.value = "";
-    if (songCount) songCount.value = "20";
-    updateStatus();
-    msg("🔄 App reseteada correctamente.");
 }
-
 /* =========================================
    INICIALIZACIÓN
 ========================================= */
