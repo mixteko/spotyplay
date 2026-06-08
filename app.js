@@ -59,46 +59,6 @@ function updateStatus() {
 /* =========================================
    AUTENTICACIÓN CON OAUTH
 ========================================= */
-async function loginSpotify() {
-
-    try {
-
-        msg(
-            "🔐 Pidiendo URL de autenticación..."
-        );
-
-        const response =
-            await fetch(
-                AUTH_WORKER +
-                "/spotify-login-url"
-            );
-
-        const data =
-            await response.json();
-
-        if (!data.authUrl) {
-
-            throw new Error(
-                "No se recibió authUrl"
-            );
-
-        }
-
-        window.location.href =
-            data.authUrl;
-
-    } catch (error) {
-
-        console.error(error);
-
-        msg(
-            `❌ ${error.message}`
-        );
-
-    }
-
-}
-
 async function getToken() {
 
     const urlParams =
@@ -152,14 +112,6 @@ async function getToken() {
                 responseData
             );
 
-            msg(
-                JSON.stringify(
-                    responseData,
-                    null,
-                    2
-                )
-            );
-
             if (!response.ok) {
 
                 throw new Error(
@@ -175,9 +127,17 @@ async function getToken() {
             accessToken =
                 responseData.access_token;
 
+            window.accessToken =
+                responseData.access_token;
+
             localStorage.setItem(
                 "spotify_token",
-                accessToken
+                responseData.access_token
+            );
+
+            console.log(
+                "TOKEN GUARDADO:",
+                responseData.access_token
             );
 
             window.history.replaceState(
@@ -192,6 +152,8 @@ async function getToken() {
                 "✅ Spotify conectado"
             );
 
+            return;
+
         } catch (error) {
 
             console.error(error);
@@ -200,15 +162,18 @@ async function getToken() {
                 `❌ ${error.message}`
             );
 
-        }
+            return;
 
-        return;
+        }
 
     }
 
     if (token) {
 
         accessToken =
+            token;
+
+        window.accessToken =
             token;
 
         localStorage.setItem(
@@ -222,27 +187,32 @@ async function getToken() {
 
     }
 
-    if (accessToken) {
+    const savedToken =
+        localStorage.getItem(
+            "spotify_token"
+        );
+
+    if (savedToken) {
+
+        accessToken =
+            savedToken;
+
+        window.accessToken =
+            savedToken;
 
         updateStatus();
+
+        msg(
+            "✅ Usando sesión existente"
+        );
 
         return;
 
     }
 
-}
-
-function changeUser() {
-
-    localStorage.removeItem(
-        "spotify_token"
+    msg(
+        "⚠️ Spotify no conectado"
     );
-
-    accessToken = "";
-
-    updateStatus();
-
-    loginSpotify();
 
 }
 
