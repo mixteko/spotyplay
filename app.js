@@ -250,10 +250,11 @@ function changeUser() {
     updateStatus();
 
     msg(
-        "🔄 Cambiando cuenta Spotify..."
+        "🔄 Eliminando sesión Spotify..."
     );
 
-    loginSpotify();
+    window.location.href =
+        REDIRECT_URI;
 
 }
 
