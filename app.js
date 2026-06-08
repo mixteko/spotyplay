@@ -229,6 +229,7 @@ function changeUser() {
     loginSpotify();
 
 }
+
 /* =========================================
    GENERADOR DE CANCIONES CON GEMINI
 ========================================= */
@@ -265,7 +266,7 @@ async function generateGemini(moreTracks = false) {
         }
 
         const data = await response.json();
-        
+
         if (!data.tracks || data.tracks.length === 0) {
             throw new Error("Gemini no devolvió canciones. Intenta otra descripción.");
         }
@@ -276,26 +277,49 @@ async function generateGemini(moreTracks = false) {
         if (!moreTracks && songs) songs.innerHTML = "";
 
         let found = 0;
+
         for (const trackStr of data.tracks) {
+
             msg(`🔍 Buscando: "${trackStr}"`);
-            const spotifyTrack = await spotifySearch(trackStr);
+
+            const spotifyTrack =
+                await spotifySearch(trackStr);
+
             if (spotifyTrack) {
+
                 appendSongToList(spotifyTrack);
+
                 found++;
+
             } else {
+
                 msg(`⚠️ No encontrada: ${trackStr}`);
+
             }
+
         }
-        
+
         msg(`✨ Encontradas ${found}/${data.tracks.length} canciones.`);
 
     } catch (error) {
-        console.error("Error en generateGemini:", error);
-        setDisconnected(geminiStatus, "Gemini Error 🔴");
-        msg(`❌ Error: ${error.message}`);
-    }
-}
 
+        console.error(
+            "Error en generateGemini:",
+            error
+        );
+
+        setDisconnected(
+            geminiStatus,
+            "Gemini Error 🔴"
+        );
+
+        msg(
+            `❌ Error: ${error.message}`
+        );
+
+    }
+
+}
 /* =========================================
    BUSCAR CANCIONES EN SPOTIFY
 ========================================= */
