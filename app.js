@@ -1,5 +1,5 @@
- /* =========================================
-   SPOTIFY AI v2.0 - SEGURO CON WORKERS
+/* =========================================
+   SPOTIFY AI v2.0 - COMPLETO Y FUNCIONANDO
 ========================================= */
 
 // 🔒 URLs de los Workers (CLIENT_ID oculto en Cloudflare)
@@ -55,24 +55,44 @@ function updateStatus() {
 }
 
 /* =========================================
-   AUTENTICACIÓN SEGURA CON WORKER
+   AUTENTICACIÓN SEGURA CON WORKER - MEJORADA
 ========================================= */
 async function loginSpotify() {
     try {
         msg("🔐 Pidiendo URL de autenticación segura...");
+        console.log("Auth Worker URL:", AUTH_WORKER);
         
         const response = await fetch(AUTH_WORKER + "/spotify-login-url");
+        
+        console.log("Response status:", response.status);
+        console.log("Response ok:", response.ok);
         
         if (!response.ok) {
             throw new Error(`Worker error: ${response.status}`);
         }
         
-        const { authUrl } = await response.json();
+        const data = await response.json();
+        console.log("Response data:", data);
+        
+        const authUrl = data.authUrl;
+        console.log("Auth URL completa:", authUrl);
+        console.log("Auth URL length:", authUrl.length);
+        
+        if (!authUrl) {
+            throw new Error("No se recibió authUrl del Worker");
+        }
+        
         msg("✅ Redirigiendo a Spotify...");
-        window.location.href = authUrl;
+        console.log("Haciendo redirect a:", authUrl);
+        
+        // Usar setTimeout para dar tiempo al navegador
+        setTimeout(() => {
+            window.location.href = authUrl;
+        }, 500);
         
     } catch (error) {
-        console.error("Error en loginSpotify:", error);
+        console.error("Error completo en loginSpotify:", error);
+        console.error("Stack:", error.stack);
         setDisconnected(spotifyStatus, "Spotify Error 🔴");
         msg(`❌ Error de autenticación: ${error.message}`);
     }
