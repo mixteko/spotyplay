@@ -924,139 +924,46 @@ return null;
 }
 
 /* ==========================
-   CREAR PLAYLIST SPOTIFY
+   CREAR Y LLENAR PLAYLIST
 ========================== */
+async function createPlaylist() {
+    try {
+        const finalName = playlistName.value || "Mi Playlist AI";
+        
+        // 1. Crear playlist (Endpoint Oficial)
+        const playlistResponse = await fetch(`https://api.spotify.com/v1/me/playlists`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: finalName,
+                public: false,
+                collaborative: false,
+                description: "Generada con Spotify AI Cloud"
+            })
+        });
 
-// SE REQUIERE EL ID DEL USUARIO OBLIGATORIAMENTE EN LA URL
-const playlistResponse =
-await fetch(
+        if (!playlistResponse.ok) throw new Error("Error creando la playlist");
+        const playlist = await playlistResponse.json();
 
-`https://api.spotify.com/v1/me/playlists`,
+        // 2. Agregar canciones (Endpoint Oficial)
+        const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
+        const chunk = uris.slice(0, 100);
 
-{
-method:"POST",
+        const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ uris: chunk })
+        });
 
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-},
-
-body:JSON.stringify({
-
-name:finalName,
-
-public:false,
-
-collaborative:false,
-
-description:
-"Generada con Spotify AI Cloud"
-
-})
-
-}
-
-);
-
-/* ==========================
-   CREAR PLAYLIST SPOTIFY
-========================== */
-
-const playlistResponse =
-await fetch(
-
-"https://api.spotify.com/v1/me/playlists",
-
-{
-method:"POST",
-
-headers:{
-Authorization:
-`Bearer ${accessToken}`,
-
-"Content-Type":
-"application/json"
-},
-
-body:JSON.stringify({
-
-name:finalName,
-
-public:false,
-
-collaborative:false,
-
-description:
-"Generada con Spotify AI Cloud"
-
-})
-
-}
-
-);
-
-console.log(
-"CREATE STATUS:",
-playlistResponse.status
-);
-
-console.log(
-"CREATE HEADERS:",
-Object.fromEntries(
-playlistResponse.headers.entries()
-)
-);
-
-const playlist =
-await playlistResponse.json();
-
-console.log(
-"PLAYLIST RESPONSE:",
-playlist
-);
-
-console.log(
-"PLAYLIST OWNER:",
-playlist.owner
-);
-
-console.log(
-"PLAYLIST OWNER ID:",
-playlist.owner?.id
-);
-
-if(
-playlist.error
-){
-
-msg(
-JSON.stringify(
-playlist.error,
-null,
-2
-)
-);
-
-return;
-
-}
-
-msg(
-`Playlist creada: ${playlist.name}`
-);
-
-console.log(
-"PLAYLIST ID:",
-playlist.id
-);
-
-console.log(
-"PLAYLIST URL:",
-playlist.external_urls?.spotify
-);
+        if (!addResponse.ok) throw new Error("Error agregando canciones");
+        
+        // Finalizar...
 /* ==========================
    LEER CANCIONES
 ========================== */
