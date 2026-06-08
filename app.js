@@ -57,103 +57,163 @@ function updateStatus() {
 /* =========================================
    AUTENTICACIÓN CON OAUTH
 ========================================= */
-async function loginSpotify() {
-    try {
-        msg("🔐 Pidiendo URL de autenticación segura...");
-        
-        const response = await fetch(AUTH_WORKER + "/spotify-login-url");
-        
-        if (!response.ok) {
-            throw new Error(`Worker error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const authUrl = data.authUrl;
-        
-        if (!authUrl) {
-            throw new Error("No se recibió authUrl del Worker");
-        }
-        
-        msg("✅ Redirigiendo a Spotify...");
-        
-        setTimeout(() => {
-            window.location.assign(authUrl);
-        }, 300);
-        
-    } catch (error) {
-        console.error("Error en loginSpotify:", error);
-        setDisconnected(spotifyStatus, "Spotify Error 🔴");
-        msg(`❌ Error de autenticación: ${error.message}`);
-    }
-}
-
 async function getToken() {
-    // ✅ Obtener código de los parámetros (?code=...)
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-    
-    // También obtener token del hash (#access_token=...) por compatibilidad
-    const hash = window.location.hash.substring(1);
-    const hashParams = new URLSearchParams(hash);
-    const token = hashParams.get("access_token");
+
+    const urlParams =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const code =
+        urlParams.get("code");
+
+    const hash =
+        window.location.hash.substring(1);
+
+    const hashParams =
+        new URLSearchParams(hash);
+
+    const token =
+        hashParams.get("access_token");
 
     if (code) {
-        // ✅ Si recibimos código, intercambiarlo por token
-        msg("🔐 Intercambiando código por token...");
+
+        msg(
+            "🔐 Intercambiando código por token..."
+        );
+
         try {
-            const response = await fetch(AUTH_WORKER + "/spotify-callback", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code })
-            });
+
+            const response =
+                await fetch(
+                    AUTH_WORKER + "/spotify-callback",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            code
+                        })
+                    }
+                );
+
+            const responseData =
+                await response.json();
+
+            console.log(
+                "WORKER RESPONSE:",
+                responseData
+            );
+
+            msg(
+                JSON.stringify(
+                    responseData,
+                    null,
+                    2
+                )
+            );
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || "Error al obtener token");
+
+                throw new Error(
+                    JSON.stringify(
+                        responseData,
+                        null,
+                        2
+                    )
+                );
+
             }
 
-            const tokenData = await response.json();
-            accessToken = tokenData.access_token;
-            localStorage.setItem("spotify_token", accessToken);
-            
-            // Limpiar URL
-            window.history.replaceState({}, document.title, REDIRECT_URI);
-            
+            accessToken =
+                responseData.access_token;
+
+            localStorage.setItem(
+                "spotify_token",
+                accessToken
+            );
+
+            window.history.replaceState(
+                {},
+                document.title,
+                REDIRECT_URI
+            );
+
             updateStatus();
-            msg("✅ ¡Conectado a Spotify correctamente!");
-            
+
+            msg(
+                "✅ ¡Conectado a Spotify correctamente!"
+            );
+
         } catch (error) {
-            console.error("Error intercambiando código:", error);
-            setDisconnected(spotifyStatus, "Spotify Error 🔴");
-            msg(`❌ Error: ${error.message}`);
-            window.history.replaceState({}, document.title, REDIRECT_URI);
+
+            console.error(
+                "Error intercambiando código:",
+                error
+            );
+
+            setDisconnected(
+                spotifyStatus,
+                "Spotify Error 🔴"
+            );
+
+            msg(
+                `❌ ${error.message}`
+            );
+
+            window.history.replaceState(
+                {},
+                document.title,
+                REDIRECT_URI
+            );
+
         }
+
         return;
+
     }
 
     if (token) {
-        accessToken = token;
-        localStorage.setItem("spotify_token", token);
-        window.location.hash = "";
+
+        accessToken =
+            token;
+
+        localStorage.setItem(
+            "spotify_token",
+            token
+        );
+
+        window.location.hash =
+            "";
+
         updateStatus();
-        msg("✅ Conectado a Spotify correctamente.");
+
+        msg(
+            "✅ Conectado a Spotify correctamente."
+        );
+
         return;
+
     }
 
     if (accessToken) {
-        msg("✅ Usando sesión existente de Spotify.");
+
+        msg(
+            "✅ Usando sesión existente de Spotify."
+        );
+
         return;
+
     }
 
-    msg("⚠️ Falta conectar cuenta de Spotify.");
-}
+    msg(
+        "⚠️ Falta conectar cuenta de Spotify."
+    );
 
-function changeUser() {
-    localStorage.removeItem("spotify_token");
-    accessToken = "";
-    updateStatus();
-    msg("🔄 Cerrando sesión para cambiar de cuenta...");
-    loginSpotify();
 }
 
 /* =========================================
