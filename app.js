@@ -59,6 +59,47 @@ function updateStatus() {
 /* =========================================
    AUTENTICACIÓN CON OAUTH
 ========================================= */
+
+async function loginSpotify() {
+
+    try {
+
+        msg(
+            "🔐 Pidiendo URL de autenticación..."
+        );
+
+        const response =
+            await fetch(
+                AUTH_WORKER +
+                "/spotify-login-url"
+            );
+
+        const data =
+            await response.json();
+
+        if (!data.authUrl) {
+
+            throw new Error(
+                "No se recibió authUrl"
+            );
+
+        }
+
+        window.location.href =
+            data.authUrl;
+
+    } catch (error) {
+
+        console.error(error);
+
+        msg(
+            `❌ ${error.message}`
+        );
+
+    }
+
+}
+
 async function getToken() {
 
     const urlParams =
@@ -68,15 +109,6 @@ async function getToken() {
 
     const code =
         urlParams.get("code");
-
-    const hash =
-        window.location.hash.substring(1);
-
-    const hashParams =
-        new URLSearchParams(hash);
-
-    const token =
-        hashParams.get("access_token");
 
     if (code) {
 
@@ -92,12 +124,10 @@ async function getToken() {
                     "/spotify-callback",
                     {
                         method: "POST",
-
                         headers: {
                             "Content-Type":
                                 "application/json"
                         },
-
                         body: JSON.stringify({
                             code
                         })
@@ -127,17 +157,9 @@ async function getToken() {
             accessToken =
                 responseData.access_token;
 
-            window.accessToken =
-                responseData.access_token;
-
             localStorage.setItem(
                 "spotify_token",
-                responseData.access_token
-            );
-
-            console.log(
-                "TOKEN GUARDADO:",
-                responseData.access_token
+                accessToken
             );
 
             window.history.replaceState(
@@ -168,25 +190,6 @@ async function getToken() {
 
     }
 
-    if (token) {
-
-        accessToken =
-            token;
-
-        window.accessToken =
-            token;
-
-        localStorage.setItem(
-            "spotify_token",
-            token
-        );
-
-        updateStatus();
-
-        return;
-
-    }
-
     const savedToken =
         localStorage.getItem(
             "spotify_token"
@@ -195,9 +198,6 @@ async function getToken() {
     if (savedToken) {
 
         accessToken =
-            savedToken;
-
-        window.accessToken =
             savedToken;
 
         updateStatus();
@@ -216,6 +216,19 @@ async function getToken() {
 
 }
 
+function changeUser() {
+
+    localStorage.removeItem(
+        "spotify_token"
+    );
+
+    accessToken = "";
+
+    updateStatus();
+
+    loginSpotify();
+
+}
 /* =========================================
    GENERADOR DE CANCIONES CON GEMINI
 ========================================= */
