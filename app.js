@@ -1,5 +1,5 @@
 /* =========================================
-   SPOTIFY AI v1.15 CLOUD SECURE (STABLE)
+   SPOTIFY AI v1.15 CLOUD SECURE (FINAL)
 ========================================= */
 
 const CLIENT_ID = "6f2af5f678674eff85c3b3cb45a06080";
@@ -60,25 +60,41 @@ function updateStatus() {
 }
 
 /* =========================================
-   FLUJO DE AUTENTICACIÓN OFICIAL
+   FLUJO DE AUTENTICACIÓN (CORREGIDO A CODE)
 ========================================= */
 async function loginSpotify() {
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
+    // CORREGIDO: response_type cambiado a 'code' para cumplir con las reglas de Spotify
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
     window.location.href = authUrl;
 }
 
 async function getToken() {
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const token = params.get("access_token");
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
 
-    if (token) {
-        accessToken = token;
-        localStorage.setItem("spotify_token", token);
-        window.location.hash = "";
-        updateStatus();
-        msg("Conectado a Spotify con éxito.");
-    } else if (accessToken) {
+    // Si Spotify nos devolvió un 'code', se lo enviamos al Worker para cambiarlo por el Token real
+    if (code) {
+        msg("Intercambiando código de autorización con el servidor...");
+        try {
+            const response = await fetch(`${WORKER_URL}/api/token?code=${code}`);
+            if (!response.ok) throw new Error("Fallo al obtener token del servidor");
+            
+            const data = await response.json();
+            if (data.access_token) {
+                accessToken = data.access_token;
+                localStorage.setItem("spotify_token", accessToken);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                updateStatus();
+                msg("Conectado a Spotify con éxito.");
+            }
+        } catch (error) {
+            console.error(error);
+            msg("Error obteniendo credenciales: " + error.message);
+        }
+        return;
+    }
+
+    if (accessToken) {
         msg("Usando sesión existente de Spotify.");
     } else {
         msg("Falta conectar cuenta de Spotify.");
@@ -197,7 +213,6 @@ async function createPlaylist() {
         setConnected(playlistStatus, "Creando... ⏳");
         const finalName = (playlistName && playlistName.value.trim()) ? playlistName.value : "Mi Playlist AI";
 
-        // 1. Obtener ID del usuario actual de Spotify
         const meResponse = await fetch("https://api.spotify.com/v1/me", {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
@@ -206,7 +221,6 @@ async function createPlaylist() {
         const meData = await meResponse.json();
         const userId = meData.id;
 
-        // 2. Crear Playlist Vacía
         const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
             method: "POST",
             headers: {
@@ -224,7 +238,6 @@ async function createPlaylist() {
         if (!playlistResponse.ok) throw new Error("Error al crear la playlist en Spotify.");
         const playlist = await playlistResponse.json();
 
-        // 3. CORREGIDO: querySelectorAll('li') con las comillas requeridas para evitar el SyntaxError
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
         if (uris.length === 0) {
             setConnected(playlistStatus, "Vacía 🟢");
@@ -235,7 +248,6 @@ async function createPlaylist() {
 
         const chunk = uris.slice(0, 100);
 
-        // 4. Inyectar canciones a la playlist recién creada
         const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
             method: "POST",
             headers: {
@@ -264,7 +276,7 @@ async function createPlaylist() {
 function refreshApp() {
     if (songs) songs.innerHTML = "";
     if (promptAI) promptAI.value = "";
-    if (playlistName) playlistName.value = "";
+    if (playlistName) promptAI.value = "";
     updateStatus();
     msg("App reseteada correctamente.");
 }
