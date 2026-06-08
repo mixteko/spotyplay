@@ -1,5 +1,5 @@
 /* =========================================
-   SPOTIFY AI v1.15 CLOUD SECURE - PARTE 1
+   SPOTIFY AI v1.15 CLOUD SECURE (STABLE)
 ========================================= */
 
 const CLIENT_ID = "6f2af5f678674eff85c3b3cb45a06080";
@@ -14,7 +14,6 @@ const SCOPES = [
     "playlist-modify-public"
 ].join(" ");
 
-// CORREGIDO: Inicialización limpia al inicio del archivo para eliminar el ReferenceError
 let accessToken = localStorage.getItem("spotify_token") || "";
 
 /* =========================================
@@ -61,10 +60,9 @@ function updateStatus() {
 }
 
 /* =========================================
-   AUTENTICACIÓN (URLS OFICIALES DE SPOTIFY)
+   FLUJO DE AUTENTICACIÓN OFICIAL
 ========================================= */
 async function loginSpotify() {
-    // CORREGIDO: URL directa a las cuentas oficiales de Spotify (accounts.spotify.com)
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
     window.location.href = authUrl;
 }
@@ -94,9 +92,6 @@ function changeUser() {
     msg("Cerrando sesión para cambiar de cuenta...");
     loginSpotify();
 }
-/* =========================================
-   SPOTIFY AI v1.15 CLOUD SECURE - PARTE 2
-========================================= */
 
 /* =========================================
    CONEXIÓN CON GEMINI AI WORKER
@@ -156,7 +151,6 @@ async function spotifySearch(query) {
     if (!accessToken) return null;
     const cleanQuery = query.replace(/"/g, "");
 
-    // CORREGIDO: URL real de la API de Spotify (api.spotify.com) con interpolación de variables exacta ${}
     const response = await fetch(
         `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
         {
@@ -203,7 +197,7 @@ async function createPlaylist() {
         setConnected(playlistStatus, "Creando... ⏳");
         const finalName = (playlistName && playlistName.value.trim()) ? playlistName.value : "Mi Playlist AI";
 
-        // 1. Obtener ID del usuario actual de la API oficial de Spotify
+        // 1. Obtener ID del usuario actual de Spotify
         const meResponse = await fetch("https://api.spotify.com/v1/me", {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
@@ -212,7 +206,7 @@ async function createPlaylist() {
         const meData = await meResponse.json();
         const userId = meData.id;
 
-        // 2. Crear Playlist Vacía usando la URL real inyectando el userId obtenido
+        // 2. Crear Playlist Vacía
         const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
             method: "POST",
             headers: {
@@ -230,7 +224,7 @@ async function createPlaylist() {
         if (!playlistResponse.ok) throw new Error("Error al crear la playlist en Spotify.");
         const playlist = await playlistResponse.json();
 
-        // 3. Agregar las canciones añadidas en la interfaz
+        // 3. CORREGIDO: querySelectorAll('li') con las comillas requeridas para evitar el SyntaxError
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
         if (uris.length === 0) {
             setConnected(playlistStatus, "Vacía 🟢");
@@ -241,7 +235,7 @@ async function createPlaylist() {
 
         const chunk = uris.slice(0, 100);
 
-        // CORREGIDO: Endpoint oficial real para inyectar canciones con la sintaxis ${playlist.id} exacta
+        // 4. Inyectar canciones a la playlist recién creada
         const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
             method: "POST",
             headers: {
