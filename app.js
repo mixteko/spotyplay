@@ -60,43 +60,26 @@ function updateStatus(){
 }
 
 /* =========================================
-   AUTENTICACIÓN (FLUJO DE CÓDIGO CORREGIDO)
+   AUTENTICACIÓN DIRECTA (COMO TU PRIMER CÓDIGO)
 ========================================= */
 async function loginSpotify(){
-    // CORREGIDO: Cambiado response_type=token por response_type=code para solucionar el error de la captura
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
+    // Regresa a response_type=token oficial para que mande al usuario directo a la página verde de Spotify
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
     window.location.href = authUrl;
 }
 
 async function getToken(){
-    // Buscamos si Spotify nos devolvió el parámetro ?code= en la barra de direcciones
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get("access_token");
 
-    if(code){
-        msg("Código de autorización detectado. Intercambiando con el Worker...");
-        try {
-            // El código se le envía a tu Worker para que este haga el intercambio seguro por el Token real
-            const response = await fetch(`${WORKER_URL}/api/token?code=${code}`);
-            if(!response.ok) throw new Error("El Worker no pudo procesar el intercambio del token");
-            
-            const data = await response.json();
-            if(data.access_token){
-                accessToken = data.access_token;
-                localStorage.setItem("spotify_token", accessToken);
-                // Limpiamos el código de la barra de direcciones para dejar la URL limpia
-                window.history.replaceState({}, document.title, window.location.pathname);
-                updateStatus();
-                msg("Conectado a Spotify correctamente vía Flujo Code.");
-            }
-        } catch (error) {
-            console.error(error);
-            msg("Error en intercambio de token: " + error.message);
-        }
-        return;
-    }
-
-    if(accessToken){
+    if(token){
+        accessToken = token;
+        localStorage.setItem("spotify_token", token);
+        window.location.hash = "";
+        updateStatus();
+        msg("Conectado a Spotify correctamente.");
+    }else if(accessToken){
         msg("Usando sesión existente de Spotify.");
     }else{
         msg("Falta conectar cuenta de Spotify.");
@@ -112,7 +95,7 @@ function changeUser(){
 }
 
 /* =========================================
-   GEMINI AI
+   GEMINI AI CLOUD WORKER
 ========================================= */
 async function generateGemini(moreTracks = false){
     if(!promptAI || !promptAI.value.trim()){
@@ -163,7 +146,7 @@ async function generateGemini(moreTracks = false){
 }
 
 /* =========================================
-   BUSCAR CANCIONES (URL OFICIAL RESTRUCTURADA)
+   BUSCAR CANCIONES (API REAL DE SPOTIFY)
 ========================================= */
 async function spotifySearch(query){
     if(!accessToken) return null;
@@ -203,7 +186,7 @@ function appendSongToList(track){
 }
 
 /* =========================================
-   CREAR PLAYLIST (URLS OFICIALES NATIVAS)
+   CREAR PLAYLIST Y AGREGAR CANCIONES (CORREGIDO CORRRECTAMENTE)
 ========================================= */
 async function createPlaylist(){
     if(!accessToken){
@@ -215,7 +198,7 @@ async function createPlaylist(){
         setConnected(playlistStatus, "Creando... ⏳");
         const finalName = (playlistName && playlistName.value.trim()) ? playlistName.value : "Mi Playlist AI";
 
-        // 1. Obtener los datos reales de tu perfil de usuario
+        // 1. Obtener datos del perfil nativo del usuario
         const meResponse = await fetch("https://api.spotify.com/v1/me", {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
@@ -224,7 +207,7 @@ async function createPlaylist(){
         const meData = await meResponse.json();
         const userId = meData.id;
 
-        // 2. Crear la lista en los servidores oficiales de Spotify usando tu ID
+        // 2. Crear Playlist usando plantillas literales con el signo $ correcto
         const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
             method: "POST",
             headers: {
@@ -242,7 +225,7 @@ async function createPlaylist(){
         if(!playlistResponse.ok) throw new Error("Error al crear la playlist.");
         const playlist = await playlistResponse.json();
 
-        // 3. Obtener elementos de la lista en interfaz con sintaxis limpia
+        // 3. Obtener elementos li válidos
         const uris = [...songs.querySelectorAll("li")].map(li => li.dataset.uri);
         if(uris.length === 0){
             setConnected(playlistStatus, "Vacía 🟢");
@@ -253,7 +236,7 @@ async function createPlaylist(){
 
         const chunk = uris.slice(0, 100);
 
-        // 4. Inyectar las canciones directamente al ID de la lista creada
+        // 4. CORREGIDO: Añadido el signo $ faltante antes de {playlist.id} para corregir el error original
         const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
             method: "POST",
             headers: {
