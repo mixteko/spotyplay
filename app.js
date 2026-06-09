@@ -654,13 +654,13 @@ async function createPlaylist() {
             );
 
         console.log(
-    "URIS COMPLETAS JSON:",
-    JSON.stringify(
-        uris,
-        null,
-        2
-    )
-);
+            "URIS COMPLETAS JSON:",
+            JSON.stringify(
+                uris,
+                null,
+                2
+            )
+        );
 
         msg(
             `🎵 URIS encontradas: ${uris.length}`
@@ -676,58 +676,44 @@ async function createPlaylist() {
 
         }
 
-        for (
-            let i = 0;
-            i < uris.length;
-            i += 100
-        ) {
+        const addResponse =
+            await fetch(
+                `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+                {
+                    method: "POST",
 
-            const chunk =
-                uris.slice(
-                    i,
-                    i + 100
-                );
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`,
 
-            const addResponse =
-                await fetch(
-                    `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
-                    {
-                        method: "POST",
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                        headers: {
-                            Authorization:
-                                `Bearer ${accessToken}`,
-
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            uris: chunk
-                        })
-                    }
-                );
-
-            console.log(
-                "ADD STATUS:",
-                addResponse.status
+                    body: JSON.stringify({
+                        uris
+                    })
+                }
             );
 
-            const addText =
-                await addResponse.text();
+        console.log(
+            "ADD STATUS:",
+            addResponse.status
+        );
 
-            console.log(
-                "ADD RESPONSE:",
-                addText
+        const addText =
+            await addResponse.text();
+
+        console.log(
+            "ADD RESPONSE COMPLETA:",
+            addText
+        );
+
+        if (!addResponse.ok) {
+
+            throw new Error(
+                `Spotify devolvió: ${addText}`
             );
-
-            if (!addResponse.ok) {
-
-                throw new Error(
-                    `Spotify devolvió: ${addText}`
-                );
-
-            }
 
         }
 
