@@ -163,7 +163,24 @@ async function getToken() {
                 );
 
             }
+accessToken =
+    tokenData.access_token;
 
+const testMe =
+    await fetch(
+        "https://api.spotify.com/v1/me",
+        {
+            headers: {
+                Authorization:
+                    `Bearer ${accessToken}`
+            }
+        }
+    );
+
+console.log(
+    "TOKEN TEST:",
+    await testMe.json()
+);
             accessToken =
                 tokenData.access_token;
 
