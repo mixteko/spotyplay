@@ -137,12 +137,17 @@ async function getToken() {
                     }
                 );
 
-            const responseData =
+            const tokenData =
                 await response.json();
 
             console.log(
-                "WORKER RESPONSE:",
-                responseData
+                "TOKEN RESPONSE:",
+                tokenData
+            );
+
+            console.log(
+                "SCOPES RECIBIDOS:",
+                tokenData.scope
             );
 
             if (
@@ -151,25 +156,11 @@ async function getToken() {
 
                 throw new Error(
                     JSON.stringify(
-                        responseData,
+                        tokenData,
                         null,
                         2
                     )
                 );
-
-            }
-
-            let tokenData =
-                responseData;
-
-            if (
-                responseData.spotify_response
-            ) {
-
-                tokenData =
-                    JSON.parse(
-                        responseData.spotify_response
-                    );
 
             }
 
@@ -257,7 +248,6 @@ function changeUser() {
         REDIRECT_URI;
 
 }
-
 /* =========================================
    GENERADOR DE CANCIONES CON GEMINI
 ========================================= */
