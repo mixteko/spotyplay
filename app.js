@@ -585,9 +585,8 @@ async function createPlaylist() {
             `👤 Usuario: ${meData.display_name}`
         );
 
-        const playlistResponse =
-            await fetch(
-                `https://api.spotify.com/v1/users/${userId}/playlists`,
+       const playlistResponse = await fetch(
+    "https://api.spotify.com/v1/me/playlists",
                 {
                     method: "POST",
 
