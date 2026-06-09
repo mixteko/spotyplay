@@ -578,15 +578,13 @@ async function createPlaylist() {
             meData
         );
 
-        const userId =
-            meData.id;
-
         msg(
             `👤 Usuario: ${meData.display_name}`
         );
 
-       const playlistResponse = await fetch(
-    "https://api.spotify.com/v1/me/playlists",
+        const playlistResponse =
+            await fetch(
+                "https://api.spotify.com/v1/me/playlists",
                 {
                     method: "POST",
 
@@ -604,9 +602,6 @@ async function createPlaylist() {
                             finalName,
 
                         public:
-                            false,
-
-                        collaborative:
                             false,
 
                         description:
@@ -650,7 +645,13 @@ async function createPlaylist() {
             .map(
                 li => li.dataset.uri
             )
-            .filter(Boolean);
+            .filter(
+                uri =>
+                    uri &&
+                    uri.startsWith(
+                        "spotify:track:"
+                    )
+            );
 
         console.log(
             "URIS COMPLETAS:",
@@ -671,44 +672,58 @@ async function createPlaylist() {
 
         }
 
-        const addResponse =
-            await fetch(
-                `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
-                {
-                    method: "POST",
+        for (
+            let i = 0;
+            i < uris.length;
+            i += 100
+        ) {
 
-                    headers: {
-                        Authorization:
-                            `Bearer ${accessToken}`,
+            const chunk =
+                uris.slice(
+                    i,
+                    i + 100
+                );
 
-                        "Content-Type":
-                            "application/json"
-                    },
+            const addResponse =
+                await fetch(
+                    `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+                    {
+                        method: "POST",
 
-                    body: JSON.stringify({
-                        uris
-                    })
-                }
+                        headers: {
+                            Authorization:
+                                `Bearer ${accessToken}`,
+
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            uris: chunk
+                        })
+                    }
+                );
+
+            console.log(
+                "ADD STATUS:",
+                addResponse.status
             );
 
-        console.log(
-            "ADD STATUS:",
-            addResponse.status
-        );
+            const addText =
+                await addResponse.text();
 
-        const addData =
-            await addResponse.json();
-
-        console.log(
-            "ADD RESPONSE:",
-            addData
-        );
-
-        if (!addResponse.ok) {
-
-            throw new Error(
-                `Error agregando canciones: ${JSON.stringify(addData)}`
+            console.log(
+                "ADD RESPONSE:",
+                addText
             );
+
+            if (!addResponse.ok) {
+
+                throw new Error(
+                    `Spotify devolvió: ${addText}`
+                );
+
+            }
 
         }
 
