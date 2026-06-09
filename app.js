@@ -557,39 +557,37 @@ async function createPlaylist() {
                 }
             );
 
-        const meText =
-            await meResponse.text();
-
         console.log(
             "ME STATUS:",
             meResponse.status
         );
 
-        console.log(
-            "ME RESPONSE:",
-            meText
-        );
-
         if (!meResponse.ok) {
 
             throw new Error(
-                "No se pudo obtener tu perfil Spotify."
+                "No se pudo obtener tu perfil."
             );
 
         }
 
         const meData =
-            JSON.parse(
-                meText
-            );
+            await meResponse.json();
+
+        console.log(
+            "ME RESPONSE:",
+            meData
+        );
+
+        const userId =
+            meData.id;
 
         msg(
-            `👤 Usuario: ${meData.display_name || meData.id}`
+            `👤 Usuario: ${meData.display_name}`
         );
 
         const playlistResponse =
             await fetch(
-                "https://api.spotify.com/v1/me/playlists",
+                `https://api.spotify.com/v1/users/${userId}/playlists`,
                 {
                     method: "POST",
 
@@ -609,131 +607,109 @@ async function createPlaylist() {
                         public:
                             false,
 
+                        collaborative:
+                            false,
+
                         description:
                             "Generada con Spotify AI"
 
                     })
-
                 }
             );
-
-        const playlistText =
-            await playlistResponse.text();
 
         console.log(
             "PLAYLIST STATUS:",
             playlistResponse.status
         );
 
+        const playlistData =
+            await playlistResponse.json();
+
         console.log(
             "PLAYLIST RESPONSE:",
-            playlistText
+            playlistData
         );
 
         if (!playlistResponse.ok) {
 
             throw new Error(
-                `Spotify respondió ${playlistResponse.status}: ${playlistText}`
+                JSON.stringify(
+                    playlistData
+                )
             );
 
         }
 
-        const playlist =
-            JSON.parse(
-                playlistText
-            );
-
         msg(
-            `✅ Playlist creada: ${playlist.name}`
+            `✅ Playlist creada: ${playlistData.name}`
         );
 
         const uris =
             [
-                ...songs.querySelectorAll(
-                    "li"
-                )
-            ].map(
+                ...songs.querySelectorAll("li")
+            ]
+            .map(
                 li => li.dataset.uri
-            );
+            )
+            .filter(Boolean);
 
-        if (!uris.length) {
+        console.log(
+            "URIS COMPLETAS:",
+            uris
+        );
 
-            setConnected(
-                playlistStatus,
-                "Vacía 🟢"
-            );
+        msg(
+            `🎵 URIS encontradas: ${uris.length}`
+        );
+
+        if (uris.length === 0) {
 
             msg(
                 "⚠️ Playlist creada sin canciones."
             );
 
-            if (
-                playlist.external_urls?.spotify
-            ) {
-
-                window.open(
-                    playlist.external_urls.spotify,
-                    "_blank"
-                );
-
-            }
-
             return;
 
         }
 
-        for (
-            let i = 0;
-            i < uris.length;
-            i += 100
-        ) {
+        const addResponse =
+            await fetch(
+                `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+                {
+                    method: "POST",
 
-            const chunk =
-                uris.slice(
-                    i,
-                    i + 100
-                );
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`,
 
-            const addResponse =
-                await fetch(
-                    `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
-                    {
-                        method: "POST",
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                        headers: {
-                            Authorization:
-                                `Bearer ${accessToken}`,
-
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            uris: chunk
-                        })
-                    }
-                );
-
-            const addText =
-                await addResponse.text();
-
-            console.log(
-                "ADD STATUS:",
-                addResponse.status
+                    body: JSON.stringify({
+                        uris
+                    })
+                }
             );
 
-            console.log(
-                "ADD RESPONSE:",
-                addText
+        console.log(
+            "ADD STATUS:",
+            addResponse.status
+        );
+
+        const addData =
+            await addResponse.json();
+
+        console.log(
+            "ADD RESPONSE:",
+            addData
+        );
+
+        if (!addResponse.ok) {
+
+            throw new Error(
+                `Error agregando canciones: ${JSON.stringify(addData)}`
             );
-
-            if (!addResponse.ok) {
-
-                throw new Error(
-                    `Error agregando canciones: ${addText}`
-                );
-
-            }
 
         }
 
@@ -743,15 +719,16 @@ async function createPlaylist() {
         );
 
         msg(
-            `✨ Playlist creada con ${uris.length} canciones`
+            `🎉 Playlist creada correctamente con ${uris.length} canciones`
         );
 
         if (
-            playlist.external_urls?.spotify
+            playlistData.external_urls &&
+            playlistData.external_urls.spotify
         ) {
 
             window.open(
-                playlist.external_urls.spotify,
+                playlistData.external_urls.spotify,
                 "_blank"
             );
 
