@@ -804,3 +804,139 @@ function refreshApp() {
     );
 
 }
+/* =========================================
+   INICIALIZACIÓN
+========================================= */
+
+window.addEventListener(
+"DOMContentLoaded",
+async ()=>{
+
+    spotifyStatus =
+    document.getElementById(
+    "spotifyStatus"
+    );
+
+    geminiStatus =
+    document.getElementById(
+    "geminiStatus"
+    );
+
+    playlistStatus =
+    document.getElementById(
+    "playlistStatus"
+    );
+
+    promptAI =
+    document.getElementById(
+    "promptAI"
+    );
+
+    songCount =
+    document.getElementById(
+    "songCount"
+    );
+
+    playlistName =
+    document.getElementById(
+    "playlistName"
+    );
+
+    songs =
+    document.getElementById(
+    "songs"
+    );
+
+    log =
+    document.getElementById(
+    "log"
+    );
+
+    msg(
+    "🚀 Iniciando Spotify Playlist Creator..."
+    );
+
+    const spotifyBtn =
+    document.getElementById(
+    "spotifyBtn"
+    );
+
+    const generateBtn =
+    document.getElementById(
+    "generateBtn"
+    );
+
+    const moreBtn =
+    document.getElementById(
+    "moreBtn"
+    );
+
+    const refreshBtn =
+    document.getElementById(
+    "refreshBtn"
+    );
+
+    const playlistBtn =
+    document.getElementById(
+    "playlistBtn"
+    );
+
+    const changeBtn =
+    document.getElementById(
+    "changeBtn"
+    );
+
+    if(
+    spotifyBtn
+    ){
+
+        spotifyBtn.onclick =
+        async ()=>{
+
+            try{
+
+                await loginSpotify();
+
+            }catch(e){
+
+                console.error(e);
+
+                msg(
+                `❌ Error: ${e.message}`
+                );
+
+            }
+
+        };
+
+    }
+
+    if(generateBtn)
+    generateBtn.onclick =
+    ()=>generateGemini(false);
+
+    if(moreBtn)
+    moreBtn.onclick =
+    ()=>generateGemini(true);
+
+    if(refreshBtn)
+    refreshBtn.onclick =
+    refreshApp;
+
+    if(playlistBtn)
+    playlistBtn.onclick =
+    createPlaylist;
+
+    if(changeBtn)
+    changeBtn.onclick =
+    changeUser;
+
+    updateStatus();
+
+    await getToken();
+
+    msg(
+    "✅ Listo para usar!"
+    );
+
+});
