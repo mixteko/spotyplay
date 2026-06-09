@@ -505,72 +505,60 @@ function appendSongToList(track) {
 /* =========================================
    CREAR PLAYLIST EN SPOTIFY
 ========================================= */
-async function createPlaylist() {
+const addResponse =
+    await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+        {
+            method: "POST",
 
-    if (!accessToken) {
+            headers: {
+                Authorization:
+                    `Bearer ${accessToken}`,
+                "Content-Type":
+                    "application/json"
+            },
 
-        msg(
-            "❌ Primero debes conectar Spotify."
-        );
+            body: JSON.stringify({
+                uris: [
+                    uris[0]
+                ]
+            })
+        }
+    );
 
-        return;
+console.log(
+    "PLAYLIST ID:",
+    playlistData.id
+);
 
-    }
+console.log(
+    "PLAYLIST OWNER:",
+    playlistData.owner
+);
 
-    try {
+console.log(
+    "PRIMER URI:",
+    uris[0]
+);
 
-        const meResponse =
-            await fetch(
-                "https://api.spotify.com/v1/me",
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${accessToken}`
-                    }
-                }
-            );
+console.log(
+    "ADD STATUS:",
+    addResponse.status
+);
 
-        const meData =
-            await meResponse.json();
+const addText =
+    await addResponse.text();
 
-        console.log(
-            "USUARIO:",
-            meData
-        );
+console.log(
+    "ADD RESPONSE COMPLETA:",
+    addText
+);
 
-        const testResponse =
-            await fetch(
-                "https://api.spotify.com/v1/me/playlists?limit=1",
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${accessToken}`
-                    }
-                }
-            );
+if (!addResponse.ok) {
 
-        console.log(
-            "TEST PLAYLIST STATUS:",
-            testResponse.status
-        );
-
-        const testData =
-            await testResponse.text();
-
-        console.log(
-            "TEST PLAYLIST RESPONSE:",
-            testData
-        );
-
-        return;
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-
-    }
+    throw new Error(
+        addText
+    );
 
 }
 /* =========================================
