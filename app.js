@@ -505,60 +505,218 @@ function appendSongToList(track) {
 /* =========================================
    CREAR PLAYLIST EN SPOTIFY
 ========================================= */
-const addResponse =
-    await fetch(
-        `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
-        {
-            method: "POST",
+async function createPlaylist() {
 
-            headers: {
-                Authorization:
-                    `Bearer ${accessToken}`,
-                "Content-Type":
-                    "application/json"
-            },
+    if (!accessToken) {
 
-            body: JSON.stringify({
-                uris: [
-                    uris[0]
-                ]
-            })
+        msg(
+            "❌ Primero debes conectar Spotify."
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const meResponse =
+            await fetch(
+                "https://api.spotify.com/v1/me",
+                {
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`
+                    }
+                }
+            );
+
+        if (!meResponse.ok) {
+
+            throw new Error(
+                "No se pudo obtener el perfil."
+            );
+
         }
-    );
 
-console.log(
-    "PLAYLIST ID:",
-    playlistData.id
-);
+        const meData =
+            await meResponse.json();
 
-console.log(
-    "PLAYLIST OWNER:",
-    playlistData.owner
-);
+        console.log(
+            "USUARIO:",
+            meData
+        );
 
-console.log(
-    "PRIMER URI:",
-    uris[0]
-);
+        msg(
+            `👤 Usuario: ${meData.display_name}`
+        );
 
-console.log(
-    "ADD STATUS:",
-    addResponse.status
-);
+        const playlistResponse =
+            await fetch(
+                "https://api.spotify.com/v1/me/playlists",
+                {
+                    method: "POST",
 
-const addText =
-    await addResponse.text();
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`,
 
-console.log(
-    "ADD RESPONSE COMPLETA:",
-    addText
-);
+                        "Content-Type":
+                            "application/json"
+                    },
 
-if (!addResponse.ok) {
+                    body: JSON.stringify({
 
-    throw new Error(
-        addText
-    );
+                        name:
+                            (
+                                playlistName &&
+                                playlistName.value.trim()
+                            )
+                                ? playlistName.value.trim()
+                                : "Mi Playlist AI",
+
+                        public:
+                            false,
+
+                        description:
+                            "Generada con Spotify AI"
+
+                    })
+                }
+            );
+
+        console.log(
+            "PLAYLIST STATUS:",
+            playlistResponse.status
+        );
+
+        const playlistData =
+            await playlistResponse.json();
+
+        console.log(
+            "PLAYLIST RESPONSE:",
+            playlistData
+        );
+
+        if (!playlistResponse.ok) {
+
+            throw new Error(
+                JSON.stringify(
+                    playlistData
+                )
+            );
+
+        }
+
+        msg(
+            `✅ Playlist creada: ${playlistData.name}`
+        );
+
+        const uris =
+            [
+                ...songs.querySelectorAll("li")
+            ]
+            .map(
+                li => li.dataset.uri
+            )
+            .filter(Boolean);
+
+        console.log(
+            "URIS COMPLETAS JSON:",
+            JSON.stringify(
+                uris,
+                null,
+                2
+            )
+        );
+
+        msg(
+            `🎵 URIS encontradas: ${uris.length}`
+        );
+
+        if (uris.length === 0) {
+
+            msg(
+                "⚠️ Playlist creada sin canciones."
+            );
+
+            return;
+
+        }
+
+        const addResponse =
+            await fetch(
+                `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`,
+
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        uris: [
+                            uris[0]
+                        ]
+                    })
+                }
+            );
+
+        console.log(
+            "PLAYLIST ID:",
+            playlistData.id
+        );
+
+        console.log(
+            "PLAYLIST OWNER:",
+            playlistData.owner
+        );
+
+        console.log(
+            "PRIMER URI:",
+            uris[0]
+        );
+
+        console.log(
+            "ADD STATUS:",
+            addResponse.status
+        );
+
+        const addText =
+            await addResponse.text();
+
+        console.log(
+            "ADD RESPONSE COMPLETA:",
+            addText
+        );
+
+        if (!addResponse.ok) {
+
+            throw new Error(
+                addText
+            );
+
+        }
+
+        msg(
+            "🎉 Canción agregada correctamente"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error en createPlaylist:",
+            error
+        );
+
+        msg(
+            `❌ ${error.message}`
+        );
+
+    }
 
 }
 /* =========================================
