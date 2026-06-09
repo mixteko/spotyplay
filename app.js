@@ -646,19 +646,28 @@ async function createPlaylist() {
             )
         );
 
-        msg(
-            `🎵 URIS encontradas: ${uris.length}`
-        );
-
         if (uris.length === 0) {
 
-            msg(
-                "⚠️ Playlist creada sin canciones."
+            throw new Error(
+                "No existen canciones para agregar."
             );
 
-            return;
-
         }
+
+        console.log(
+            "PLAYLIST ID:",
+            playlistData.id
+        );
+
+        console.log(
+            "PLAYLIST OWNER:",
+            playlistData.owner
+        );
+
+        console.log(
+            "PRIMER URI:",
+            uris[0]
+        );
 
         const addResponse =
             await fetch(
@@ -683,21 +692,6 @@ async function createPlaylist() {
             );
 
         console.log(
-            "PLAYLIST ID:",
-            playlistData.id
-        );
-
-        console.log(
-            "PLAYLIST OWNER:",
-            playlistData.owner
-        );
-
-        console.log(
-            "PRIMER URI:",
-            uris[0]
-        );
-
-        console.log(
             "ADD STATUS:",
             addResponse.status
         );
@@ -713,7 +707,7 @@ async function createPlaylist() {
         if (!addResponse.ok) {
 
             throw new Error(
-                addText
+                `Spotify devolvió: ${addText}`
             );
 
         }
