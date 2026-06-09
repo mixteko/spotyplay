@@ -654,9 +654,13 @@ async function createPlaylist() {
             );
 
         console.log(
-            "URIS COMPLETAS:",
-            uris
-        );
+    "URIS COMPLETAS JSON:",
+    JSON.stringify(
+        uris,
+        null,
+        2
+    )
+);
 
         msg(
             `🎵 URIS encontradas: ${uris.length}`
