@@ -536,6 +536,23 @@ async function createPlaylist() {
 
     try {
 
+        setConnected(
+            playlistStatus,
+            "Creando... ⏳"
+        );
+
+        const finalName =
+            (
+                playlistName &&
+                playlistName.value.trim()
+            )
+                ? playlistName.value.trim()
+                : "Mi Playlist AI";
+
+        msg(
+            `📝 Nombre de la playlist: "${finalName}"`
+        );
+
         const meResponse =
             await fetch(
                 "https://api.spotify.com/v1/me",
@@ -547,13 +564,10 @@ async function createPlaylist() {
                 }
             );
 
-        if (!meResponse.ok) {
-
-            throw new Error(
-                "No se pudo obtener el perfil."
-            );
-
-        }
+        console.log(
+            "ME STATUS:",
+            meResponse.status
+        );
 
         const meData =
             await meResponse.json();
@@ -562,6 +576,14 @@ async function createPlaylist() {
             "USUARIO:",
             meData
         );
+
+        if (!meResponse.ok) {
+
+            throw new Error(
+                "No se pudo obtener el usuario Spotify"
+            );
+
+        }
 
         msg(
             `👤 Usuario: ${meData.display_name}`
@@ -576,7 +598,6 @@ async function createPlaylist() {
                     headers: {
                         Authorization:
                             `Bearer ${accessToken}`,
-
                         "Content-Type":
                             "application/json"
                     },
@@ -584,12 +605,7 @@ async function createPlaylist() {
                     body: JSON.stringify({
 
                         name:
-                            (
-                                playlistName &&
-                                playlistName.value.trim()
-                            )
-                                ? playlistName.value.trim()
-                                : "Mi Playlist AI",
+                            finalName,
 
                         public:
                             false,
@@ -635,7 +651,13 @@ async function createPlaylist() {
             .map(
                 li => li.dataset.uri
             )
-            .filter(Boolean);
+            .filter(
+                uri =>
+                    typeof uri === "string" &&
+                    uri.startsWith(
+                        "spotify:track:"
+                    )
+            );
 
         console.log(
             "URIS COMPLETAS JSON:",
@@ -646,28 +668,21 @@ async function createPlaylist() {
             )
         );
 
-        if (uris.length === 0) {
+        msg(
+            `🎵 URIS encontradas: ${uris.length}`
+        );
 
-            throw new Error(
-                "No existen canciones para agregar."
+        if (
+            uris.length === 0
+        ) {
+
+            msg(
+                "⚠️ Playlist creada sin canciones."
             );
 
+            return;
+
         }
-
-        console.log(
-            "PLAYLIST ID:",
-            playlistData.id
-        );
-
-        console.log(
-            "PLAYLIST OWNER:",
-            playlistData.owner
-        );
-
-        console.log(
-            "PRIMER URI:",
-            uris[0]
-        );
 
         const addResponse =
             await fetch(
@@ -678,18 +693,25 @@ async function createPlaylist() {
                     headers: {
                         Authorization:
                             `Bearer ${accessToken}`,
-
                         "Content-Type":
                             "application/json"
                     },
 
                     body: JSON.stringify({
-                        uris: [
-                            uris[0]
-                        ]
+                        uris
                     })
                 }
             );
+
+        console.log(
+            "PLAYLIST ID:",
+            playlistData.id
+        );
+
+        console.log(
+            "PLAYLIST OWNER:",
+            playlistData.owner
+        );
 
         console.log(
             "ADD STATUS:",
@@ -707,20 +729,42 @@ async function createPlaylist() {
         if (!addResponse.ok) {
 
             throw new Error(
-                `Spotify devolvió: ${addText}`
+                addText
             );
 
         }
 
-        msg(
-            "🎉 Canción agregada correctamente"
+        setConnected(
+            playlistStatus,
+            "Playlist 🟢"
         );
+
+        msg(
+            `🎉 Playlist creada correctamente con ${uris.length} canciones`
+        );
+
+        if (
+            playlistData.external_urls &&
+            playlistData.external_urls.spotify
+        ) {
+
+            window.open(
+                playlistData.external_urls.spotify,
+                "_blank"
+            );
+
+        }
 
     } catch (error) {
 
         console.error(
             "Error en createPlaylist:",
             error
+        );
+
+        setDisconnected(
+            playlistStatus,
+            "Error 🔴"
         );
 
         msg(
