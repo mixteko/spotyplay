@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.6-rate-limit-fix-2026-06-10";
+const APP_VERSION = "v2.7-cancel-search-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -26,6 +26,8 @@ let songs;
 let log;
 let spotifySearchCache = new Map();
 let selectedTrackCache = new Map();
+let activeJobId = 0;
+let spotifyRateLimitedUntil = 0;
 
 /* =========================================
    FUNCIONES DE LOG Y STATUS
@@ -306,6 +308,8 @@ async function generateGemini(moreTracks = false) {
     }
 
     try {
+        const jobId =
+            ++activeJobId;
 
         setConnected(
             geminiStatus,
@@ -425,6 +429,13 @@ No inventes canciones. No expliques nada. Solo devuelve la lista.`,
         for (
             const trackStr of data.tracks
         ) {
+            if (jobId !== activeJobId) {
+                msg(
+                    "⏹️ Generación cancelada."
+                );
+
+                return;
+            }
 
             appendSongLine(
                 trackStr
@@ -499,6 +510,25 @@ function sleep(ms) {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
     });
+}
+
+async function sleepForJob(ms, jobId) {
+    const step = 250;
+    let elapsed = 0;
+
+    while (elapsed < ms) {
+        if (jobId !== activeJobId) {
+            return false;
+        }
+
+        await sleep(
+            Math.min(step, ms - elapsed)
+        );
+
+        elapsed += step;
+    }
+
+    return jobId === activeJobId;
 }
 
 function sanitizeSpotifyQuery(query) {
@@ -671,7 +701,7 @@ function scoreSpotifyTrack(track, parsedQuery) {
     };
 }
 
-async function fetchSpotifySearch(query) {
+async function fetchSpotifySearch(query, jobId) {
     const cleanQuery =
         sanitizeSpotifyQuery(query);
 
@@ -686,9 +716,23 @@ async function fetchSpotifySearch(query) {
         return spotifySearchCache.get(cacheKey);
     }
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    if (
+        Date.now() < spotifyRateLimitedUntil
+    ) {
+        return [];
+    }
 
-        await sleep(900 * attempt);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+
+        const canContinue =
+            await sleepForJob(
+                1400 * attempt,
+                jobId
+            );
+
+        if (!canContinue) {
+            return [];
+        }
 
         const response =
             await fetch(
@@ -711,19 +755,18 @@ async function fetchSpotifySearch(query) {
         if (response.status === 429) {
             const retryAfter =
                 parseInt(
-                    response.headers.get("Retry-After") || "3",
+                    response.headers.get("Retry-After") || "8",
                     10
                 );
 
+            spotifyRateLimitedUntil =
+                Date.now() + Math.max(retryAfter, 8) * 1000;
+
             msg(
-                `⏳ Spotify limitó las búsquedas. Esperando ${retryAfter}s...`
+                `⏳ Spotify limitó las búsquedas. Espera ${Math.max(retryAfter, 8)}s antes de volver a crear.`
             );
 
-            await sleep(
-                Math.max(retryAfter, 3) * 1000
-            );
-
-            continue;
+            return [];
         }
 
         if (!response.ok) {
@@ -754,7 +797,7 @@ async function fetchSpotifySearch(query) {
     return [];
 }
 
-async function spotifySearch(query) {
+async function spotifySearch(query, jobId = activeJobId) {
     if (!accessToken) {
         return null;
     }
@@ -778,9 +821,14 @@ async function spotifySearch(query) {
             new Map();
 
         for (const searchQuery of searchQueries) {
+            if (jobId !== activeJobId) {
+                return null;
+            }
+
             const results =
                 await fetchSpotifySearch(
-                    searchQuery
+                    searchQuery,
+                    jobId
                 );
 
             results.forEach(track => {
@@ -875,7 +923,7 @@ function getSongLines() {
         .filter(Boolean);
 }
 
-async function getCurrentSongUris() {
+async function getCurrentSongUris(jobId = activeJobId) {
     const lines =
         getSongLines();
 
@@ -883,6 +931,20 @@ async function getCurrentSongUris() {
     const usedUris = new Set();
 
     for (const line of lines) {
+        if (jobId !== activeJobId) {
+            return uris;
+        }
+
+        if (
+            Date.now() < spotifyRateLimitedUntil
+        ) {
+            msg(
+                "⏳ Spotify sigue limitando búsquedas. Espera unos segundos antes de intentar otra vez."
+            );
+
+            return uris;
+        }
+
         const cacheKey =
             normalizeText(line);
 
@@ -892,7 +954,8 @@ async function getCurrentSongUris() {
         if (!uri) {
             const track =
                 await spotifySearch(
-                    line
+                    line,
+                    jobId
                 );
 
             uri =
@@ -994,6 +1057,8 @@ async function createPlaylist() {
     }
 
     try {
+        const jobId =
+            ++activeJobId;
 
         setConnected(
             playlistStatus,
@@ -1051,7 +1116,15 @@ async function createPlaylist() {
         await addManualSongsToList();
 
         const uris =
-            await getCurrentSongUris();
+            await getCurrentSongUris(jobId);
+
+        if (jobId !== activeJobId) {
+            msg(
+                "⏹️ Búsqueda cancelada."
+            );
+
+            return;
+        }
 
         console.log(
             "URIS COMPLETAS JSON:",
@@ -1246,6 +1319,7 @@ async function createPlaylist() {
    REFRESH APP
 ========================================= */
 function refreshApp() {
+    activeJobId++;
 
     if (songs) {
         songs.value = "";
@@ -1263,10 +1337,13 @@ function refreshApp() {
         songCount.value = "10";
     }
 
+    selectedTrackCache.clear();
+    spotifySearchCache.clear();
+
     updateStatus();
 
     msg(
-        "🔄 Aplicación reiniciada."
+        "🔄 Aplicación reiniciada. Búsquedas canceladas."
     );
 
 }
