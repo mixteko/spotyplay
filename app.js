@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.7-cancel-search-2026-06-10";
+const APP_VERSION = "v2.8-match-fix-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -611,6 +611,25 @@ function parseTrackQuery(query) {
     };
 }
 
+function getQueryOptions(parsedQuery) {
+    const options = [
+        parsedQuery
+    ];
+
+    if (
+        parsedQuery.artist &&
+        parsedQuery.title
+    ) {
+        options.push({
+            raw: `${parsedQuery.title} - ${parsedQuery.artist}`,
+            artist: parsedQuery.title,
+            title: parsedQuery.artist
+        });
+    }
+
+    return options;
+}
+
 function scoreSpotifyTrack(track, parsedQuery) {
     const expectedArtist =
         normalizeText(parsedQuery.artist);
@@ -726,7 +745,7 @@ async function fetchSpotifySearch(query, jobId) {
 
         const canContinue =
             await sleepForJob(
-                1400 * attempt,
+                2400 * attempt,
                 jobId
             );
 
@@ -841,32 +860,50 @@ async function spotifySearch(query, jobId = activeJobId) {
             });
         }
 
+        const queryOptions =
+            getQueryOptions(
+                parsedQuery
+            );
+
         const scoredTracks =
             [...resultsByUri.values()]
-                .map(track =>
-                    scoreSpotifyTrack(
-                        track,
-                        parsedQuery
-                    )
-                )
+                .map(track => {
+                    const scores =
+                        queryOptions.map(option =>
+                            scoreSpotifyTrack(
+                                track,
+                                option
+                            )
+                        );
+
+                    return scores.sort((a, b) => b.score - a.score)[0];
+                })
                 .sort((a, b) => b.score - a.score);
 
         const bestMatch =
             scoredTracks[0];
 
         if (!bestMatch) {
+            if (
+                Date.now() < spotifyRateLimitedUntil
+            ) {
+                msg(
+                    `⏳ Búsqueda pausada por límite de Spotify: ${parsedQuery.raw}`
+                );
+            }
+
             return null;
         }
 
         const minimumScore =
             parsedQuery.artist
-                ? 68
-                : 50;
+                ? 58
+                : 45;
 
         const acceptableArtistMatch =
             !parsedQuery.artist ||
             bestMatch.artistMatches ||
-            bestMatch.artistOverlap >= 0.45;
+            bestMatch.artistOverlap >= 0.3;
 
         const strongTitleMatch =
             bestMatch.titleMatches &&
