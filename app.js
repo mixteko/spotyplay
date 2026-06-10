@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.8-match-fix-2026-06-10";
+const APP_VERSION = "v2.9-429-retry-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -738,10 +738,25 @@ async function fetchSpotifySearch(query, jobId) {
     if (
         Date.now() < spotifyRateLimitedUntil
     ) {
-        return [];
+        const waitMs =
+            spotifyRateLimitedUntil - Date.now();
+
+        msg(
+            `⏳ Esperando ${Math.ceil(waitMs / 1000)}s por límite de Spotify...`
+        );
+
+        const canContinue =
+            await sleepForJob(
+                waitMs,
+                jobId
+            );
+
+        if (!canContinue) {
+            return [];
+        }
     }
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 4; attempt++) {
 
         const canContinue =
             await sleepForJob(
@@ -782,7 +797,25 @@ async function fetchSpotifySearch(query, jobId) {
                 Date.now() + Math.max(retryAfter, 8) * 1000;
 
             msg(
-                `⏳ Spotify limitó las búsquedas. Espera ${Math.max(retryAfter, 8)}s antes de volver a crear.`
+                `⏳ Spotify limitó las búsquedas. Esperando ${Math.max(retryAfter, 8)}s y reintentando...`
+            );
+
+            const canRetry =
+                await sleepForJob(
+                    Math.max(retryAfter, 8) * 1000,
+                    jobId
+                );
+
+            if (!canRetry) {
+                return [];
+            }
+
+            continue;
+        }
+
+        if (response.status === 403) {
+            msg(
+                "⚠️ Spotify no permitió esta búsqueda. Revisa permisos o vuelve a conectar."
             );
 
             return [];
@@ -812,6 +845,10 @@ async function fetchSpotifySearch(query, jobId) {
         return tracks;
 
     }
+
+    msg(
+        `⏳ Spotify sigue limitando la búsqueda: ${cleanQuery}`
+    );
 
     return [];
 }
@@ -969,16 +1006,6 @@ async function getCurrentSongUris(jobId = activeJobId) {
 
     for (const line of lines) {
         if (jobId !== activeJobId) {
-            return uris;
-        }
-
-        if (
-            Date.now() < spotifyRateLimitedUntil
-        ) {
-            msg(
-                "⏳ Spotify sigue limitando búsquedas. Espera unos segundos antes de intentar otra vez."
-            );
-
             return uris;
         }
 
