@@ -5,9 +5,9 @@ const CORS_HEADERS = {
     "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "resolver-v5-cors-safe";
-const MAX_TRACKS_PER_REQUEST = 10;
-const SPOTIFY_SEARCH_LIMIT = 10;
+const WORKER_VERSION = "resolver-v6-subrequest-safe";
+const MAX_TRACKS_PER_REQUEST = 5;
+const SPOTIFY_SEARCH_LIMIT = 5;
 
 export default {
     async fetch(request, env) {
@@ -212,18 +212,6 @@ async function resolveSingleTrack(line, fallbackAuthorization, market, env) {
         };
     }
 
-    const publicTrack =
-        await resolveTrackFromPublicSearch(parsed);
-
-    if (publicTrack) {
-        await cacheTrack(cacheKey, publicTrack);
-
-        return {
-            source: "public-search",
-            track: publicTrack
-        };
-    }
-
     return {
         track: null,
         reason: apiResult.reason || "not_found"
@@ -238,45 +226,28 @@ async function searchWithSpotifyApi(parsed, authorization, market) {
         };
     }
 
-    const queries =
-        buildSearchQueries(parsed);
+    const query =
+        buildBestSearchQuery(parsed);
 
-    let lastReason = "not_found";
-
-    for (const query of queries) {
-        const tracks =
-            await fetchSpotifyTracks(
-                query,
-                authorization,
-                market
-            );
-
-        if (tracks.rateLimited) {
-            lastReason = "rate_limited";
-            continue;
-        }
-
-        if (tracks.error) {
-            lastReason = tracks.error;
-            continue;
-        }
-
-        const bestTrack =
-            pickBestTrack(
-                tracks.items,
-                parsed
-            );
-
-        if (bestTrack) {
-            return {
-                track: bestTrack
-            };
-        }
-    }
+    const tracks =
+        await fetchSpotifyTracks(
+            query,
+            authorization,
+            market
+        );
 
     return {
-        track: null,
-        reason: lastReason
+        track:
+            tracks.error
+                ? null
+                : pickBestTrack(
+                    tracks.items,
+                    parsed
+                ),
+        reason:
+            tracks.rateLimited
+                ? "rate_limited"
+                : tracks.error || "not_found"
     };
 }
 
@@ -334,61 +305,6 @@ async function fetchSpotifyTracks(query, authorization, market) {
 
     return {
         items: data.tracks?.items || []
-    };
-}
-
-async function resolveTrackFromPublicSearch(parsed) {
-    const query =
-        parsed.artist
-            ? `${parsed.artist} ${parsed.title}`
-            : parsed.raw;
-
-    const searchUrl =
-        `https://open.spotify.com/search/${encodeURIComponent(sanitizeSpotifyQuery(query))}/tracks`;
-
-    let response;
-
-    try {
-        response =
-            await fetch(searchUrl, {
-                headers: {
-                    "Accept": "text/html",
-                    "User-Agent": "Mozilla/5.0"
-                }
-            });
-    } catch (error) {
-        return null;
-    }
-
-    if (!response.ok) {
-        return null;
-    }
-
-    const html =
-        await response.text();
-
-    const trackIds =
-        [
-            ...html.matchAll(/(?:spotify:track:|spotify%3Atrack%3A|\/track\/)([A-Za-z0-9]{22})/g)
-        ]
-            .map(match => match[1]);
-
-    const uniqueTrackIds =
-        [...new Set(trackIds)];
-
-    if (!uniqueTrackIds.length) {
-        return null;
-    }
-
-    return {
-        uri: `spotify:track:${uniqueTrackIds[0]}`,
-        name: parsed.title || parsed.raw,
-        artists: [
-            {
-                name: parsed.artist || "Spotify"
-            }
-        ],
-        popularity: 0
     };
 }
 
@@ -498,8 +414,7 @@ async function cacheTrack(cacheKey, track) {
     }
 }
 
-function buildSearchQueries(parsed) {
-    const queries = [];
+function buildBestSearchQuery(parsed) {
     const artist =
         sanitizeSpotifyQuery(parsed.artist);
     const title =
@@ -508,17 +423,10 @@ function buildSearchQueries(parsed) {
         sanitizeSpotifyQuery(parsed.raw);
 
     if (artist && title) {
-        queries.push(`track:"${title}" artist:"${artist}"`);
-        queries.push(`${artist} ${title}`);
-        queries.push(`${title} ${artist}`);
-        queries.push(title);
+        return `${artist} ${title}`;
     }
 
-    if (raw) {
-        queries.push(raw);
-    }
-
-    return [...new Set(queries)];
+    return raw;
 }
 
 function pickBestTrack(tracks, parsed) {
