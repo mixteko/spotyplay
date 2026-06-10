@@ -6,6 +6,7 @@ Worker de Cloudflare para resolver canciones a URIs de Spotify sin saturar el na
 
 - Recibe canciones en texto.
 - Busca máximo 5 canciones por petición para no superar límites de Cloudflare.
+- Se detiene al primer `rate_limited` para no gastar llamadas.
 - Acepta `Maná - Rayando el Sol` y `mana-rayando el sol`.
 - Usa `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` si están configurados.
 - Si la API de Spotify falla, intenta un respaldo con la búsqueda pública de Spotify.
@@ -23,7 +24,7 @@ Debe responder con:
 {
   "ok": true,
   "service": "spotify-search-worker",
-  "version": "resolver-v6-subrequest-safe",
+  "version": "resolver-v7-stop-on-rate-limit",
   "maxTracksPerRequest": 5,
   "spotifyCredentialsConfigured": true
 }

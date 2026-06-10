@@ -5,7 +5,7 @@ const CORS_HEADERS = {
     "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "resolver-v6-subrequest-safe";
+const WORKER_VERSION = "resolver-v7-stop-on-rate-limit";
 const MAX_TRACKS_PER_REQUEST = 5;
 const SPOTIFY_SEARCH_LIMIT = 5;
 
@@ -97,7 +97,10 @@ async function resolveTracks(request, env) {
     const resolved = [];
     const unresolved = [];
 
-    for (const line of tracksToResolve) {
+    for (let index = 0; index < tracksToResolve.length; index++) {
+        const line =
+            tracksToResolve[index];
+
         let result;
 
         try {
@@ -128,6 +131,17 @@ async function resolveTracks(request, env) {
                 input: line,
                 reason: result.reason || "not_found"
             });
+
+            if (result.reason === "rate_limited") {
+                return jsonResponse({
+                    ok: true,
+                    rateLimited: true,
+                    version: WORKER_VERSION,
+                    resolved,
+                    unresolved,
+                    remaining: lines.slice(index + 1)
+                });
+            }
         }
 
         await sleep(350);

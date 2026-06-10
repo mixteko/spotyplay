@@ -7,11 +7,11 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.2-subrequest-safe-2026-06-10";
+const APP_VERSION = "v4.3-import-links-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
-const RESOLVER_CACHE_VERSION = "resolver-v6-subrequest-safe";
+const RESOLVER_CACHE_VERSION = "resolver-v7-stop-on-rate-limit";
 const MAX_SEARCHES_PER_CREATE = 5;
 const MAX_WORKER_BATCHES_PER_CREATE = 4;
 const MAX_SPOTIFY_RATE_LIMIT_SECONDS = 90;
@@ -1101,6 +1101,102 @@ function getSpotifyTrackUriFromLine(line) {
     return "";
 }
 
+function getSpotifyCollectionFromLine(line) {
+    const value =
+        String(line || "");
+
+    const urlMatch =
+        value.match(
+            /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(playlist|album)\/([A-Za-z0-9]{22})/
+        );
+
+    if (urlMatch) {
+        return {
+            type: urlMatch[1],
+            id: urlMatch[2]
+        };
+    }
+
+    const uriMatch =
+        value.match(
+            /spotify:(playlist|album):([A-Za-z0-9]{22})/
+        );
+
+    if (uriMatch) {
+        return {
+            type: uriMatch[1],
+            id: uriMatch[2]
+        };
+    }
+
+    return null;
+}
+
+async function fetchSpotifyCollectionTracks(collection) {
+    const tracks = [];
+
+    if (!collection) {
+        return tracks;
+    }
+
+    let url =
+        collection.type === "playlist"
+            ? `https://api.spotify.com/v1/playlists/${collection.id}/tracks?limit=100&fields=items(track(uri,name,artists(name))),next`
+            : `https://api.spotify.com/v1/albums/${collection.id}/tracks?limit=50`;
+
+    while (url) {
+        const response =
+            await fetch(
+                url,
+                {
+                    headers: {
+                        Authorization:
+                            `Bearer ${accessToken}`
+                    }
+                }
+            );
+
+        if (response.status === 401) {
+            localStorage.removeItem("spotify_token");
+            accessToken = "";
+            updateStatus();
+            msg("🔴 Token expirado. Conecta Spotify otra vez.");
+            return tracks;
+        }
+
+        if (!response.ok) {
+            msg(
+                `⚠️ No pude leer el ${collection.type} de Spotify.`
+            );
+            return tracks;
+        }
+
+        const data =
+            await response.json();
+
+        if (collection.type === "playlist") {
+            (data.items || [])
+                .forEach(item => {
+                    if (item.track?.uri) {
+                        tracks.push(item.track);
+                    }
+                });
+        } else {
+            (data.items || [])
+                .forEach(track => {
+                    if (track.uri) {
+                        tracks.push(track);
+                    }
+                });
+        }
+
+        url =
+            data.next || "";
+    }
+
+    return tracks;
+}
+
 async function getSearchWorkerStatus() {
     if (searchWorkerStatusCache) {
         return searchWorkerStatusCache;
@@ -1214,7 +1310,7 @@ async function resolveTracksWithWorker(lines, jobId) {
             data.rateLimited
         ) {
             msg(
-                "⏳ Spotify limitó la búsqueda por nombre. No se pausó la app; puedes intentar otra vez o pegar links directos de Spotify."
+                "⏳ Spotify limitó la búsqueda por nombre. Para avanzar ahora, pega links de canciones, playlist o álbum de Spotify."
             );
 
             return {
@@ -1291,6 +1387,39 @@ async function getCurrentSongUris(jobId = activeJobId) {
 
         let uri =
             selectedTrackCache.get(cacheKey);
+
+        const collection =
+            getSpotifyCollectionFromLine(
+                line
+            );
+
+        if (collection) {
+            msg(
+                `📚 Importando ${collection.type} de Spotify...`
+            );
+
+            const collectionTracks =
+                await fetchSpotifyCollectionTracks(
+                    collection
+                );
+
+            collectionTracks
+                .forEach(track => {
+                    if (
+                        track.uri &&
+                        !usedUris.has(track.uri)
+                    ) {
+                        uris.push(track.uri);
+                        usedUris.add(track.uri);
+                    }
+                });
+
+            msg(
+                `✅ Importadas ${collectionTracks.length} canciones del ${collection.type}.`
+            );
+
+            continue;
+        }
 
         if (!uri) {
             uri =
