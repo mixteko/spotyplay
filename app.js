@@ -6,8 +6,10 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.0-spotify-pause-2026-06-10";
+const APP_VERSION = "v3.1-small-batches-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
+const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
+const MAX_SEARCHES_PER_CREATE = 5;
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -26,7 +28,14 @@ let playlistName;
 let songs;
 let log;
 let spotifySearchCache = new Map();
-let selectedTrackCache = new Map();
+let selectedTrackCache =
+    new Map(
+        JSON.parse(
+            localStorage.getItem(
+                SELECTED_TRACK_CACHE_KEY
+            ) || "[]"
+        )
+    );
 let activeJobId = 0;
 let spotifyRateLimitedUntil =
     parseInt(
@@ -565,6 +574,15 @@ function clearSpotifyRateLimit() {
     );
 }
 
+function saveSelectedTrackCache() {
+    localStorage.setItem(
+        SELECTED_TRACK_CACHE_KEY,
+        JSON.stringify(
+            [...selectedTrackCache.entries()]
+        )
+    );
+}
+
 function sanitizeSpotifyQuery(query) {
     return String(query || "")
         .normalize("NFD")
@@ -1027,6 +1045,7 @@ async function getCurrentSongUris(jobId = activeJobId) {
 
     const uris = [];
     const usedUris = new Set();
+    let searchesThisRun = 0;
 
     for (const line of lines) {
         if (jobId !== activeJobId) {
@@ -1039,7 +1058,16 @@ async function getCurrentSongUris(jobId = activeJobId) {
         let uri =
             selectedTrackCache.get(cacheKey);
 
+        if (
+            !uri &&
+            searchesThisRun >= MAX_SEARCHES_PER_CREATE
+        ) {
+            continue;
+        }
+
         if (!uri) {
+            searchesThisRun++;
+
             const track =
                 await spotifySearch(
                     line,
@@ -1054,6 +1082,8 @@ async function getCurrentSongUris(jobId = activeJobId) {
                     cacheKey,
                     uri
                 );
+
+                saveSelectedTrackCache();
             }
         }
 
@@ -1064,6 +1094,15 @@ async function getCurrentSongUris(jobId = activeJobId) {
             uris.push(uri);
             usedUris.add(uri);
         }
+    }
+
+    if (
+        lines.length > uris.length &&
+        Date.now() >= spotifyRateLimitedUntil
+    ) {
+        msg(
+            `ℹ️ Se resolvieron ${uris.length}/${lines.length}. Presiona Crear Playlist otra vez para resolver más canciones sin saturar Spotify.`
+        );
     }
 
     return uris;
@@ -1104,6 +1143,8 @@ function appendSongLine(line, uri = "") {
             normalizeText(cleanLine),
             uri
         );
+
+        saveSelectedTrackCache();
     }
 }
 
@@ -1438,6 +1479,10 @@ function refreshApp() {
 
     selectedTrackCache.clear();
     spotifySearchCache.clear();
+
+    localStorage.removeItem(
+        SELECTED_TRACK_CACHE_KEY
+    );
 
     updateStatus();
 
