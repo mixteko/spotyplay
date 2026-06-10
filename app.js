@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.3-rate-limit-fix-2026-06-10";
+const APP_VERSION = "v3.4-direct-links-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const MAX_SEARCHES_PER_CREATE = 5;
@@ -1061,6 +1061,28 @@ function getSongLines() {
         .filter(Boolean);
 }
 
+function getSpotifyTrackUriFromLine(line) {
+    const spotifyUriMatch =
+        line.match(
+            /spotify:track:([A-Za-z0-9]{22})/
+        );
+
+    if (spotifyUriMatch) {
+        return `spotify:track:${spotifyUriMatch[1]}`;
+    }
+
+    const spotifyUrlMatch =
+        line.match(
+            /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/([A-Za-z0-9]{22})/
+        );
+
+    if (spotifyUrlMatch) {
+        return `spotify:track:${spotifyUrlMatch[1]}`;
+    }
+
+    return "";
+}
+
 async function resolveTracksWithWorker(lines, jobId) {
     if (!lines.length) {
         return {
@@ -1207,9 +1229,21 @@ async function getCurrentSongUris(jobId = activeJobId) {
             selectedTrackCache.get(cacheKey);
 
         if (!uri) {
+            uri =
+                getSpotifyTrackUriFromLine(
+                    line
+                );
+        }
+
+        if (!uri) {
             pendingLines.push(line);
             continue;
         }
+
+        selectedTrackCache.set(
+            cacheKey,
+            uri
+        );
 
         if (
             uri &&
@@ -1221,6 +1255,10 @@ async function getCurrentSongUris(jobId = activeJobId) {
     }
 
     let workerBatches = 0;
+
+    if (uris.length) {
+        saveSelectedTrackCache();
+    }
 
     while (
         pendingLines.length &&

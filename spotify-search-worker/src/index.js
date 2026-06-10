@@ -10,7 +10,7 @@ const SPOTIFY_SEARCH_LIMIT = 5;
 const MAX_RETRY_AFTER_SECONDS = 90;
 
 export default {
-    async fetch(request) {
+    async fetch(request, env) {
         if (request.method === "OPTIONS") {
             return new Response(null, {
                 status: 204,
@@ -28,7 +28,7 @@ export default {
         }
 
         if (request.method === "POST" && url.pathname === "/resolve") {
-            return resolveTracks(request);
+            return resolveTracks(request, env);
         }
 
         return jsonResponse({
@@ -38,7 +38,7 @@ export default {
     }
 };
 
-async function resolveTracks(request) {
+async function resolveTracks(request, env) {
     const authorization =
         request.headers.get("Authorization") || "";
 
@@ -82,7 +82,8 @@ async function resolveTracks(request) {
             await resolveSingleTrack(
                 line,
                 authorization,
-                market
+                market,
+                env
             );
 
         if (result.rateLimited) {
@@ -121,7 +122,7 @@ async function resolveTracks(request) {
     });
 }
 
-async function resolveSingleTrack(line, authorization, market) {
+async function resolveSingleTrack(line, authorization, market, env) {
     const parsed =
         parseTrackLine(line);
 
@@ -158,7 +159,11 @@ async function resolveSingleTrack(line, authorization, market) {
     const response =
         await fetch(searchUrl.toString(), {
             headers: {
-                Authorization: authorization
+                Authorization:
+                    await getSearchAuthorization(
+                        env,
+                        authorization
+                    )
             }
         });
 
@@ -206,6 +211,85 @@ async function resolveSingleTrack(line, authorization, market) {
     return {
         track: pickBestTrack(tracks, parsed)
     };
+}
+
+async function getSearchAuthorization(env, fallbackAuthorization) {
+    if (
+        !env ||
+        !env.SPOTIFY_CLIENT_ID ||
+        !env.SPOTIFY_CLIENT_SECRET
+    ) {
+        return fallbackAuthorization;
+    }
+
+    const cacheKey =
+        new Request(
+            "https://spotify-search-worker.cache/client-token"
+        );
+
+    const cached =
+        await caches.default.match(cacheKey);
+
+    if (cached) {
+        const data =
+            await cached.json();
+
+        if (data.access_token) {
+            return `Bearer ${data.access_token}`;
+        }
+    }
+
+    const credentials =
+        btoa(
+            `${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`
+        );
+
+    const response =
+        await fetch(
+            "https://accounts.spotify.com/api/token",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Basic ${credentials}`,
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: "grant_type=client_credentials"
+            }
+        );
+
+    if (!response.ok) {
+        return fallbackAuthorization;
+    }
+
+    const data =
+        await response.json();
+
+    if (!data.access_token) {
+        return fallbackAuthorization;
+    }
+
+    const cacheSeconds =
+        Math.max(
+            (data.expires_in || 3600) - 90,
+            60
+        );
+
+    await caches.default.put(
+        cacheKey,
+        new Response(
+            JSON.stringify({
+                access_token: data.access_token
+            }),
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": `public, max-age=${cacheSeconds}`
+                }
+            }
+        )
+    );
+
+    return `Bearer ${data.access_token}`;
 }
 
 function pickBestTrack(tracks, parsed) {
