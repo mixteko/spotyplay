@@ -38,13 +38,13 @@ function msg(text) {
 function setConnected(element, text) {
     if (!element) return;
     element.innerText = text;
-    element.style.color = "#00ffcc";
+    element.style.color = "#1ed760";
 }
 
 function setDisconnected(element, text) {
     if (!element) return;
     element.innerText = text;
-    element.style.color = "#ff3366";
+    element.style.color = "#ff4f64";
 }
 
 function updateStatus() {
@@ -783,7 +783,7 @@ function appendSongToList(track) {
                 <strong>${track.name}</strong><br>
                 <small>${artistNames}</small>
             </div>
-            <button class="remove-btn" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #ff3366; cursor: pointer; font-size: 18px;">✕</button>
+            <button class="remove-btn" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #ff4f64; cursor: pointer; font-size: 18px;">✕</button>
         </div>
     `;
     
