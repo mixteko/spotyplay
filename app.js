@@ -6,6 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
+const APP_VERSION = "v2.2-cache-check-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -1136,6 +1137,10 @@ async ()=>{
 
     msg(
     "🚀 Iniciando Spotify Playlist Creator..."
+    );
+
+    msg(
+    `🧪 Versión cargada: ${APP_VERSION}`
     );
 
     const spotifyBtn =
