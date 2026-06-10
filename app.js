@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.5-playlist-link-2026-06-10";
+const APP_VERSION = "v3.6-worker-check-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const MAX_SEARCHES_PER_CREATE = 5;
@@ -40,6 +40,8 @@ let selectedTrackCache =
         )
     );
 let activeJobId = 0;
+let searchWorkerStatusCache = null;
+let workerCredentialWarningShown = false;
 let spotifyRateLimitedUntil =
     parseInt(
         localStorage.getItem(
@@ -1083,12 +1085,64 @@ function getSpotifyTrackUriFromLine(line) {
     return "";
 }
 
+async function getSearchWorkerStatus() {
+    if (searchWorkerStatusCache) {
+        return searchWorkerStatusCache;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `${SEARCH_WORKER}/health`
+            );
+
+        if (!response.ok) {
+            return null;
+        }
+
+        searchWorkerStatusCache =
+            await response.json();
+
+        return searchWorkerStatusCache;
+
+    } catch (error) {
+        console.warn(
+            "No se pudo revisar el Worker:",
+            error
+        );
+
+        return null;
+    }
+}
+
 async function resolveTracksWithWorker(lines, jobId) {
     if (!lines.length) {
         return {
             resolved: [],
             unresolved: [],
             remaining: []
+        };
+    }
+
+    const workerStatus =
+        await getSearchWorkerStatus();
+
+    if (
+        workerStatus &&
+        workerStatus.spotifyCredentialsConfigured !== true
+    ) {
+        if (!workerCredentialWarningShown) {
+            msg(
+                "⚠️ El Worker no tiene configuradas las claves SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET. Por eso no puede buscar canciones por nombre."
+            );
+
+            workerCredentialWarningShown = true;
+        }
+
+        return {
+            resolved: [],
+            unresolved: [],
+            remaining: lines
         };
     }
 
@@ -1557,7 +1611,7 @@ async function createPlaylist() {
                             finalName,
 
                         public:
-                            false,
+                            true,
 
                         description:
                             "Generada con Spotify AI"
@@ -1657,6 +1711,36 @@ async function createPlaylist() {
 
         }
 
+        try {
+            const followResponse =
+                await fetch(
+                    `https://api.spotify.com/v1/playlists/${playlistData.id}/followers`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            Authorization:
+                                `Bearer ${accessToken}`,
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            public: true
+                        })
+                    }
+                );
+
+            if (followResponse.ok) {
+                msg(
+                    "📌 Playlist guardada en tu biblioteca."
+                );
+            }
+        } catch (error) {
+            console.warn(
+                "No se pudo seguir la playlist:",
+                error
+            );
+        }
+
         setConnected(
             playlistStatus,
             "Playlist 🟢"
@@ -1724,6 +1808,8 @@ function refreshApp() {
 
     selectedTrackCache.clear();
     spotifySearchCache.clear();
+    searchWorkerStatusCache = null;
+    workerCredentialWarningShown = false;
     clearSpotifyRateLimit();
 
     localStorage.removeItem(
