@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.4-manual-builder-2026-06-10";
+const APP_VERSION = "v2.5-single-builder-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -22,9 +22,10 @@ let playlistStatus;
 let promptAI;
 let songCount;
 let playlistName;
-let manualSongs;
 let songs;
 let log;
+let spotifySearchCache = new Map();
+let selectedTrackCache = new Map();
 
 /* =========================================
    FUNCIONES DE LOG Y STATUS
@@ -414,7 +415,8 @@ No inventes canciones. No expliques nada. Solo devuelve la lista.`,
             songs
         ) {
 
-            songs.innerHTML = "";
+            songs.value = "";
+            selectedTrackCache.clear();
 
         }
 
@@ -512,6 +514,23 @@ function getTokens(value) {
     return normalizeText(value)
         .split(" ")
         .filter(token => token.length > 1);
+}
+
+function sleep(ms) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+
+function sanitizeSpotifyQuery(query) {
+    return String(query || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[–—]/g, " ")
+        .replace(/["“”'’‘]/g, "")
+        .replace(/[(){}\[\]]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 }
 
 function tokenOverlap(expected, received) {
@@ -674,16 +693,25 @@ function scoreSpotifyTrack(track, parsedQuery) {
 }
 
 async function fetchSpotifySearch(query) {
-    const searchParams =
-        new URLSearchParams({
-            q: query,
-            type: "track",
-            limit: "20"
-        });
+    const cleanQuery =
+        sanitizeSpotifyQuery(query);
+
+    if (!cleanQuery) {
+        return [];
+    }
+
+    const cacheKey =
+        normalizeText(cleanQuery);
+
+    if (spotifySearchCache.has(cacheKey)) {
+        return spotifySearchCache.get(cacheKey);
+    }
+
+    await sleep(350);
 
     const response =
         await fetch(
-            `https://api.spotify.com/v1/search?${searchParams.toString()}`,
+            `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=10`,
             {
                 headers: {
                     "Authorization": `Bearer ${accessToken}`
@@ -703,8 +731,14 @@ async function fetchSpotifySearch(query) {
         console.warn(
             "Spotify search error:",
             response.status,
-            query
+            cleanQuery
         );
+
+        if (response.status === 429) {
+            msg(
+                "⏳ Spotify limitó las búsquedas. Intenta de nuevo en unos segundos."
+            );
+        }
 
         return [];
     }
@@ -712,7 +746,15 @@ async function fetchSpotifySearch(query) {
     const data =
         await response.json();
 
-    return data.tracks?.items || [];
+    const tracks =
+        data.tracks?.items || [];
+
+    spotifySearchCache.set(
+        cacheKey,
+        tracks
+    );
+
+    return tracks;
 }
 
 async function spotifySearch(query) {
@@ -729,13 +771,10 @@ async function spotifySearch(query) {
         const searchQueries =
             parsedQuery.artist
                 ? [
-                    `${parsedQuery.artist} ${parsedQuery.title}`,
-                    parsedQuery.raw,
-                    parsedQuery.title
+                    `${parsedQuery.artist} ${parsedQuery.title}`
                 ]
                 : [
-                    parsedQuery.title,
-                    parsedQuery.raw
+                    parsedQuery.title
                 ];
 
         const resultsByUri =
@@ -826,44 +865,10 @@ async function spotifySearch(query) {
     }
 }
 
-function refreshSongNumbers() {
-    if (!songs) return;
-
-    [
-        ...songs.querySelectorAll(".songIndex")
-    ].forEach((element, index) => {
-        element.innerText =
-            String(index + 1).padStart(2, "0");
-    });
-}
-
-function getCurrentSongUris() {
+function getSongLines() {
     if (!songs) return [];
 
-    return [
-        ...songs.querySelectorAll("li")
-    ]
-    .map(
-        li => li.dataset.uri
-    )
-    .filter(
-        uri =>
-            typeof uri === "string" &&
-            uri.startsWith(
-                "spotify:track:"
-            )
-    );
-}
-
-function getManualSongLines() {
-    if (
-        !manualSongs ||
-        !manualSongs.value.trim()
-    ) {
-        return [];
-    }
-
-    return manualSongs.value
+    return songs.value
         .split("\n")
         .map(line =>
             line
@@ -873,88 +878,107 @@ function getManualSongLines() {
         .filter(Boolean);
 }
 
-async function addManualSongsToList() {
+async function getCurrentSongUris() {
     const lines =
-        getManualSongLines();
+        getSongLines();
 
-    if (lines.length === 0) {
+    const uris = [];
+    const usedUris = new Set();
+
+    for (const line of lines) {
+        const cacheKey =
+            normalizeText(line);
+
+        let uri =
+            selectedTrackCache.get(cacheKey);
+
+        if (!uri) {
+            const track =
+                await spotifySearch(
+                    line
+                );
+
+            uri =
+                track?.uri || "";
+
+            if (uri) {
+                selectedTrackCache.set(
+                    cacheKey,
+                    uri
+                );
+            }
+        }
+
+        if (
+            uri &&
+            !usedUris.has(uri)
+        ) {
+            uris.push(uri);
+            usedUris.add(uri);
+        }
+    }
+
+    return uris;
+}
+
+function refreshSongNumbers() {
+    return;
+}
+
+function appendSongLine(line, uri = "") {
+    if (!songs || !line) return;
+
+    const cleanLine =
+        line.trim();
+
+    const existingLines =
+        getSongLines()
+            .map(item =>
+                normalizeText(item)
+            )
+    ;
+
+    if (
+        existingLines.includes(
+            normalizeText(cleanLine)
+        )
+    ) {
         return;
     }
 
-    const existingUris =
-        new Set(
-            getCurrentSongUris()
+    songs.value =
+        songs.value.trim()
+            ? `${songs.value.trim()}\n${cleanLine}`
+            : cleanLine;
+
+    if (uri) {
+        selectedTrackCache.set(
+            normalizeText(cleanLine),
+            uri
         );
-
-    let added = 0;
-
-    msg(
-        `✍️ Buscando ${lines.length} canciones escritas manualmente...`
-    );
-
-    for (const line of lines) {
-
-        msg(
-            `🔎 Manual: ${line}`
-        );
-
-        const track =
-            await spotifySearch(
-                line
-            );
-
-        if (
-            track &&
-            !existingUris.has(track.uri)
-        ) {
-
-            appendSongToList(
-                track
-            );
-
-            existingUris.add(
-                track.uri
-            );
-
-            added++;
-
-        } else if (!track) {
-
-            msg(
-                `⚠️ Manual no encontrada: ${line}`
-            );
-
-        }
-
     }
+}
 
-    msg(
-        `✅ Manual agregadas: ${added}/${lines.length}`
-    );
+function getManualSongLines() {
+    return getSongLines();
+}
+
+async function addManualSongsToList() {
+    return;
 }
 
 function appendSongToList(track) {
     if (!songs) return;
-    
-    const li = document.createElement("li");
-    li.dataset.uri = track.uri;
-    
-    const artistNames = track.artists.map(a => a.name).join(", ");
-    
-    li.innerHTML = `
-        <div class="songItem">
-            <span class="songIndex"></span>
-            <div class="songInfo">
-                <strong class="songTitle">${track.name}</strong>
-                <small class="songArtist">${artistNames}</small>
-            </div>
-            <button class="remove-btn" onclick="this.closest('li').remove(); refreshSongNumbers();" aria-label="Eliminar canción">×</button>
-        </div>
-    `;
-    
-    songs.appendChild(li);
 
-    refreshSongNumbers();
+    const artistNames =
+        track.artists
+            .map(a => a.name)
+            .join(", ");
+
+    appendSongLine(
+        `${artistNames} - ${track.name}`,
+        track.uri
+    );
 }
 
 /* =========================================
@@ -1030,7 +1054,7 @@ async function createPlaylist() {
         await addManualSongsToList();
 
         const uris =
-            getCurrentSongUris();
+            await getCurrentSongUris();
 
         console.log(
             "URIS COMPLETAS JSON:",
@@ -1227,7 +1251,7 @@ async function createPlaylist() {
 function refreshApp() {
 
     if (songs) {
-        songs.innerHTML = "";
+        songs.value = "";
     }
 
     if (promptAI) {
@@ -1236,10 +1260,6 @@ function refreshApp() {
 
     if (playlistName) {
         playlistName.value = "";
-    }
-
-    if (manualSongs) {
-        manualSongs.value = "";
     }
 
     if (songCount) {
@@ -1289,11 +1309,6 @@ async ()=>{
     playlistName =
     document.getElementById(
     "playlistName"
-    );
-
-    manualSongs =
-    document.getElementById(
-    "manualSongs"
     );
 
     songs =

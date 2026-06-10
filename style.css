@@ -198,13 +198,6 @@ resize:vertical;
 line-height:1.55;
 }
 
-.manualSongs{
-min-height:96px;
-max-height:150px;
-font-size:13px;
-line-height:1.45;
-}
-
 input::placeholder,
 textarea::placeholder{
 color:var(--muted-2);
@@ -228,86 +221,20 @@ margin-top:12px;
 border-radius:18px;
 background:#0b0b0b;
 border:1px solid var(--line);
-list-style:none;
-display:flex;
-flex-direction:column;
-gap:8px;
-}
-
-.songsList:empty{
-display:flex;
-align-items:center;
-justify-content:center;
-}
-
-.songsList:empty::before{
-content:"Las canciones aparecerán aquí";
-color:var(--muted-2);
-font-size:14px;
-font-weight:600;
-}
-
-.songsList li{
-min-height:56px;
-padding:11px 12px;
-border-radius:12px;
-background:linear-gradient(180deg,var(--surface-2),#141414);
-border:1px solid rgba(255,255,255,.06);
-transition:background .2s ease,border-color .2s ease,transform .2s ease;
-}
-
-.songsList li:hover{
-background:var(--surface-3);
-border-color:var(--line-green);
-transform:translateY(-1px);
-}
-
-.songItem{
-display:grid;
-grid-template-columns:34px minmax(0,1fr) 30px;
-align-items:center;
-gap:12px;
-width:100%;
-}
-
-.songIndex{
-width:30px;
-height:30px;
-display:flex;
-align-items:center;
-justify-content:center;
-border-radius:8px;
-background:rgba(30,215,96,.12);
-color:var(--spotify);
-font-size:12px;
-font-weight:800;
-}
-
-.songInfo{
-min-width:0;
-}
-
-.songTitle{
-display:block;
-font-size:14px;
-font-weight:800;
-line-height:1.2;
 color:var(--text);
-white-space:nowrap;
-overflow:hidden;
-text-overflow:ellipsis;
+font-family:'Plus Jakarta Sans',sans-serif;
+font-size:14px;
+font-weight:600;
+line-height:1.6;
+resize:vertical;
+outline:none;
+transition:border-color .2s ease,box-shadow .2s ease,background .2s ease;
 }
 
-.songArtist{
-display:block;
-margin-top:4px;
-font-size:12px;
-font-weight:600;
-line-height:1.2;
-color:var(--muted);
-white-space:nowrap;
-overflow:hidden;
-text-overflow:ellipsis;
+.songsList:focus{
+background:#101010;
+border-color:var(--spotify);
+box-shadow:0 0 0 4px rgba(30,215,96,.12);
 }
 
 .remove-btn{
