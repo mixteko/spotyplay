@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.3-import-links-2026-06-10";
+const APP_VERSION = "v4.4-valid-link-guard-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
@@ -1132,6 +1132,20 @@ function getSpotifyCollectionFromLine(line) {
     return null;
 }
 
+function isIncompleteSpotifyLink(line) {
+    const value =
+        String(line || "").trim();
+
+    if (
+        !/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(track|playlist|album)\//.test(value) &&
+        !/spotify:(track|playlist|album):/.test(value)
+    ) {
+        return false;
+    }
+
+    return !/[A-Za-z0-9]{22}/.test(value);
+}
+
 async function fetchSpotifyCollectionTracks(collection) {
     const tracks = [];
 
@@ -1426,6 +1440,17 @@ async function getCurrentSongUris(jobId = activeJobId) {
                 getSpotifyTrackUriFromLine(
                     line
                 );
+        }
+
+        if (
+            !uri &&
+            isIncompleteSpotifyLink(line)
+        ) {
+            msg(
+                `⚠️ Link incompleto. Copia el enlace real desde Spotify, no uses "...": ${line}`
+            );
+
+            continue;
         }
 
         if (!uri) {
