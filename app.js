@@ -7,11 +7,12 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.2-search-worker-2026-06-10";
+const APP_VERSION = "v3.3-rate-limit-fix-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const MAX_SEARCHES_PER_CREATE = 5;
 const MAX_WORKER_BATCHES_PER_CREATE = 2;
+const MAX_SPOTIFY_RATE_LIMIT_SECONDS = 90;
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -46,6 +47,16 @@ let spotifyRateLimitedUntil =
         ) || "0",
         10
     );
+
+if (
+    spotifyRateLimitedUntil - Date.now() >
+    MAX_SPOTIFY_RATE_LIMIT_SECONDS * 1000
+) {
+    spotifyRateLimitedUntil = 0;
+    localStorage.removeItem(
+        SPOTIFY_RATE_LIMIT_KEY
+    );
+}
 
 /* =========================================
    FUNCIONES DE LOG Y STATUS
@@ -559,8 +570,17 @@ function getSpotifyRateLimitSeconds() {
 }
 
 function setSpotifyRateLimit(seconds) {
+    const safeSeconds =
+        Math.min(
+            Math.max(
+                parseInt(seconds || "60", 10),
+                30
+            ),
+            MAX_SPOTIFY_RATE_LIMIT_SECONDS
+        );
+
     spotifyRateLimitedUntil =
-        Date.now() + seconds * 1000;
+        Date.now() + safeSeconds * 1000;
 
     localStorage.setItem(
         SPOTIFY_RATE_LIMIT_KEY,
@@ -1108,9 +1128,12 @@ async function resolveTracksWithWorker(lines, jobId) {
             data.rateLimited
         ) {
             const waitSeconds =
-                Math.max(
-                    parseInt(data.retryAfter || "60", 10),
-                    60
+                Math.min(
+                    Math.max(
+                        parseInt(data.retryAfter || "60", 10),
+                        60
+                    ),
+                    MAX_SPOTIFY_RATE_LIMIT_SECONDS
                 );
 
             setSpotifyRateLimit(

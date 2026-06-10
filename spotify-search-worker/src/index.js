@@ -7,6 +7,7 @@ const CORS_HEADERS = {
 
 const MAX_TRACKS_PER_REQUEST = 5;
 const SPOTIFY_SEARCH_LIMIT = 5;
+const MAX_RETRY_AFTER_SECONDS = 90;
 
 export default {
     async fetch(request) {
@@ -170,7 +171,10 @@ async function resolveSingleTrack(line, authorization, market) {
 
         return {
             rateLimited: true,
-            retryAfter: Math.max(retryAfter, 60)
+            retryAfter: Math.min(
+                Math.max(retryAfter, 60),
+                MAX_RETRY_AFTER_SECONDS
+            )
         };
     }
 
