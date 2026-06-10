@@ -7,11 +7,11 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.0-resolver-total-fix-2026-06-10";
+const APP_VERSION = "v4.1-cors-safe-worker-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
-const RESOLVER_CACHE_VERSION = "resolver-v4-cache-bust";
+const RESOLVER_CACHE_VERSION = "resolver-v5-cors-safe";
 const MAX_SEARCHES_PER_CREATE = 10;
 const MAX_WORKER_BATCHES_PER_CREATE = 3;
 const MAX_SPOTIFY_RATE_LIMIT_SECONDS = 90;
@@ -1229,13 +1229,21 @@ async function resolveTracksWithWorker(lines, jobId) {
             !response.ok ||
             data.ok === false
         ) {
+            const workerError =
+                data.message ||
+                data.error ||
+                `HTTP ${response.status}`;
+
             msg(
-                "⚠️ El Worker de búsqueda no respondió bien. Revisa que esté publicado."
+                `⚠️ El Worker respondió con error: ${workerError}`
             );
 
             return {
                 resolved: [],
-                unresolved: [],
+                unresolved: lines.map(line => ({
+                    input: line,
+                    reason: workerError
+                })),
                 remaining: lines
             };
         }
@@ -1250,11 +1258,16 @@ async function resolveTracksWithWorker(lines, jobId) {
 
     } catch (err) {
         console.error("Error en SEARCH_WORKER:", err);
-        msg("⚠️ No se pudo conectar con el Worker de búsqueda.");
+        msg(
+            "⚠️ No se pudo conectar con el Worker. Si ves error CORS, vuelve a publicar el Worker con la versión resolver-v5-cors-safe."
+        );
 
         return {
             resolved: [],
-            unresolved: [],
+            unresolved: lines.map(line => ({
+                input: line,
+                reason: "worker_fetch_failed"
+            })),
             remaining: lines
         };
     }

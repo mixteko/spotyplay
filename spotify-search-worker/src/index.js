@@ -5,42 +5,51 @@ const CORS_HEADERS = {
     "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "resolver-v4-cache-bust";
+const WORKER_VERSION = "resolver-v5-cors-safe";
 const MAX_TRACKS_PER_REQUEST = 10;
 const SPOTIFY_SEARCH_LIMIT = 10;
 
 export default {
     async fetch(request, env) {
-        if (request.method === "OPTIONS") {
-            return new Response(null, {
-                status: 204,
-                headers: CORS_HEADERS
-            });
-        }
+        try {
+            if (request.method === "OPTIONS") {
+                return new Response(null, {
+                    status: 204,
+                    headers: CORS_HEADERS
+                });
+            }
 
-        const url = new URL(request.url);
+            const url = new URL(request.url);
 
-        if (request.method === "GET" && url.pathname === "/health") {
+            if (request.method === "GET" && url.pathname === "/health") {
+                return jsonResponse({
+                    ok: true,
+                    service: "spotify-search-worker",
+                    version: WORKER_VERSION,
+                    maxTracksPerRequest: MAX_TRACKS_PER_REQUEST,
+                    spotifyCredentialsConfigured: Boolean(
+                        env?.SPOTIFY_CLIENT_ID &&
+                        env?.SPOTIFY_CLIENT_SECRET
+                    )
+                });
+            }
+
+            if (request.method === "POST" && url.pathname === "/resolve") {
+                return resolveTracks(request, env);
+            }
+
             return jsonResponse({
-                ok: true,
-                service: "spotify-search-worker",
-                version: WORKER_VERSION,
-                maxTracksPerRequest: MAX_TRACKS_PER_REQUEST,
-                spotifyCredentialsConfigured: Boolean(
-                    env?.SPOTIFY_CLIENT_ID &&
-                    env?.SPOTIFY_CLIENT_SECRET
-                )
-            });
-        }
+                ok: false,
+                error: "Ruta no encontrada"
+            }, 404);
 
-        if (request.method === "POST" && url.pathname === "/resolve") {
-            return resolveTracks(request, env);
+        } catch (error) {
+            return jsonResponse({
+                ok: false,
+                error: "worker_exception",
+                message: error.message || String(error)
+            }, 500);
         }
-
-        return jsonResponse({
-            ok: false,
-            error: "Ruta no encontrada"
-        }, 404);
     }
 };
 
@@ -89,13 +98,22 @@ async function resolveTracks(request, env) {
     const unresolved = [];
 
     for (const line of tracksToResolve) {
-        const result =
-            await resolveSingleTrack(
-                line,
-                fallbackAuthorization,
-                market,
-                env
-            );
+        let result;
+
+        try {
+            result =
+                await resolveSingleTrack(
+                    line,
+                    fallbackAuthorization,
+                    market,
+                    env
+                );
+        } catch (error) {
+            result = {
+                track: null,
+                reason: `exception:${error.message || String(error)}`
+            };
+        }
 
         if (result.track) {
             resolved.push({
@@ -153,19 +171,23 @@ async function resolveSingleTrack(line, fallbackAuthorization, market, env) {
             `https://spotify-search-worker.cache/${WORKER_VERSION}/${encodeURIComponent(normalizeText(parsed.raw))}?market=${market}`
         );
 
-    const cached =
-        await caches.default.match(cacheKey);
+    try {
+        const cached =
+            await caches.default.match(cacheKey);
 
-    if (cached) {
-        const data =
-            await cached.json();
+        if (cached) {
+            const data =
+                await cached.json();
 
-        if (data.track?.uri) {
-            return {
-                source: "cache",
-                track: data.track
-            };
+            if (data.track?.uri) {
+                return {
+                    source: "cache",
+                    track: data.track
+                };
+            }
         }
+    } catch (error) {
+        // Cache failures should not block searches.
     }
 
     const authorization =
@@ -270,12 +292,21 @@ async function fetchSpotifyTracks(query, authorization, market) {
         searchUrl.searchParams.set("market", market);
     }
 
-    const response =
-        await fetch(searchUrl.toString(), {
-            headers: {
-                Authorization: authorization
-            }
-        });
+    let response;
+
+    try {
+        response =
+            await fetch(searchUrl.toString(), {
+                headers: {
+                    Authorization: authorization
+                }
+            });
+    } catch (error) {
+        return {
+            items: [],
+            error: `fetch_failed:${error.message || String(error)}`
+        };
+    }
 
     if (response.status === 429) {
         return {
@@ -315,13 +346,19 @@ async function resolveTrackFromPublicSearch(parsed) {
     const searchUrl =
         `https://open.spotify.com/search/${encodeURIComponent(sanitizeSpotifyQuery(query))}/tracks`;
 
-    const response =
-        await fetch(searchUrl, {
-            headers: {
-                "Accept": "text/html",
-                "User-Agent": "Mozilla/5.0"
-            }
-        });
+    let response;
+
+    try {
+        response =
+            await fetch(searchUrl, {
+                headers: {
+                    "Accept": "text/html",
+                    "User-Agent": "Mozilla/5.0"
+                }
+            });
+    } catch (error) {
+        return null;
+    }
 
     if (!response.ok) {
         return null;
@@ -365,16 +402,20 @@ async function getSearchAuthorization(env, fallbackAuthorization) {
             `https://spotify-search-worker.cache/${WORKER_VERSION}/client-token`
         );
 
-    const cached =
-        await caches.default.match(cacheKey);
+    try {
+        const cached =
+            await caches.default.match(cacheKey);
 
-    if (cached) {
-        const data =
-            await cached.json();
+        if (cached) {
+            const data =
+                await cached.json();
 
-        if (data.access_token) {
-            return `Bearer ${data.access_token}`;
+            if (data.access_token) {
+                return `Bearer ${data.access_token}`;
+            }
         }
+    } catch (error) {
+        // Token cache failures should fall back to requesting a new token.
     }
 
     const credentials =
@@ -382,18 +423,24 @@ async function getSearchAuthorization(env, fallbackAuthorization) {
             `${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`
         );
 
-    const response =
-        await fetch(
-            "https://accounts.spotify.com/api/token",
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": `Basic ${credentials}`,
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: "grant_type=client_credentials"
-            }
-        );
+    let response;
+
+    try {
+        response =
+            await fetch(
+                "https://accounts.spotify.com/api/token",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Basic ${credentials}`,
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: "grant_type=client_credentials"
+                }
+            );
+    } catch (error) {
+        return fallbackAuthorization;
+    }
 
     if (!response.ok) {
         return fallbackAuthorization;
@@ -406,20 +453,24 @@ async function getSearchAuthorization(env, fallbackAuthorization) {
         return fallbackAuthorization;
     }
 
-    await caches.default.put(
-        cacheKey,
-        new Response(
-            JSON.stringify({
-                access_token: data.access_token
-            }),
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Cache-Control": `public, max-age=${Math.max((data.expires_in || 3600) - 90, 60)}`
+    try {
+        await caches.default.put(
+            cacheKey,
+            new Response(
+                JSON.stringify({
+                    access_token: data.access_token
+                }),
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Cache-Control": `public, max-age=${Math.max((data.expires_in || 3600) - 90, 60)}`
+                    }
                 }
-            }
-        )
-    );
+            )
+        );
+    } catch (error) {
+        // Token cache failures should not block the token.
+    }
 
     return `Bearer ${data.access_token}`;
 }
@@ -429,18 +480,22 @@ async function cacheTrack(cacheKey, track) {
         return;
     }
 
-    await caches.default.put(
-        cacheKey,
-        new Response(
-            JSON.stringify({ track }),
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Cache-Control": "public, max-age=604800"
+    try {
+        await caches.default.put(
+            cacheKey,
+            new Response(
+                JSON.stringify({ track }),
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Cache-Control": "public, max-age=604800"
+                    }
                 }
-            }
-        )
-    );
+            )
+        );
+    } catch (error) {
+        // Cache failures should not block successful matches.
+    }
 }
 
 function buildSearchQueries(parsed) {

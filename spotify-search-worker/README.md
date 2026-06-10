@@ -23,7 +23,7 @@ Debe responder con:
 {
   "ok": true,
   "service": "spotify-search-worker",
-  "version": "resolver-v4-cache-bust",
+  "version": "resolver-v5-cors-safe",
   "maxTracksPerRequest": 10,
   "spotifyCredentialsConfigured": true
 }
