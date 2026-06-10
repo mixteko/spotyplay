@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.6-worker-check-2026-06-10";
+const APP_VERSION = "v3.7-web-fallback-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const MAX_SEARCHES_PER_CREATE = 5;
@@ -1133,32 +1133,11 @@ async function resolveTracksWithWorker(lines, jobId) {
     ) {
         if (!workerCredentialWarningShown) {
             msg(
-                "⚠️ El Worker no tiene configuradas las claves SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET. Por eso no puede buscar canciones por nombre."
+                "⚠️ El Worker no tiene claves de Spotify completas. Intentaré buscar con el respaldo público."
             );
 
             workerCredentialWarningShown = true;
         }
-
-        return {
-            resolved: [],
-            unresolved: [],
-            remaining: lines
-        };
-    }
-
-    if (
-        Date.now() < spotifyRateLimitedUntil
-    ) {
-        msg(
-            `⏳ Spotify está pausado. Espera ${getSpotifyRateLimitSeconds()}s y vuelve a presionar Crear Playlist.`
-        );
-
-        return {
-            resolved: [],
-            unresolved: [],
-            remaining: lines,
-            rateLimited: true
-        };
     }
 
     try {
@@ -1203,21 +1182,8 @@ async function resolveTracksWithWorker(lines, jobId) {
             response.status === 429 ||
             data.rateLimited
         ) {
-            const waitSeconds =
-                Math.min(
-                    Math.max(
-                        parseInt(data.retryAfter || "60", 10),
-                        60
-                    ),
-                    MAX_SPOTIFY_RATE_LIMIT_SECONDS
-                );
-
-            setSpotifyRateLimit(
-                waitSeconds
-            );
-
             msg(
-                `⏳ Spotify limitó las búsquedas. Espera ${waitSeconds}s y vuelve a presionar Crear Playlist.`
+                "⏳ Spotify limitó la búsqueda por nombre. No se pausó la app; puedes intentar otra vez o pegar links directos de Spotify."
             );
 
             return {
@@ -1538,6 +1504,8 @@ async function createPlaylist() {
             `👤 Usuario: ${meData.display_name}`
         );
 
+        clearSpotifyRateLimit();
+
         await addManualSongsToList();
 
         const uris =
@@ -1572,7 +1540,7 @@ async function createPlaylist() {
             ) {
 
                 msg(
-                    `⏳ No se creó la playlist porque Spotify está en pausa. Espera ${getSpotifyRateLimitSeconds()}s.`
+                    "⏳ No se creó la playlist porque no se pudieron resolver canciones por nombre."
                 );
 
             } else {

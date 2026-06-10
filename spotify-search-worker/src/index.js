@@ -24,6 +24,7 @@ export default {
             return jsonResponse({
                 ok: true,
                 service: "spotify-search-worker",
+                publicSearchFallback: true,
                 spotifyCredentialsConfigured: Boolean(
                     env &&
                     env.SPOTIFY_CLIENT_ID &&
@@ -173,22 +174,66 @@ async function resolveSingleTrack(line, authorization, market, env) {
         });
 
     if (response.status === 429) {
-        const retryAfter =
-            parseInt(
-                response.headers.get("Retry-After") || "60",
-                10
+        const publicTrack =
+            await resolveTrackFromPublicSearch(
+                query,
+                parsed
             );
 
+        if (publicTrack) {
+            await caches.default.put(
+                cacheKey,
+                new Response(
+                    JSON.stringify({
+                        tracks: [publicTrack]
+                    }),
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Cache-Control": "public, max-age=86400"
+                        }
+                    }
+                )
+            );
+
+            return {
+                track: publicTrack
+            };
+        }
+
         return {
-            rateLimited: true,
-            retryAfter: Math.min(
-                Math.max(retryAfter, 60),
-                MAX_RETRY_AFTER_SECONDS
-            )
+            track: null
         };
     }
 
     if (!response.ok) {
+        const publicTrack =
+            await resolveTrackFromPublicSearch(
+                query,
+                parsed
+            );
+
+        if (publicTrack) {
+            await caches.default.put(
+                cacheKey,
+                new Response(
+                    JSON.stringify({
+                        tracks: [publicTrack]
+                    }),
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Cache-Control": "public, max-age=86400"
+                        }
+                    }
+                )
+            );
+
+            return {
+                track: publicTrack
+            };
+        }
+
         return {
             track: null
         };
@@ -215,6 +260,50 @@ async function resolveSingleTrack(line, authorization, market, env) {
 
     return {
         track: pickBestTrack(tracks, parsed)
+    };
+}
+
+async function resolveTrackFromPublicSearch(query, parsed) {
+    const searchUrl =
+        `https://open.spotify.com/search/${encodeURIComponent(sanitizeSpotifyQuery(query))}/tracks`;
+
+    const response =
+        await fetch(searchUrl, {
+            headers: {
+                "Accept": "text/html",
+                "User-Agent": "Mozilla/5.0 SpotifyPlaylistWorker/1.0"
+            }
+        });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const html =
+        await response.text();
+
+    const trackIds =
+        [
+            ...html.matchAll(/(?:spotify:track:|spotify%3Atrack%3A|\/track\/)([A-Za-z0-9]{22})/g)
+        ]
+            .map(match => match[1]);
+
+    const uniqueTrackIds =
+        [...new Set(trackIds)];
+
+    if (!uniqueTrackIds.length) {
+        return null;
+    }
+
+    return {
+        uri: `spotify:track:${uniqueTrackIds[0]}`,
+        name: parsed.title || parsed.raw,
+        artists: [
+            {
+                name: parsed.artist || "Spotify"
+            }
+        ],
+        popularity: 0
     };
 }
 
