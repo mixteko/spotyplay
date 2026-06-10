@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.5-single-builder-2026-06-10";
+const APP_VERSION = "v2.6-rate-limit-fix-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -426,45 +426,24 @@ No inventes canciones. No expliques nada. Solo devuelve la lista.`,
             const trackStr of data.tracks
         ) {
 
-            msg(
-                `🔍 Buscando: ${trackStr}`
+            appendSongLine(
+                trackStr
             );
 
-            const spotifyTrack =
-                await spotifySearch(
-                    trackStr
-                );
+            found++;
 
             if (
-                spotifyTrack
+                found >= targetCount
             ) {
 
-                appendSongToList(
-                    spotifyTrack
-                );
-
-                found++;
-
-                if (
-                    found >= targetCount
-                ) {
-
-                    break;
-
-                }
-
-            } else {
-
-                msg(
-                    `⚠️ No encontrada: ${trackStr}`
-                );
+                break;
 
             }
 
         }
 
         msg(
-            `✨ Encontradas ${found}/${data.tracks.length} canciones.`
+            `✨ Agregadas ${found} canciones al builder.`
         );
 
     } catch (error) {
@@ -707,54 +686,72 @@ async function fetchSpotifySearch(query) {
         return spotifySearchCache.get(cacheKey);
     }
 
-    await sleep(350);
+    for (let attempt = 1; attempt <= 3; attempt++) {
 
-    const response =
-        await fetch(
-            `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=10`,
-            {
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`
+        await sleep(900 * attempt);
+
+        const response =
+            await fetch(
+                `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=5`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`
+                    }
                 }
-            }
-        );
-
-    if (response.status === 401) {
-        localStorage.removeItem("spotify_token");
-        accessToken = "";
-        updateStatus();
-        msg("🔴 Token expirado. Conecta nuevamente.");
-        return [];
-    }
-
-    if (!response.ok) {
-        console.warn(
-            "Spotify search error:",
-            response.status,
-            cleanQuery
-        );
-
-        if (response.status === 429) {
-            msg(
-                "⏳ Spotify limitó las búsquedas. Intenta de nuevo en unos segundos."
             );
+
+        if (response.status === 401) {
+            localStorage.removeItem("spotify_token");
+            accessToken = "";
+            updateStatus();
+            msg("🔴 Token expirado. Conecta nuevamente.");
+            return [];
         }
 
-        return [];
+        if (response.status === 429) {
+            const retryAfter =
+                parseInt(
+                    response.headers.get("Retry-After") || "3",
+                    10
+                );
+
+            msg(
+                `⏳ Spotify limitó las búsquedas. Esperando ${retryAfter}s...`
+            );
+
+            await sleep(
+                Math.max(retryAfter, 3) * 1000
+            );
+
+            continue;
+        }
+
+        if (!response.ok) {
+            console.warn(
+                "Spotify search error:",
+                response.status,
+                cleanQuery
+            );
+
+            return [];
+        }
+
+        const data =
+            await response.json();
+
+        const tracks =
+            data.tracks?.items || [];
+
+        spotifySearchCache.set(
+            cacheKey,
+            tracks
+        );
+
+        return tracks;
+
     }
 
-    const data =
-        await response.json();
-
-    const tracks =
-        data.tracks?.items || [];
-
-    spotifySearchCache.set(
-        cacheKey,
-        tracks
-    );
-
-    return tracks;
+    return [];
 }
 
 async function spotifySearch(query) {
