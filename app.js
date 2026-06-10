@@ -163,25 +163,26 @@ async function getToken() {
                 );
 
             }
+accessToken =
+    tokenData.access_token;
 
+const testMe =
+    await fetch(
+        "https://api.spotify.com/v1/me",
+        {
+            headers: {
+                Authorization:
+                    `Bearer ${accessToken}`
+            }
+        }
+    );
+
+console.log(
+    "TOKEN TEST:",
+    await testMe.json()
+);
             accessToken =
                 tokenData.access_token;
-
-            const testMe =
-                await fetch(
-                    "https://api.spotify.com/v1/me",
-                    {
-                        headers: {
-                            Authorization:
-                                `Bearer ${accessToken}`
-                        }
-                    }
-                );
-
-            console.log(
-                "TOKEN TEST:",
-                await testMe.json()
-            );
 
             localStorage.setItem(
                 "spotify_token",
@@ -264,7 +265,6 @@ function changeUser() {
         REDIRECT_URI;
 
 }
-
 /* =========================================
    GENERADOR DE CANCIONES CON GEMINI
 ========================================= */
@@ -329,7 +329,12 @@ async function generateGemini(moreTracks = false) {
 
                     body: JSON.stringify({
                         prompt:
-                            promptAI.value,
+                            `${promptAI.value.trim()}
+
+Devuelve canciones reales disponibles en Spotify.
+Usa siempre el formato exacto: Artista - Canción.
+Respeta estrictamente los artistas, canciones, géneros e idioma solicitados.
+No inventes canciones ni cambies el artista pedido.`,
 
                         count:
                             Math.min(
@@ -453,25 +458,197 @@ async function generateGemini(moreTracks = false) {
     }
 
 }
-
 /* =========================================
    BUSCAR CANCIONES EN SPOTIFY
 ========================================= */
-async function spotifySearch(query) {
-    if (!accessToken) {
-        return null;
+function normalizeText(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[’‘]/g, "'")
+        .replace(/[“”]/g, "\"")
+        .replace(/&/g, " and ")
+        .replace(/[^a-z0-9áéíóúüñ\s]/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getBaseTitle(value) {
+    return normalizeText(value)
+        .replace(/\b(remasterizado|remastered|remaster|version|versión|edit|radio edit|single|deluxe|explicit)\b/g, " ")
+        .replace(/\b(live|en vivo|ao vivo|acustico|acústico|remix|mix)\b/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getTokens(value) {
+    return normalizeText(value)
+        .split(" ")
+        .filter(token => token.length > 1);
+}
+
+function tokenOverlap(expected, received) {
+    const expectedTokens =
+        new Set(
+            getTokens(expected)
+        );
+
+    const receivedTokens =
+        new Set(
+            getTokens(received)
+        );
+
+    if (
+        expectedTokens.size === 0 ||
+        receivedTokens.size === 0
+    ) {
+        return 0;
     }
 
-    const cleanQuery = query
-        .replace(/"/g, "")
-        .replace(/[\(\)]/g, "")
-        .trim();
+    let matches = 0;
 
-    if (!cleanQuery) return null;
+    expectedTokens.forEach(token => {
+        if (receivedTokens.has(token)) {
+            matches++;
+        }
+    });
 
-    try {
-        const response = await fetch(
-            `https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQuery)}&type=track&limit=1`,
+    return matches / expectedTokens.size;
+}
+
+function parseTrackQuery(query) {
+    const cleanQuery =
+        String(query || "")
+            .replace(/^\s*\d+[\.\)]\s*/, "")
+            .replace(/["“”]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const parts =
+        cleanQuery
+            .split(/\s[-–—]\s/)
+            .map(part => part.trim())
+            .filter(Boolean);
+
+    if (parts.length >= 2) {
+        return {
+            raw: cleanQuery,
+            artist: parts[0],
+            title: parts.slice(1).join(" - ")
+        };
+    }
+
+    const byMatch =
+        cleanQuery.match(/^(.+?)\s+by\s+(.+)$/i);
+
+    if (byMatch) {
+        return {
+            raw: cleanQuery,
+            artist: byMatch[2].trim(),
+            title: byMatch[1].trim()
+        };
+    }
+
+    return {
+        raw: cleanQuery,
+        artist: "",
+        title: cleanQuery
+    };
+}
+
+function scoreSpotifyTrack(track, parsedQuery) {
+    const expectedArtist =
+        normalizeText(parsedQuery.artist);
+
+    const expectedTitle =
+        normalizeText(parsedQuery.title);
+
+    const expectedBaseTitle =
+        getBaseTitle(parsedQuery.title);
+
+    const trackTitle =
+        normalizeText(track.name);
+
+    const trackBaseTitle =
+        getBaseTitle(track.name);
+
+    const artistNames =
+        track.artists
+            .map(artist => artist.name)
+            .join(" ");
+
+    const normalizedArtists =
+        normalizeText(artistNames);
+
+    const artistOverlap =
+        tokenOverlap(
+            parsedQuery.artist,
+            artistNames
+        );
+
+    const titleOverlap =
+        Math.max(
+            tokenOverlap(
+                parsedQuery.title,
+                track.name
+            ),
+            tokenOverlap(
+                expectedBaseTitle,
+                trackBaseTitle
+            )
+        );
+
+    const artistMatches =
+        !expectedArtist ||
+        normalizedArtists.includes(expectedArtist) ||
+        expectedArtist.includes(normalizedArtists) ||
+        artistOverlap >= 0.8;
+
+    const titleMatches =
+        !expectedTitle ||
+        trackTitle === expectedTitle ||
+        trackBaseTitle === expectedBaseTitle ||
+        trackTitle.includes(expectedTitle) ||
+        expectedTitle.includes(trackTitle) ||
+        titleOverlap >= 0.75;
+
+    let score = 0;
+
+    if (artistMatches) {
+        score += 55;
+    } else if (expectedArtist) {
+        score -= 80;
+    }
+
+    if (trackTitle === expectedTitle) {
+        score += 55;
+    } else if (trackBaseTitle === expectedBaseTitle) {
+        score += 45;
+    } else if (titleMatches) {
+        score += 35;
+    } else if (expectedTitle) {
+        score -= 45;
+    }
+
+    score += Math.round(titleOverlap * 20);
+    score += Math.round(artistOverlap * 15);
+    score += Math.min(track.popularity || 0, 100) / 20;
+
+    return {
+        track,
+        score,
+        artistMatches,
+        titleMatches,
+        artistNames,
+        title: track.name
+    };
+}
+
+async function fetchSpotifySearch(query) {
+    const response =
+        await fetch(
+            `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
             {
                 headers: {
                     "Authorization": `Bearer ${accessToken}`,
@@ -480,18 +657,110 @@ async function spotifySearch(query) {
             }
         );
 
-        if (response.status === 401) {
-            localStorage.removeItem("spotify_token");
-            accessToken = "";
-            updateStatus();
-            msg("🔴 Token expirado. Conecta nuevamente.");
+    if (response.status === 401) {
+        localStorage.removeItem("spotify_token");
+        accessToken = "";
+        updateStatus();
+        msg("🔴 Token expirado. Conecta nuevamente.");
+        return [];
+    }
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const data =
+        await response.json();
+
+    return data.tracks?.items || [];
+}
+
+async function spotifySearch(query) {
+    if (!accessToken) {
+        return null;
+    }
+
+    const parsedQuery =
+        parseTrackQuery(query);
+
+    if (!parsedQuery.raw) return null;
+
+    try {
+        const searchQueries =
+            parsedQuery.artist
+                ? [
+                    `track:${parsedQuery.title} artist:${parsedQuery.artist}`,
+                    `${parsedQuery.artist} ${parsedQuery.title}`,
+                    parsedQuery.raw
+                ]
+                : [
+                    parsedQuery.title,
+                    parsedQuery.raw
+                ];
+
+        const resultsByUri =
+            new Map();
+
+        for (const searchQuery of searchQueries) {
+            const results =
+                await fetchSpotifySearch(
+                    searchQuery
+                );
+
+            results.forEach(track => {
+                if (!resultsByUri.has(track.uri)) {
+                    resultsByUri.set(
+                        track.uri,
+                        track
+                    );
+                }
+            });
+        }
+
+        const scoredTracks =
+            [...resultsByUri.values()]
+                .map(track =>
+                    scoreSpotifyTrack(
+                        track,
+                        parsedQuery
+                    )
+                )
+                .sort((a, b) => b.score - a.score);
+
+        const bestMatch =
+            scoredTracks[0];
+
+        if (!bestMatch) {
             return null;
         }
 
-        if (!response.ok) return null;
+        const minimumScore =
+            parsedQuery.artist
+                ? 85
+                : 55;
 
-        const data = await response.json();
-        return data.tracks?.items?.[0] || null;
+        if (
+            bestMatch.score < minimumScore ||
+            !bestMatch.titleMatches ||
+            (
+                parsedQuery.artist &&
+                !bestMatch.artistMatches
+            )
+        ) {
+
+            msg(
+                `⚠️ Coincidencia rechazada: ${bestMatch.artistNames} - ${bestMatch.title}`
+            );
+
+            return null;
+
+        }
+
+        msg(
+            `✅ Match: ${bestMatch.artistNames} - ${bestMatch.title}`
+        );
+
+        return bestMatch.track;
 
     } catch (err) {
         console.error("Error en spotifySearch:", err);
@@ -501,12 +770,12 @@ async function spotifySearch(query) {
 
 function appendSongToList(track) {
     if (!songs) return;
-
+    
     const li = document.createElement("li");
     li.dataset.uri = track.uri;
-
+    
     const artistNames = track.artists.map(a => a.name).join(", ");
-
+    
     li.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <div>
@@ -516,7 +785,7 @@ function appendSongToList(track) {
             <button class="remove-btn" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #ff3366; cursor: pointer; font-size: 18px;">✕</button>
         </div>
     `;
-
+    
     songs.appendChild(li);
 }
 
@@ -789,7 +1058,6 @@ async function createPlaylist() {
     }
 
 }
-
 /* =========================================
    REFRESH APP
 ========================================= */
@@ -818,7 +1086,6 @@ function refreshApp() {
     );
 
 }
-
 /* =========================================
    INICIALIZACIÓN
 ========================================= */
