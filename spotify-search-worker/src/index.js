@@ -23,7 +23,12 @@ export default {
         if (request.method === "GET" && url.pathname === "/health") {
             return jsonResponse({
                 ok: true,
-                service: "spotify-search-worker"
+                service: "spotify-search-worker",
+                spotifyCredentialsConfigured: Boolean(
+                    env &&
+                    env.SPOTIFY_CLIENT_ID &&
+                    env.SPOTIFY_CLIENT_SECRET
+                )
             });
         }
 

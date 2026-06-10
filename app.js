@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.4-direct-links-2026-06-10";
+const APP_VERSION = "v3.5-playlist-link-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const MAX_SEARCHES_PER_CREATE = 5;
@@ -1670,6 +1670,9 @@ async function createPlaylist() {
             playlistData.external_urls &&
             playlistData.external_urls.spotify
         ) {
+            msg(
+                `🔗 <a href="${playlistData.external_urls.spotify}" target="_blank" rel="noopener">Abrir playlist en Spotify</a>`
+            );
 
             window.open(
                 playlistData.external_urls.spotify,
@@ -1721,6 +1724,7 @@ function refreshApp() {
 
     selectedTrackCache.clear();
     spotifySearchCache.clear();
+    clearSpotifyRateLimit();
 
     localStorage.removeItem(
         SELECTED_TRACK_CACHE_KEY
@@ -1729,7 +1733,7 @@ function refreshApp() {
     updateStatus();
 
     msg(
-        "🔄 Aplicación reiniciada. Búsquedas canceladas."
+        "🔄 Aplicación reiniciada. Búsquedas canceladas y pausa de Spotify limpiada."
     );
 
 }
