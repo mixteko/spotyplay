@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.7-create-found-songs-2026-06-10";
+const APP_VERSION = "v4.8-no-partial-playlists-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
@@ -1800,8 +1800,15 @@ async function createPlaylist() {
             resolution.stoppedByRateLimit
         ) {
             msg(
-                `⏸️ Quedaron ${resolution.pendingCount} canciones pendientes. Crearé la playlist con las ${uris.length} encontradas hasta ahora.`
+                `⏸️ Quedaron ${resolution.pendingCount} canciones pendientes. No creé la playlist para evitar una lista incompleta. Presiona Crear Playlist otra vez para continuar.`
             );
+
+            setDisconnected(
+                playlistStatus,
+                "Pendiente"
+            );
+
+            return;
         }
 
         if (
@@ -1809,8 +1816,15 @@ async function createPlaylist() {
             uris.length < resolution.totalLines
         ) {
             msg(
-                `⚠️ Se omitieron ${resolution.unresolvedCount} canciones que Spotify no devolvió con suficiente seguridad. Crearé la playlist con las ${uris.length} encontradas.`
+                `⚠️ Se omitieron ${resolution.unresolvedCount} canciones que Spotify no devolvió con suficiente seguridad. No creé la playlist para evitar una lista incompleta. Corrige esos nombres o pega links directos de Spotify.`
             );
+
+            setDisconnected(
+                playlistStatus,
+                "Pendiente"
+            );
+
+            return;
         }
 
         if (
