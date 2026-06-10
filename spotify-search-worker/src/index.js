@@ -92,7 +92,7 @@ async function resolveTracks(request) {
                 resolved,
                 unresolved,
                 remaining: lines.slice(resolved.length + unresolved.length)
-            }, 429);
+            });
         }
 
         if (result.track) {

@@ -5,11 +5,13 @@
 // 🔒 URLs de los Workers
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
+const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.1-small-batches-2026-06-10";
+const APP_VERSION = "v3.2-search-worker-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const MAX_SEARCHES_PER_CREATE = 5;
+const MAX_WORKER_BATCHES_PER_CREATE = 2;
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -1039,13 +1041,136 @@ function getSongLines() {
         .filter(Boolean);
 }
 
+async function resolveTracksWithWorker(lines, jobId) {
+    if (!lines.length) {
+        return {
+            resolved: [],
+            unresolved: [],
+            remaining: []
+        };
+    }
+
+    if (
+        Date.now() < spotifyRateLimitedUntil
+    ) {
+        msg(
+            `⏳ Spotify está pausado. Espera ${getSpotifyRateLimitSeconds()}s y vuelve a presionar Crear Playlist.`
+        );
+
+        return {
+            resolved: [],
+            unresolved: [],
+            remaining: lines,
+            rateLimited: true
+        };
+    }
+
+    try {
+        const response =
+            await fetch(
+                `${SEARCH_WORKER}/resolve`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        tracks: lines,
+                        market: "US"
+                    })
+                }
+            );
+
+        let data = {};
+
+        try {
+            data = await response.json();
+        } catch (error) {
+            data = {};
+        }
+
+        if (response.status === 401) {
+            localStorage.removeItem("spotify_token");
+            accessToken = "";
+            updateStatus();
+            msg("🔴 Token expirado. Conecta Spotify otra vez.");
+
+            return {
+                resolved: [],
+                unresolved: [],
+                remaining: lines
+            };
+        }
+
+        if (
+            response.status === 429 ||
+            data.rateLimited
+        ) {
+            const waitSeconds =
+                Math.max(
+                    parseInt(data.retryAfter || "60", 10),
+                    60
+                );
+
+            setSpotifyRateLimit(
+                waitSeconds
+            );
+
+            msg(
+                `⏳ Spotify limitó las búsquedas. Espera ${waitSeconds}s y vuelve a presionar Crear Playlist.`
+            );
+
+            return {
+                resolved: data.resolved || [],
+                unresolved: data.unresolved || [],
+                remaining: data.remaining || lines,
+                rateLimited: true
+            };
+        }
+
+        if (
+            !response.ok ||
+            data.ok === false
+        ) {
+            msg(
+                "⚠️ El Worker de búsqueda no respondió bien. Revisa que esté publicado."
+            );
+
+            return {
+                resolved: [],
+                unresolved: [],
+                remaining: lines
+            };
+        }
+
+        clearSpotifyRateLimit();
+
+        return {
+            resolved: data.resolved || [],
+            unresolved: data.unresolved || [],
+            remaining: data.remaining || []
+        };
+
+    } catch (err) {
+        console.error("Error en SEARCH_WORKER:", err);
+        msg("⚠️ No se pudo conectar con el Worker de búsqueda.");
+
+        return {
+            resolved: [],
+            unresolved: [],
+            remaining: lines
+        };
+    }
+}
+
 async function getCurrentSongUris(jobId = activeJobId) {
     const lines =
         getSongLines();
 
     const uris = [];
     const usedUris = new Set();
-    let searchesThisRun = 0;
+    let pendingLines = [];
 
     for (const line of lines) {
         if (jobId !== activeJobId) {
@@ -1058,33 +1183,9 @@ async function getCurrentSongUris(jobId = activeJobId) {
         let uri =
             selectedTrackCache.get(cacheKey);
 
-        if (
-            !uri &&
-            searchesThisRun >= MAX_SEARCHES_PER_CREATE
-        ) {
-            continue;
-        }
-
         if (!uri) {
-            searchesThisRun++;
-
-            const track =
-                await spotifySearch(
-                    line,
-                    jobId
-                );
-
-            uri =
-                track?.uri || "";
-
-            if (uri) {
-                selectedTrackCache.set(
-                    cacheKey,
-                    uri
-                );
-
-                saveSelectedTrackCache();
-            }
+            pendingLines.push(line);
+            continue;
         }
 
         if (
@@ -1096,13 +1197,93 @@ async function getCurrentSongUris(jobId = activeJobId) {
         }
     }
 
-    if (
-        lines.length > uris.length &&
-        Date.now() >= spotifyRateLimitedUntil
+    let workerBatches = 0;
+
+    while (
+        pendingLines.length &&
+        workerBatches < MAX_WORKER_BATCHES_PER_CREATE
     ) {
+        if (jobId !== activeJobId) {
+            return uris;
+        }
+
+        workerBatches++;
+
         msg(
-            `ℹ️ Se resolvieron ${uris.length}/${lines.length}. Presiona Crear Playlist otra vez para resolver más canciones sin saturar Spotify.`
+            `🔎 Buscando con Worker (${Math.min(pendingLines.length, MAX_SEARCHES_PER_CREATE)} canciones)...`
         );
+
+        const data =
+            await resolveTracksWithWorker(
+                pendingLines,
+                jobId
+            );
+
+        if (jobId !== activeJobId) {
+            return uris;
+        }
+
+        const resolved =
+            data.resolved || [];
+
+        for (const item of resolved) {
+            const uri =
+                item.uri || "";
+
+            if (!uri) {
+                continue;
+            }
+
+            selectedTrackCache.set(
+                normalizeText(item.input),
+                uri
+            );
+
+            if (!usedUris.has(uri)) {
+                uris.push(uri);
+                usedUris.add(uri);
+            }
+
+            msg(
+                `✅ Match: ${item.artists.join(", ")} - ${item.name}`
+            );
+        }
+
+        if (resolved.length) {
+            saveSelectedTrackCache();
+        }
+
+        (data.unresolved || [])
+            .slice(0, 3)
+            .forEach(item => {
+                msg(
+                    `⚠️ No encontrada: ${item.input}`
+                );
+            });
+
+        pendingLines =
+            data.remaining || [];
+
+        if (data.rateLimited) {
+            break;
+        }
+
+        if (
+            !resolved.length &&
+            !(data.unresolved || []).length
+        ) {
+            break;
+        }
+    }
+
+    if (
+        lines.length > uris.length
+    ) {
+        if (Date.now() >= spotifyRateLimitedUntil) {
+            msg(
+                `ℹ️ Se resolvieron ${uris.length}/${lines.length}. Presiona Crear Playlist otra vez para continuar con las que faltan.`
+            );
+        }
     }
 
     return uris;
