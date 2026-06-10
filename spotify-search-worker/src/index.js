@@ -5,7 +5,7 @@ const CORS_HEADERS = {
     "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "resolver-v8-accurate-batches";
+const WORKER_VERSION = "resolver-v9-title-fallback";
 const MAX_TRACKS_PER_REQUEST = 5;
 const SPOTIFY_SEARCH_LIMIT = 5;
 
@@ -240,28 +240,47 @@ async function searchWithSpotifyApi(parsed, authorization, market) {
         };
     }
 
-    const query =
-        buildBestSearchQuery(parsed);
+    const queries =
+        buildSearchQueries(parsed);
 
-    const tracks =
-        await fetchSpotifyTracks(
-            query,
-            authorization,
-            market
-        );
+    let lastReason = "not_found";
+
+    for (const query of queries) {
+        const tracks =
+            await fetchSpotifyTracks(
+                query,
+                authorization,
+                market
+            );
+
+        if (tracks.rateLimited) {
+            return {
+                track: null,
+                reason: "rate_limited"
+            };
+        }
+
+        if (tracks.error) {
+            lastReason = tracks.error;
+            continue;
+        }
+
+        const match =
+            pickBestTrack(
+                tracks.items,
+                parsed
+            );
+
+        if (match) {
+            return {
+                track: match
+            };
+        }
+    }
 
     return {
-        track:
-            tracks.error
-                ? null
-                : pickBestTrack(
-                    tracks.items,
-                    parsed
-                ),
-        reason:
-            tracks.rateLimited
-                ? "rate_limited"
-                : tracks.error || "not_found"
+        track: null,
+        reason: lastReason
     };
 }
 
@@ -428,7 +447,7 @@ async function cacheTrack(cacheKey, track) {
     }
 }
 
-function buildBestSearchQuery(parsed) {
+function buildSearchQueries(parsed) {
     const artist =
         sanitizeSpotifyQuery(parsed.artist);
     const title =
@@ -436,11 +455,18 @@ function buildBestSearchQuery(parsed) {
     const raw =
         sanitizeSpotifyQuery(parsed.raw);
 
+    const queries = [];
+
     if (artist && title) {
-        return `${artist} ${title}`;
+        queries.push(`${artist} ${title}`);
+        queries.push(title);
     }
 
-    return raw;
+    if (raw) {
+        queries.push(raw);
+    }
+
+    return [...new Set(queries)];
 }
 
 function pickBestTrack(tracks, parsed) {

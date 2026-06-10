@@ -7,11 +7,11 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.6-full-batch-resolver-2026-06-10";
+const APP_VERSION = "v4.7-create-found-songs-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
-const RESOLVER_CACHE_VERSION = "resolver-v8-accurate-batches";
+const RESOLVER_CACHE_VERSION = "resolver-v9-title-fallback";
 const MAX_SEARCHES_PER_CREATE = 5;
 const MAX_WORKER_BATCHES_PER_CREATE = 40;
 const WORKER_BATCH_PAUSE_MS = 900;
@@ -1800,15 +1800,8 @@ async function createPlaylist() {
             resolution.stoppedByRateLimit
         ) {
             msg(
-                `⏸️ Aún faltan ${resolution.pendingCount} canciones por revisar. No creé la playlist para evitar una lista incompleta. Presiona Crear Playlist otra vez para continuar.`
+                `⏸️ Quedaron ${resolution.pendingCount} canciones pendientes. Crearé la playlist con las ${uris.length} encontradas hasta ahora.`
             );
-
-            setDisconnected(
-                playlistStatus,
-                "Pendiente"
-            );
-
-            return;
         }
 
         if (
@@ -1816,15 +1809,8 @@ async function createPlaylist() {
             uris.length < resolution.totalLines
         ) {
             msg(
-                `⚠️ Hay ${resolution.unresolvedCount} canciones que no se encontraron. No creé la playlist para evitar una lista incompleta. Corrige esos nombres o pega links directos de Spotify.`
+                `⚠️ Se omitieron ${resolution.unresolvedCount} canciones que Spotify no devolvió con suficiente seguridad. Crearé la playlist con las ${uris.length} encontradas.`
             );
-
-            setDisconnected(
-                playlistStatus,
-                "Pendiente"
-            );
-
-            return;
         }
 
         if (
