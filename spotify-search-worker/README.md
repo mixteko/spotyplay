@@ -24,7 +24,7 @@ Debe responder con:
 {
   "ok": true,
   "service": "spotify-search-worker",
-  "version": "resolver-v7-stop-on-rate-limit",
+  "version": "resolver-v8-accurate-batches",
   "maxTracksPerRequest": 5,
   "spotifyCredentialsConfigured": true
 }

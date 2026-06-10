@@ -7,13 +7,14 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.5-no-partial-playlists-2026-06-10";
+const APP_VERSION = "v4.6-full-batch-resolver-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
-const RESOLVER_CACHE_VERSION = "resolver-v7-stop-on-rate-limit";
+const RESOLVER_CACHE_VERSION = "resolver-v8-accurate-batches";
 const MAX_SEARCHES_PER_CREATE = 5;
-const MAX_WORKER_BATCHES_PER_CREATE = 4;
+const MAX_WORKER_BATCHES_PER_CREATE = 40;
+const WORKER_BATCH_PAUSE_MS = 900;
 const MAX_SPOTIFY_RATE_LIMIT_SECONDS = 90;
 
 // Variables globales
@@ -1589,6 +1590,24 @@ async function getCurrentSongUris(jobId = activeJobId) {
             !(data.unresolved || []).length
         ) {
             break;
+        }
+
+        if (pendingLines.length) {
+            const canContinue =
+                await sleepForJob(
+                    WORKER_BATCH_PAUSE_MS,
+                    jobId
+                );
+
+            if (!canContinue) {
+                return {
+                    uris,
+                    totalLines: lines.length,
+                    pendingCount: pendingLines.length,
+                    unresolvedCount,
+                    stoppedByRateLimit: true
+                };
+            }
         }
     }
 

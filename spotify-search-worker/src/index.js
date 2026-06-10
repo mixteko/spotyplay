@@ -5,7 +5,7 @@ const CORS_HEADERS = {
     "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "resolver-v7-stop-on-rate-limit";
+const WORKER_VERSION = "resolver-v8-accurate-batches";
 const MAX_TRACKS_PER_REQUEST = 5;
 const SPOTIFY_SEARCH_LIMIT = 5;
 
@@ -473,7 +473,14 @@ function pickBestTrack(tracks, parsed) {
             ? 52
             : 30;
 
-    if (best.score < minimumScore) {
+    const needsTitle =
+        Boolean(normalizeText(parsed.title));
+
+    if (
+        best.score < minimumScore ||
+        (needsTitle && best.titleOverlap < 0.45) ||
+        (needsArtist && !best.artistMatches && best.artistOverlap < 0.35)
+    ) {
         return null;
     }
 
@@ -521,7 +528,10 @@ function scoreTrack(track, parsed) {
 
     return {
         track,
-        score
+        score,
+        titleOverlap,
+        artistOverlap,
+        artistMatches
     };
 }
 
