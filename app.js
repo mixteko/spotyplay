@@ -163,26 +163,25 @@ async function getToken() {
                 );
 
             }
-accessToken =
-    tokenData.access_token;
 
-const testMe =
-    await fetch(
-        "https://api.spotify.com/v1/me",
-        {
-            headers: {
-                Authorization:
-                    `Bearer ${accessToken}`
-            }
-        }
-    );
-
-console.log(
-    "TOKEN TEST:",
-    await testMe.json()
-);
             accessToken =
                 tokenData.access_token;
+
+            const testMe =
+                await fetch(
+                    "https://api.spotify.com/v1/me",
+                    {
+                        headers: {
+                            Authorization:
+                                `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+            console.log(
+                "TOKEN TEST:",
+                await testMe.json()
+            );
 
             localStorage.setItem(
                 "spotify_token",
@@ -265,6 +264,7 @@ function changeUser() {
         REDIRECT_URI;
 
 }
+
 /* =========================================
    GENERADOR DE CANCIONES CON GEMINI
 ========================================= */
@@ -453,6 +453,7 @@ async function generateGemini(moreTracks = false) {
     }
 
 }
+
 /* =========================================
    BUSCAR CANCIONES EN SPOTIFY
 ========================================= */
@@ -500,12 +501,12 @@ async function spotifySearch(query) {
 
 function appendSongToList(track) {
     if (!songs) return;
-    
+
     const li = document.createElement("li");
     li.dataset.uri = track.uri;
-    
+
     const artistNames = track.artists.map(a => a.name).join(", ");
-    
+
     li.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <div>
@@ -515,7 +516,7 @@ function appendSongToList(track) {
             <button class="remove-btn" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #ff3366; cursor: pointer; font-size: 18px;">✕</button>
         </div>
     `;
-    
+
     songs.appendChild(li);
 }
 
@@ -684,25 +685,6 @@ async function createPlaylist() {
 
         }
 
-        const addResponse =
-            await fetch(
-                `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        Authorization:
-                            `Bearer ${accessToken}`,
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        uris
-                    })
-                }
-            );
-
         console.log(
             "PLAYLIST ID:",
             playlistData.id
@@ -713,23 +695,56 @@ async function createPlaylist() {
             playlistData.owner
         );
 
-        console.log(
-            "ADD STATUS:",
-            addResponse.status
-        );
+        for (let index = 0; index < uris.length; index += 100) {
 
-        const addText =
-            await addResponse.text();
+            const chunk =
+                uris.slice(
+                    index,
+                    index + 100
+                );
 
-        console.log(
-            "ADD RESPONSE COMPLETA:",
-            addText
-        );
+            const addResponse =
+                await fetch(
+                    `https://api.spotify.com/v1/playlists/${playlistData.id}/items`,
+                    {
+                        method: "POST",
 
-        if (!addResponse.ok) {
+                        headers: {
+                            Authorization:
+                                `Bearer ${accessToken}`,
+                            "Content-Type":
+                                "application/json"
+                        },
 
-            throw new Error(
+                        body: JSON.stringify({
+                            uris: chunk
+                        })
+                    }
+                );
+
+            console.log(
+                "ADD STATUS:",
+                addResponse.status
+            );
+
+            const addText =
+                await addResponse.text();
+
+            console.log(
+                "ADD RESPONSE COMPLETA:",
                 addText
+            );
+
+            if (!addResponse.ok) {
+
+                throw new Error(
+                    addText
+                );
+
+            }
+
+            msg(
+                `✅ Agregadas ${Math.min(index + chunk.length, uris.length)}/${uris.length} canciones.`
             );
 
         }
@@ -774,6 +789,7 @@ async function createPlaylist() {
     }
 
 }
+
 /* =========================================
    REFRESH APP
 ========================================= */
@@ -802,6 +818,7 @@ function refreshApp() {
     );
 
 }
+
 /* =========================================
    INICIALIZACIÓN
 ========================================= */
