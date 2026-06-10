@@ -7,7 +7,7 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v4.4-valid-link-guard-2026-06-10";
+const APP_VERSION = "v4.5-no-partial-playlists-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
 const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
@@ -1390,10 +1390,18 @@ async function getCurrentSongUris(jobId = activeJobId) {
     const uris = [];
     const usedUris = new Set();
     let pendingLines = [];
+    let unresolvedCount = 0;
+    let stoppedByRateLimit = false;
 
     for (const line of lines) {
         if (jobId !== activeJobId) {
-            return uris;
+            return {
+                uris,
+                totalLines: lines.length,
+                pendingCount: pendingLines.length,
+                unresolvedCount,
+                stoppedByRateLimit: true
+            };
         }
 
         const cacheKey =
@@ -1483,7 +1491,13 @@ async function getCurrentSongUris(jobId = activeJobId) {
         workerBatches < MAX_WORKER_BATCHES_PER_CREATE
     ) {
         if (jobId !== activeJobId) {
-            return uris;
+            return {
+                uris,
+                totalLines: lines.length,
+                pendingCount: pendingLines.length,
+                unresolvedCount,
+                stoppedByRateLimit: true
+            };
         }
 
         workerBatches++;
@@ -1499,7 +1513,13 @@ async function getCurrentSongUris(jobId = activeJobId) {
             );
 
         if (jobId !== activeJobId) {
-            return uris;
+            return {
+                uris,
+                totalLines: lines.length,
+                pendingCount: pendingLines.length,
+                unresolvedCount,
+                stoppedByRateLimit: true
+            };
         }
 
         const resolved =
@@ -1537,7 +1557,13 @@ async function getCurrentSongUris(jobId = activeJobId) {
             saveSelectedTrackCache();
         }
 
-        (data.unresolved || [])
+        const unresolved =
+            data.unresolved || [];
+
+        unresolvedCount +=
+            unresolved.length;
+
+        unresolved
             .slice(0, 10)
             .forEach(item => {
                 const reason =
@@ -1554,6 +1580,7 @@ async function getCurrentSongUris(jobId = activeJobId) {
             data.remaining || [];
 
         if (data.rateLimited) {
+            stoppedByRateLimit = true;
             break;
         }
 
@@ -1575,7 +1602,13 @@ async function getCurrentSongUris(jobId = activeJobId) {
         }
     }
 
-    return uris;
+    return {
+        uris,
+        totalLines: lines.length,
+        pendingCount: pendingLines.length,
+        unresolvedCount,
+        stoppedByRateLimit
+    };
 }
 
 function refreshSongNumbers() {
@@ -1716,8 +1749,11 @@ async function createPlaylist() {
 
         await addManualSongsToList();
 
-        const uris =
+        const resolution =
             await getCurrentSongUris(jobId);
+
+        const uris =
+            resolution.uris || [];
 
         if (jobId !== activeJobId) {
             msg(
@@ -1739,6 +1775,38 @@ async function createPlaylist() {
         msg(
             `🎵 URIS encontradas: ${uris.length}`
         );
+
+        if (
+            resolution.pendingCount > 0 ||
+            resolution.stoppedByRateLimit
+        ) {
+            msg(
+                `⏸️ Aún faltan ${resolution.pendingCount} canciones por revisar. No creé la playlist para evitar una lista incompleta. Presiona Crear Playlist otra vez para continuar.`
+            );
+
+            setDisconnected(
+                playlistStatus,
+                "Pendiente"
+            );
+
+            return;
+        }
+
+        if (
+            resolution.unresolvedCount > 0 &&
+            uris.length < resolution.totalLines
+        ) {
+            msg(
+                `⚠️ Hay ${resolution.unresolvedCount} canciones que no se encontraron. No creé la playlist para evitar una lista incompleta. Corrige esos nombres o pega links directos de Spotify.`
+            );
+
+            setDisconnected(
+                playlistStatus,
+                "Pendiente"
+            );
+
+            return;
+        }
 
         if (
             uris.length === 0
