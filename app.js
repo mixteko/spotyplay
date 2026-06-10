@@ -7,11 +7,13 @@ const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const SEARCH_WORKER = "https://spotify-search-worker.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v3.7-web-fallback-2026-06-10";
+const APP_VERSION = "v4.0-resolver-total-fix-2026-06-10";
 const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 const SELECTED_TRACK_CACHE_KEY = "spotify_selected_track_cache";
-const MAX_SEARCHES_PER_CREATE = 5;
-const MAX_WORKER_BATCHES_PER_CREATE = 2;
+const RESOLVER_CACHE_VERSION_KEY = "spotify_resolver_cache_version";
+const RESOLVER_CACHE_VERSION = "resolver-v4-cache-bust";
+const MAX_SEARCHES_PER_CREATE = 10;
+const MAX_WORKER_BATCHES_PER_CREATE = 3;
 const MAX_SPOTIFY_RATE_LIMIT_SECONDS = 90;
 
 // Variables globales
@@ -57,6 +59,20 @@ if (
     spotifyRateLimitedUntil = 0;
     localStorage.removeItem(
         SPOTIFY_RATE_LIMIT_KEY
+    );
+}
+
+if (
+    localStorage.getItem(RESOLVER_CACHE_VERSION_KEY) !==
+    RESOLVER_CACHE_VERSION
+) {
+    selectedTrackCache.clear();
+    localStorage.removeItem(
+        SELECTED_TRACK_CACHE_KEY
+    );
+    localStorage.setItem(
+        RESOLVER_CACHE_VERSION_KEY,
+        RESOLVER_CACHE_VERSION
     );
 }
 
@@ -1140,6 +1156,21 @@ async function resolveTracksWithWorker(lines, jobId) {
         }
     }
 
+    if (
+        workerStatus &&
+        workerStatus.version !== RESOLVER_CACHE_VERSION
+    ) {
+        msg(
+            `⚠️ Tu Worker publicado no es el nuevo. Tiene "${workerStatus.version || "sin version"}" y debe tener "${RESOLVER_CACHE_VERSION}". Actualiza y da Deploy en Cloudflare.`
+        );
+
+        return {
+            resolved: [],
+            unresolved: [],
+            remaining: lines
+        };
+    }
+
     try {
         const response =
             await fetch(
@@ -1325,8 +1356,13 @@ async function getCurrentSongUris(jobId = activeJobId) {
                 usedUris.add(uri);
             }
 
+            const source =
+                item.source
+                    ? ` (${item.source})`
+                    : "";
+
             msg(
-                `✅ Match: ${item.artists.join(", ")} - ${item.name}`
+                `✅ Match${source}: ${item.artists.join(", ")} - ${item.name}`
             );
         }
 
@@ -1335,10 +1371,15 @@ async function getCurrentSongUris(jobId = activeJobId) {
         }
 
         (data.unresolved || [])
-            .slice(0, 3)
+            .slice(0, 10)
             .forEach(item => {
+                const reason =
+                    item.reason
+                        ? ` [${item.reason}]`
+                        : "";
+
                 msg(
-                    `⚠️ No encontrada: ${item.input}`
+                    `⚠️ No encontrada${reason}: ${item.input}`
                 );
             });
 

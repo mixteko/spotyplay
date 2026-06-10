@@ -5,9 +5,9 @@ const CORS_HEADERS = {
     "Access-Control-Max-Age": "86400"
 };
 
-const MAX_TRACKS_PER_REQUEST = 5;
-const SPOTIFY_SEARCH_LIMIT = 5;
-const MAX_RETRY_AFTER_SECONDS = 90;
+const WORKER_VERSION = "resolver-v4-cache-bust";
+const MAX_TRACKS_PER_REQUEST = 10;
+const SPOTIFY_SEARCH_LIMIT = 10;
 
 export default {
     async fetch(request, env) {
@@ -24,11 +24,11 @@ export default {
             return jsonResponse({
                 ok: true,
                 service: "spotify-search-worker",
-                publicSearchFallback: true,
+                version: WORKER_VERSION,
+                maxTracksPerRequest: MAX_TRACKS_PER_REQUEST,
                 spotifyCredentialsConfigured: Boolean(
-                    env &&
-                    env.SPOTIFY_CLIENT_ID &&
-                    env.SPOTIFY_CLIENT_SECRET
+                    env?.SPOTIFY_CLIENT_ID &&
+                    env?.SPOTIFY_CLIENT_SECRET
                 )
             });
         }
@@ -45,13 +45,16 @@ export default {
 };
 
 async function resolveTracks(request, env) {
-    const authorization =
+    const fallbackAuthorization =
         request.headers.get("Authorization") || "";
 
-    if (!authorization.startsWith("Bearer ")) {
+    if (
+        !hasWorkerCredentials(env) &&
+        !fallbackAuthorization.startsWith("Bearer ")
+    ) {
         return jsonResponse({
             ok: false,
-            error: "Falta Authorization: Bearer TOKEN"
+            error: "Falta Authorization o variables SPOTIFY_CLIENT_ID/SPOTIFY_CLIENT_SECRET"
         }, 401);
     }
 
@@ -62,11 +65,11 @@ async function resolveTracks(request, env) {
     } catch (error) {
         return jsonResponse({
             ok: false,
-            error: "JSON inválido"
+            error: "JSON invalido"
         }, 400);
     }
 
-    const lines =
+    const rawLines =
         Array.isArray(body.tracks)
             ? body.tracks
             : [];
@@ -74,11 +77,13 @@ async function resolveTracks(request, env) {
     const market =
         sanitizeMarket(body.market || "US");
 
-    const tracksToResolve =
-        lines
+    const lines =
+        rawLines
             .map(cleanTrackLine)
-            .filter(Boolean)
-            .slice(0, MAX_TRACKS_PER_REQUEST);
+            .filter(Boolean);
+
+    const tracksToResolve =
+        lines.slice(0, MAX_TRACKS_PER_REQUEST);
 
     const resolved = [];
     const unresolved = [];
@@ -87,59 +92,65 @@ async function resolveTracks(request, env) {
         const result =
             await resolveSingleTrack(
                 line,
-                authorization,
+                fallbackAuthorization,
                 market,
                 env
             );
-
-        if (result.rateLimited) {
-            return jsonResponse({
-                ok: true,
-                rateLimited: true,
-                retryAfter: result.retryAfter,
-                resolved,
-                unresolved,
-                remaining: lines.slice(resolved.length + unresolved.length)
-            });
-        }
 
         if (result.track) {
             resolved.push({
                 input: line,
                 uri: result.track.uri,
                 name: result.track.name,
-                artists: result.track.artists.map(artist => artist.name)
+                artists: result.track.artists.map(artist => artist.name),
+                source: result.source || "spotify"
             });
         } else {
             unresolved.push({
-                input: line
+                input: line,
+                reason: result.reason || "not_found"
             });
         }
 
-        await sleep(1200);
+        await sleep(350);
     }
 
     return jsonResponse({
         ok: true,
         rateLimited: false,
+        version: WORKER_VERSION,
         resolved,
         unresolved,
         remaining: lines.slice(tracksToResolve.length)
     });
 }
 
-async function resolveSingleTrack(line, authorization, market, env) {
+async function resolveSingleTrack(line, fallbackAuthorization, market, env) {
+    const directUri =
+        getSpotifyTrackUriFromLine(line);
+
+    if (directUri) {
+        return {
+            source: "direct",
+            track: {
+                uri: directUri,
+                name: line,
+                artists: [
+                    {
+                        name: "Spotify"
+                    }
+                ],
+                popularity: 100
+            }
+        };
+    }
+
     const parsed =
         parseTrackLine(line);
 
-    const query =
-        parsed.artist
-            ? `${parsed.artist} ${parsed.title}`
-            : parsed.title;
-
     const cacheKey =
         new Request(
-            `https://spotify-search-worker.cache/search/${encodeURIComponent(normalizeText(query))}?market=${market}`
+            `https://spotify-search-worker.cache/${WORKER_VERSION}/${encodeURIComponent(normalizeText(parsed.raw))}?market=${market}`
         );
 
     const cached =
@@ -149,121 +160,158 @@ async function resolveSingleTrack(line, authorization, market, env) {
         const data =
             await cached.json();
 
+        if (data.track?.uri) {
+            return {
+                source: "cache",
+                track: data.track
+            };
+        }
+    }
+
+    const authorization =
+        await getSearchAuthorization(
+            env,
+            fallbackAuthorization
+        );
+
+    const apiResult =
+        await searchWithSpotifyApi(
+            parsed,
+            authorization,
+            market
+        );
+
+    if (apiResult.track) {
+        await cacheTrack(cacheKey, apiResult.track);
+
         return {
-            track: pickBestTrack(data.tracks, parsed)
+            source: "spotify-api",
+            track: apiResult.track
         };
     }
 
+    const publicTrack =
+        await resolveTrackFromPublicSearch(parsed);
+
+    if (publicTrack) {
+        await cacheTrack(cacheKey, publicTrack);
+
+        return {
+            source: "public-search",
+            track: publicTrack
+        };
+    }
+
+    return {
+        track: null,
+        reason: apiResult.reason || "not_found"
+    };
+}
+
+async function searchWithSpotifyApi(parsed, authorization, market) {
+    if (!authorization.startsWith("Bearer ")) {
+        return {
+            track: null,
+            reason: "missing_authorization"
+        };
+    }
+
+    const queries =
+        buildSearchQueries(parsed);
+
+    let lastReason = "not_found";
+
+    for (const query of queries) {
+        const tracks =
+            await fetchSpotifyTracks(
+                query,
+                authorization,
+                market
+            );
+
+        if (tracks.rateLimited) {
+            lastReason = "rate_limited";
+            continue;
+        }
+
+        if (tracks.error) {
+            lastReason = tracks.error;
+            continue;
+        }
+
+        const bestTrack =
+            pickBestTrack(
+                tracks.items,
+                parsed
+            );
+
+        if (bestTrack) {
+            return {
+                track: bestTrack
+            };
+        }
+    }
+
+    return {
+        track: null,
+        reason: lastReason
+    };
+}
+
+async function fetchSpotifyTracks(query, authorization, market) {
     const searchUrl =
         new URL("https://api.spotify.com/v1/search");
 
-    searchUrl.searchParams.set("q", sanitizeSpotifyQuery(query));
+    searchUrl.searchParams.set("q", query);
     searchUrl.searchParams.set("type", "track");
     searchUrl.searchParams.set("limit", String(SPOTIFY_SEARCH_LIMIT));
-    searchUrl.searchParams.set("market", market);
+
+    if (market) {
+        searchUrl.searchParams.set("market", market);
+    }
 
     const response =
         await fetch(searchUrl.toString(), {
             headers: {
-                Authorization:
-                    await getSearchAuthorization(
-                        env,
-                        authorization
-                    )
+                Authorization: authorization
             }
         });
 
     if (response.status === 429) {
-        const publicTrack =
-            await resolveTrackFromPublicSearch(
-                query,
-                parsed
-            );
-
-        if (publicTrack) {
-            await caches.default.put(
-                cacheKey,
-                new Response(
-                    JSON.stringify({
-                        tracks: [publicTrack]
-                    }),
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Cache-Control": "public, max-age=86400"
-                        }
-                    }
-                )
-            );
-
-            return {
-                track: publicTrack
-            };
-        }
-
         return {
-            track: null
+            items: [],
+            rateLimited: true
+        };
+    }
+
+    if (response.status === 401) {
+        return {
+            items: [],
+            error: "unauthorized"
         };
     }
 
     if (!response.ok) {
-        const publicTrack =
-            await resolveTrackFromPublicSearch(
-                query,
-                parsed
-            );
-
-        if (publicTrack) {
-            await caches.default.put(
-                cacheKey,
-                new Response(
-                    JSON.stringify({
-                        tracks: [publicTrack]
-                    }),
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Cache-Control": "public, max-age=86400"
-                        }
-                    }
-                )
-            );
-
-            return {
-                track: publicTrack
-            };
-        }
-
         return {
-            track: null
+            items: [],
+            error: `spotify_${response.status}`
         };
     }
 
     const data =
         await response.json();
 
-    const tracks =
-        data.tracks?.items || [];
-
-    await caches.default.put(
-        cacheKey,
-        new Response(
-            JSON.stringify({ tracks }),
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Cache-Control": "public, max-age=86400"
-                }
-            }
-        )
-    );
-
     return {
-        track: pickBestTrack(tracks, parsed)
+        items: data.tracks?.items || []
     };
 }
 
-async function resolveTrackFromPublicSearch(query, parsed) {
+async function resolveTrackFromPublicSearch(parsed) {
+    const query =
+        parsed.artist
+            ? `${parsed.artist} ${parsed.title}`
+            : parsed.raw;
+
     const searchUrl =
         `https://open.spotify.com/search/${encodeURIComponent(sanitizeSpotifyQuery(query))}/tracks`;
 
@@ -271,7 +319,7 @@ async function resolveTrackFromPublicSearch(query, parsed) {
         await fetch(searchUrl, {
             headers: {
                 "Accept": "text/html",
-                "User-Agent": "Mozilla/5.0 SpotifyPlaylistWorker/1.0"
+                "User-Agent": "Mozilla/5.0"
             }
         });
 
@@ -308,17 +356,13 @@ async function resolveTrackFromPublicSearch(query, parsed) {
 }
 
 async function getSearchAuthorization(env, fallbackAuthorization) {
-    if (
-        !env ||
-        !env.SPOTIFY_CLIENT_ID ||
-        !env.SPOTIFY_CLIENT_SECRET
-    ) {
+    if (!hasWorkerCredentials(env)) {
         return fallbackAuthorization;
     }
 
     const cacheKey =
         new Request(
-            "https://spotify-search-worker.cache/client-token"
+            `https://spotify-search-worker.cache/${WORKER_VERSION}/client-token`
         );
 
     const cached =
@@ -362,12 +406,6 @@ async function getSearchAuthorization(env, fallbackAuthorization) {
         return fallbackAuthorization;
     }
 
-    const cacheSeconds =
-        Math.max(
-            (data.expires_in || 3600) - 90,
-            60
-        );
-
     await caches.default.put(
         cacheKey,
         new Response(
@@ -377,7 +415,7 @@ async function getSearchAuthorization(env, fallbackAuthorization) {
             {
                 headers: {
                     "Content-Type": "application/json",
-                    "Cache-Control": `public, max-age=${cacheSeconds}`
+                    "Cache-Control": `public, max-age=${Math.max((data.expires_in || 3600) - 90, 60)}`
                 }
             }
         )
@@ -386,24 +424,61 @@ async function getSearchAuthorization(env, fallbackAuthorization) {
     return `Bearer ${data.access_token}`;
 }
 
+async function cacheTrack(cacheKey, track) {
+    if (!track?.uri) {
+        return;
+    }
+
+    await caches.default.put(
+        cacheKey,
+        new Response(
+            JSON.stringify({ track }),
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "public, max-age=604800"
+                }
+            }
+        )
+    );
+}
+
+function buildSearchQueries(parsed) {
+    const queries = [];
+    const artist =
+        sanitizeSpotifyQuery(parsed.artist);
+    const title =
+        sanitizeSpotifyQuery(parsed.title);
+    const raw =
+        sanitizeSpotifyQuery(parsed.raw);
+
+    if (artist && title) {
+        queries.push(`track:"${title}" artist:"${artist}"`);
+        queries.push(`${artist} ${title}`);
+        queries.push(`${title} ${artist}`);
+        queries.push(title);
+    }
+
+    if (raw) {
+        queries.push(raw);
+    }
+
+    return [...new Set(queries)];
+}
+
 function pickBestTrack(tracks, parsed) {
     if (!tracks.length) {
         return null;
     }
 
-    const options =
-        getQueryOptions(parsed);
-
     const scored =
         tracks
-            .map(track => {
-                const scores =
-                    options.map(option =>
-                        scoreTrack(track, option)
-                    );
-
-                return scores.sort((a, b) => b.score - a.score)[0];
-            })
+            .map(track =>
+                scoreTrack(
+                    track,
+                    parsed
+                )
+            )
             .sort((a, b) => b.score - a.score);
 
     const best =
@@ -413,53 +488,19 @@ function pickBestTrack(tracks, parsed) {
         return null;
     }
 
-    if (
-        best.score < 42 ||
-        best.titleOverlap < 0.45
-    ) {
+    const needsArtist =
+        Boolean(normalizeText(parsed.artist));
+
+    const minimumScore =
+        needsArtist
+            ? 52
+            : 30;
+
+    if (best.score < minimumScore) {
         return null;
     }
 
     return best.track;
-}
-
-function parseTrackLine(line) {
-    const cleanLine =
-        cleanTrackLine(line);
-
-    const parts =
-        cleanLine
-            .split(/\s[-–—]\s/)
-            .map(part => part.trim())
-            .filter(Boolean);
-
-    if (parts.length >= 2) {
-        return {
-            raw: cleanLine,
-            artist: parts[0],
-            title: parts.slice(1).join(" - ")
-        };
-    }
-
-    return {
-        raw: cleanLine,
-        artist: "",
-        title: cleanLine
-    };
-}
-
-function getQueryOptions(parsed) {
-    const options = [parsed];
-
-    if (parsed.artist && parsed.title) {
-        options.push({
-            raw: `${parsed.title} - ${parsed.artist}`,
-            artist: parsed.title,
-            title: parsed.artist
-        });
-    }
-
-    return options;
 }
 
 function scoreTrack(track, parsed) {
@@ -486,23 +527,72 @@ function scoreTrack(track, parsed) {
     const artistMatches =
         !expectedArtist ||
         normalizedArtists.includes(expectedArtist) ||
+        expectedArtist.includes(normalizedArtists) ||
         artistOverlap >= 0.35;
 
     let score = 0;
 
     if (artistMatches) {
         score += 45;
+    } else if (expectedArtist) {
+        score -= 35;
     }
 
-    score += Math.round(titleOverlap * 45);
-    score += Math.round(artistOverlap * 20);
+    score += Math.round(titleOverlap * 55);
+    score += Math.round(artistOverlap * 25);
     score += Math.min(track.popularity || 0, 100) / 10;
 
     return {
         track,
-        score,
-        titleOverlap
+        score
     };
+}
+
+function parseTrackLine(line) {
+    const cleanLine =
+        cleanTrackLine(line);
+
+    const parts =
+        cleanLine
+            .split(/\s*[-–—]\s*/)
+            .map(part => part.trim())
+            .filter(Boolean);
+
+    if (parts.length >= 2) {
+        return {
+            raw: cleanLine,
+            artist: parts[0],
+            title: parts.slice(1).join(" - ")
+        };
+    }
+
+    return {
+        raw: cleanLine,
+        artist: "",
+        title: cleanLine
+    };
+}
+
+function getSpotifyTrackUriFromLine(line) {
+    const spotifyUriMatch =
+        String(line).match(
+            /spotify:track:([A-Za-z0-9]{22})/
+        );
+
+    if (spotifyUriMatch) {
+        return `spotify:track:${spotifyUriMatch[1]}`;
+    }
+
+    const spotifyUrlMatch =
+        String(line).match(
+            /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/([A-Za-z0-9]{22})/
+        );
+
+    if (spotifyUrlMatch) {
+        return `spotify:track:${spotifyUrlMatch[1]}`;
+    }
+
+    return "";
 }
 
 function cleanTrackLine(value) {
@@ -548,7 +638,7 @@ function normalizeText(value) {
 
 function baseTitle(value) {
     return normalizeText(value)
-        .replace(/\b(remasterizado|remastered|version|versión|edit|live|en vivo|remix|mix)\b/g, " ")
+        .replace(/\b(remasterizado|remastered|version|versión|edit|live|en vivo|remix|mix|radio edit)\b/g, " ")
         .replace(/\s+/g, " ")
         .trim();
 }
@@ -581,6 +671,13 @@ function tokenOverlap(expected, received) {
     });
 
     return matches / expectedTokens.size;
+}
+
+function hasWorkerCredentials(env) {
+    return Boolean(
+        env?.SPOTIFY_CLIENT_ID &&
+        env?.SPOTIFY_CLIENT_SECRET
+    );
 }
 
 function sleep(ms) {
