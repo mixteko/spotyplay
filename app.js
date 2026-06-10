@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.2-cache-check-2026-06-10";
+const APP_VERSION = "v2.3-modern-spotify-search-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -37,24 +37,28 @@ function msg(text) {
 
 function setConnected(element, text) {
     if (!element) return;
-    element.innerText = text;
-    element.style.color = "#1ed760";
+    element.innerText =
+        text.replace(/[🟢🔴⚪⏳]/g, "").trim();
+    element.className = "status connected";
+    element.style.color = "";
 }
 
 function setDisconnected(element, text) {
     if (!element) return;
-    element.innerText = text;
-    element.style.color = "#ff4f64";
+    element.innerText =
+        text.replace(/[🟢🔴⚪⏳]/g, "").trim();
+    element.className = "status disconnected";
+    element.style.color = "";
 }
 
 function updateStatus() {
     if (accessToken) {
-        setConnected(spotifyStatus, "Spotify 🟢");
+        setConnected(spotifyStatus, "Spotify");
     } else {
-        setDisconnected(spotifyStatus, "Spotify 🔴");
+        setDisconnected(spotifyStatus, "Spotify");
     }
-    setDisconnected(geminiStatus, "Gemini ⚪");
-    setDisconnected(playlistStatus, "Playlist ⚪");
+    setDisconnected(geminiStatus, "Gemini AI");
+    setDisconnected(playlistStatus, "Playlist");
 }
 
 /* =========================================
@@ -317,6 +321,20 @@ async function generateGemini(moreTracks = false) {
                 )
                 : 20;
 
+        const targetCount =
+            Math.min(
+                count,
+                100
+            );
+
+        const aiCount =
+            Math.min(
+                moreTracks
+                    ? targetCount * 2
+                    : targetCount * 3,
+                100
+            );
+
         const response =
             await fetch(
                 GEMINI_WORKER,
@@ -332,16 +350,14 @@ async function generateGemini(moreTracks = false) {
                         prompt:
                             `${promptAI.value.trim()}
 
-Devuelve canciones reales disponibles en Spotify.
+Devuelve canciones reales y populares que existan en Spotify.
 Usa siempre el formato exacto: Artista - Canción.
-Respeta estrictamente los artistas, canciones, géneros e idioma solicitados.
-No inventes canciones ni cambies el artista pedido.`,
+Respeta los artistas, canciones, géneros, idioma y región solicitados.
+Si el usuario menciona artistas, prioriza canciones de esos artistas.
+No inventes canciones. No expliques nada. Solo devuelve la lista.`,
 
                         count:
-                            Math.min(
-                                count,
-                                100
-                            ),
+                            aiCount,
 
                         more:
                             moreTracks
@@ -425,6 +441,14 @@ No inventes canciones ni cambies el artista pedido.`,
                 );
 
                 found++;
+
+                if (
+                    found >= targetCount
+                ) {
+
+                    break;
+
+                }
 
             } else {
 
@@ -641,6 +665,8 @@ function scoreSpotifyTrack(track, parsedQuery) {
         score,
         artistMatches,
         titleMatches,
+        titleOverlap,
+        artistOverlap,
         artistNames,
         title: track.name
     };
@@ -649,7 +675,7 @@ function scoreSpotifyTrack(track, parsedQuery) {
 async function fetchSpotifySearch(query) {
     const response =
         await fetch(
-            `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+            `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
             {
                 headers: {
                     "Authorization": `Bearer ${accessToken}`,
@@ -692,7 +718,8 @@ async function spotifySearch(query) {
                 ? [
                     `track:${parsedQuery.title} artist:${parsedQuery.artist}`,
                     `${parsedQuery.artist} ${parsedQuery.title}`,
-                    parsedQuery.raw
+                    parsedQuery.raw,
+                    parsedQuery.title
                 ]
                 : [
                     parsedQuery.title,
@@ -737,16 +764,22 @@ async function spotifySearch(query) {
 
         const minimumScore =
             parsedQuery.artist
-                ? 85
-                : 55;
+                ? 68
+                : 50;
+
+        const acceptableArtistMatch =
+            !parsedQuery.artist ||
+            bestMatch.artistMatches ||
+            bestMatch.artistOverlap >= 0.45;
+
+        const strongTitleMatch =
+            bestMatch.titleMatches &&
+            bestMatch.titleOverlap >= 0.82;
 
         if (
             bestMatch.score < minimumScore ||
             !bestMatch.titleMatches ||
-            (
-                parsedQuery.artist &&
-                !bestMatch.artistMatches
-            )
+            !acceptableArtistMatch
         ) {
 
             msg(
@@ -754,6 +787,18 @@ async function spotifySearch(query) {
             );
 
             return null;
+
+        }
+
+        if (
+            parsedQuery.artist &&
+            !bestMatch.artistMatches &&
+            strongTitleMatch
+        ) {
+
+            msg(
+                `ℹ️ Artista aproximado: ${bestMatch.artistNames} - ${bestMatch.title}`
+            );
 
         }
 
@@ -769,6 +814,17 @@ async function spotifySearch(query) {
     }
 }
 
+function refreshSongNumbers() {
+    if (!songs) return;
+
+    [
+        ...songs.querySelectorAll(".songIndex")
+    ].forEach((element, index) => {
+        element.innerText =
+            String(index + 1).padStart(2, "0");
+    });
+}
+
 function appendSongToList(track) {
     if (!songs) return;
     
@@ -778,16 +834,19 @@ function appendSongToList(track) {
     const artistNames = track.artists.map(a => a.name).join(", ");
     
     li.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <div>
-                <strong>${track.name}</strong><br>
-                <small>${artistNames}</small>
+        <div class="songItem">
+            <span class="songIndex"></span>
+            <div class="songInfo">
+                <strong class="songTitle">${track.name}</strong>
+                <small class="songArtist">${artistNames}</small>
             </div>
-            <button class="remove-btn" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #ff4f64; cursor: pointer; font-size: 18px;">✕</button>
+            <button class="remove-btn" onclick="this.closest('li').remove(); refreshSongNumbers();" aria-label="Eliminar canción">×</button>
         </div>
     `;
     
     songs.appendChild(li);
+
+    refreshSongNumbers();
 }
 
 /* =========================================
