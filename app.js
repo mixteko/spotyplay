@@ -6,7 +6,8 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.9-429-retry-2026-06-10";
+const APP_VERSION = "v3.0-spotify-pause-2026-06-10";
+const SPOTIFY_RATE_LIMIT_KEY = "spotify_rate_limited_until";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -27,7 +28,13 @@ let log;
 let spotifySearchCache = new Map();
 let selectedTrackCache = new Map();
 let activeJobId = 0;
-let spotifyRateLimitedUntil = 0;
+let spotifyRateLimitedUntil =
+    parseInt(
+        localStorage.getItem(
+            SPOTIFY_RATE_LIMIT_KEY
+        ) || "0",
+        10
+    );
 
 /* =========================================
    FUNCIONES DE LOG Y STATUS
@@ -531,6 +538,33 @@ async function sleepForJob(ms, jobId) {
     return jobId === activeJobId;
 }
 
+function getSpotifyRateLimitSeconds() {
+    return Math.max(
+        Math.ceil(
+            (spotifyRateLimitedUntil - Date.now()) / 1000
+        ),
+        0
+    );
+}
+
+function setSpotifyRateLimit(seconds) {
+    spotifyRateLimitedUntil =
+        Date.now() + seconds * 1000;
+
+    localStorage.setItem(
+        SPOTIFY_RATE_LIMIT_KEY,
+        String(spotifyRateLimitedUntil)
+    );
+}
+
+function clearSpotifyRateLimit() {
+    spotifyRateLimitedUntil = 0;
+
+    localStorage.removeItem(
+        SPOTIFY_RATE_LIMIT_KEY
+    );
+}
+
 function sanitizeSpotifyQuery(query) {
     return String(query || "")
         .normalize("NFD")
@@ -738,25 +772,14 @@ async function fetchSpotifySearch(query, jobId) {
     if (
         Date.now() < spotifyRateLimitedUntil
     ) {
-        const waitMs =
-            spotifyRateLimitedUntil - Date.now();
-
         msg(
-            `⏳ Esperando ${Math.ceil(waitMs / 1000)}s por límite de Spotify...`
+            `⏳ Spotify está pausado. Espera ${getSpotifyRateLimitSeconds()}s y vuelve a presionar Crear Playlist.`
         );
 
-        const canContinue =
-            await sleepForJob(
-                waitMs,
-                jobId
-            );
-
-        if (!canContinue) {
-            return [];
-        }
+        return [];
     }
 
-    for (let attempt = 1; attempt <= 4; attempt++) {
+    for (let attempt = 1; attempt <= 1; attempt++) {
 
         const canContinue =
             await sleepForJob(
@@ -789,28 +812,27 @@ async function fetchSpotifySearch(query, jobId) {
         if (response.status === 429) {
             const retryAfter =
                 parseInt(
-                    response.headers.get("Retry-After") || "8",
+                    response.headers.get("Retry-After") || "60",
                     10
                 );
 
-            spotifyRateLimitedUntil =
-                Date.now() + Math.max(retryAfter, 8) * 1000;
-
-            msg(
-                `⏳ Spotify limitó las búsquedas. Esperando ${Math.max(retryAfter, 8)}s y reintentando...`
-            );
-
-            const canRetry =
-                await sleepForJob(
-                    Math.max(retryAfter, 8) * 1000,
-                    jobId
+            const waitSeconds =
+                Math.max(
+                    retryAfter,
+                    60
                 );
 
-            if (!canRetry) {
-                return [];
-            }
+            setSpotifyRateLimit(
+                waitSeconds
+            );
 
-            continue;
+            msg(
+                `⏳ Spotify limitó las búsquedas. Espera ${waitSeconds}s y vuelve a presionar Crear Playlist.`
+            );
+
+            activeJobId++;
+
+            return [];
         }
 
         if (response.status === 403) {
@@ -833,6 +855,8 @@ async function fetchSpotifySearch(query, jobId) {
 
         const data =
             await response.json();
+
+        clearSpotifyRateLimit();
 
         const tracks =
             data.tracks?.items || [];
@@ -1206,10 +1230,21 @@ async function createPlaylist() {
         if (
             uris.length === 0
         ) {
+            if (
+                Date.now() < spotifyRateLimitedUntil
+            ) {
 
-            msg(
-                "⚠️ No hay canciones para crear la playlist."
-            );
+                msg(
+                    `⏳ No se creó la playlist porque Spotify está en pausa. Espera ${getSpotifyRateLimitSeconds()}s.`
+                );
+
+            } else {
+
+                msg(
+                    "⚠️ No hay canciones encontradas para crear la playlist."
+                );
+
+            }
 
             setDisconnected(
                 playlistStatus,
