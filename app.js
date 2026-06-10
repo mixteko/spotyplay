@@ -6,7 +6,7 @@
 const AUTH_WORKER = "https://spotify-auth-worker.mixteko.workers.dev";
 const GEMINI_WORKER = "https://spotify-ai-gemini.mixteko.workers.dev";
 const REDIRECT_URI = "https://mixteko.github.io/spotyplay/";
-const APP_VERSION = "v2.3-modern-spotify-search-2026-06-10";
+const APP_VERSION = "v2.4-manual-builder-2026-06-10";
 
 // Variables globales
 let accessToken = localStorage.getItem("spotify_token") || "";
@@ -22,6 +22,7 @@ let playlistStatus;
 let promptAI;
 let songCount;
 let playlistName;
+let manualSongs;
 let songs;
 let log;
 
@@ -673,13 +674,19 @@ function scoreSpotifyTrack(track, parsedQuery) {
 }
 
 async function fetchSpotifySearch(query) {
+    const searchParams =
+        new URLSearchParams({
+            q: query,
+            type: "track",
+            limit: "20"
+        });
+
     const response =
         await fetch(
-            `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
+            `https://api.spotify.com/v1/search?${searchParams.toString()}`,
             {
                 headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json"
+                    "Authorization": `Bearer ${accessToken}`
                 }
             }
         );
@@ -693,6 +700,12 @@ async function fetchSpotifySearch(query) {
     }
 
     if (!response.ok) {
+        console.warn(
+            "Spotify search error:",
+            response.status,
+            query
+        );
+
         return [];
     }
 
@@ -716,7 +729,6 @@ async function spotifySearch(query) {
         const searchQueries =
             parsedQuery.artist
                 ? [
-                    `track:${parsedQuery.title} artist:${parsedQuery.artist}`,
                     `${parsedQuery.artist} ${parsedQuery.title}`,
                     parsedQuery.raw,
                     parsedQuery.title
@@ -825,6 +837,102 @@ function refreshSongNumbers() {
     });
 }
 
+function getCurrentSongUris() {
+    if (!songs) return [];
+
+    return [
+        ...songs.querySelectorAll("li")
+    ]
+    .map(
+        li => li.dataset.uri
+    )
+    .filter(
+        uri =>
+            typeof uri === "string" &&
+            uri.startsWith(
+                "spotify:track:"
+            )
+    );
+}
+
+function getManualSongLines() {
+    if (
+        !manualSongs ||
+        !manualSongs.value.trim()
+    ) {
+        return [];
+    }
+
+    return manualSongs.value
+        .split("\n")
+        .map(line =>
+            line
+                .replace(/^\s*\d+[\.\)]\s*/, "")
+                .trim()
+        )
+        .filter(Boolean);
+}
+
+async function addManualSongsToList() {
+    const lines =
+        getManualSongLines();
+
+    if (lines.length === 0) {
+        return;
+    }
+
+    const existingUris =
+        new Set(
+            getCurrentSongUris()
+        );
+
+    let added = 0;
+
+    msg(
+        `✍️ Buscando ${lines.length} canciones escritas manualmente...`
+    );
+
+    for (const line of lines) {
+
+        msg(
+            `🔎 Manual: ${line}`
+        );
+
+        const track =
+            await spotifySearch(
+                line
+            );
+
+        if (
+            track &&
+            !existingUris.has(track.uri)
+        ) {
+
+            appendSongToList(
+                track
+            );
+
+            existingUris.add(
+                track.uri
+            );
+
+            added++;
+
+        } else if (!track) {
+
+            msg(
+                `⚠️ Manual no encontrada: ${line}`
+            );
+
+        }
+
+    }
+
+    msg(
+        `✅ Manual agregadas: ${added}/${lines.length}`
+    );
+}
+
 function appendSongToList(track) {
     if (!songs) return;
     
@@ -868,7 +976,7 @@ async function createPlaylist() {
 
         setConnected(
             playlistStatus,
-            "Creando... ⏳"
+            "Creando"
         );
 
         const finalName =
@@ -918,6 +1026,41 @@ async function createPlaylist() {
         msg(
             `👤 Usuario: ${meData.display_name}`
         );
+
+        await addManualSongsToList();
+
+        const uris =
+            getCurrentSongUris();
+
+        console.log(
+            "URIS COMPLETAS JSON:",
+            JSON.stringify(
+                uris,
+                null,
+                2
+            )
+        );
+
+        msg(
+            `🎵 URIS encontradas: ${uris.length}`
+        );
+
+        if (
+            uris.length === 0
+        ) {
+
+            msg(
+                "⚠️ No hay canciones para crear la playlist."
+            );
+
+            setDisconnected(
+                playlistStatus,
+                "Playlist"
+            );
+
+            return;
+
+        }
 
         const playlistResponse =
             await fetch(
@@ -973,46 +1116,6 @@ async function createPlaylist() {
         msg(
             `✅ Playlist creada: ${playlistData.name}`
         );
-
-        const uris =
-            [
-                ...songs.querySelectorAll("li")
-            ]
-            .map(
-                li => li.dataset.uri
-            )
-            .filter(
-                uri =>
-                    typeof uri === "string" &&
-                    uri.startsWith(
-                        "spotify:track:"
-                    )
-            );
-
-        console.log(
-            "URIS COMPLETAS JSON:",
-            JSON.stringify(
-                uris,
-                null,
-                2
-            )
-        );
-
-        msg(
-            `🎵 URIS encontradas: ${uris.length}`
-        );
-
-        if (
-            uris.length === 0
-        ) {
-
-            msg(
-                "⚠️ Playlist creada sin canciones."
-            );
-
-            return;
-
-        }
 
         console.log(
             "PLAYLIST ID:",
@@ -1135,6 +1238,10 @@ function refreshApp() {
         playlistName.value = "";
     }
 
+    if (manualSongs) {
+        manualSongs.value = "";
+    }
+
     if (songCount) {
         songCount.value = "10";
     }
@@ -1182,6 +1289,11 @@ async ()=>{
     playlistName =
     document.getElementById(
     "playlistName"
+    );
+
+    manualSongs =
+    document.getElementById(
+    "manualSongs"
     );
 
     songs =

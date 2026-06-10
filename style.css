@@ -198,6 +198,13 @@ resize:vertical;
 line-height:1.55;
 }
 
+.manualSongs{
+min-height:96px;
+max-height:150px;
+font-size:13px;
+line-height:1.45;
+}
+
 input::placeholder,
 textarea::placeholder{
 color:var(--muted-2);
