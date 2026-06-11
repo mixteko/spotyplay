@@ -1,0 +1,19 @@
+{
+  "name": "Spotify AI Playlist Creator",
+  "short_name": "Spotify AI",
+  "description": "Crea playlists de Spotify con IA y enlaces directos.",
+  "start_url": "/spotyplay/",
+  "scope": "/spotyplay/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1DB954",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
