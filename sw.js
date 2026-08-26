@@ -1,26 +1,37 @@
 const CACHE_PREFIX = "spotify-ai-pwa-";
 const CACHE_NAME = "spotify-ai-pwa-v2";
 
+// Ruta base real de la aplicación, derivada del scope del Service Worker.
+// - Local:       scope "http://localhost:8001/"       -> APP_BASE_PATH ""
+// - GitHub Pages: scope "https://mixteko.github.io/spotyplay/" -> APP_BASE_PATH "/spotyplay"
+let APP_BASE_PATH = "";
+try {
+  APP_BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+} catch (error) {
+  // Si el scope no estuviera disponible, se usa la raíz del origin.
+  APP_BASE_PATH = "";
+}
+
 const APP_SHELL = [
-  "/spotyplay/",
-  "/spotyplay/index.html",
-  "/spotyplay/style.css",
-  "/spotyplay/app.js",
-  "/spotyplay/manifest.webmanifest",
-  "/spotyplay/pwa-icon.svg",
-  "/spotyplay/pwa-install.css",
-  "/spotyplay/pwa-install.js"
+  `${APP_BASE_PATH}/`,
+  `${APP_BASE_PATH}/index.html`,
+  `${APP_BASE_PATH}/style.css`,
+  `${APP_BASE_PATH}/app.js`,
+  `${APP_BASE_PATH}/manifest.webmanifest`,
+  `${APP_BASE_PATH}/pwa-icon.svg`,
+  `${APP_BASE_PATH}/pwa-install.css`,
+  `${APP_BASE_PATH}/pwa-install.js`
 ];
 
 // Archivos críticos: deben intentar siempre obtener la versión de red
 // y actualizar el caché. El sw.js no se sirve por fetch (lo controla
 // el navegador), por lo que no necesita estar en esta lista.
 const CRITICAL_ASSETS = [
-  "/spotyplay/",
-  "/spotyplay/index.html",
-  "/spotyplay/app.js",
-  "/spotyplay/pwa-install.js",
-  "/spotyplay/manifest.webmanifest"
+  `${APP_BASE_PATH}/`,
+  `${APP_BASE_PATH}/index.html`,
+  `${APP_BASE_PATH}/app.js`,
+  `${APP_BASE_PATH}/pwa-install.js`,
+  `${APP_BASE_PATH}/manifest.webmanifest`
 ];
 
 self.addEventListener("install", event => {
