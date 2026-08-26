@@ -17,8 +17,97 @@ const MAX_WORKER_BATCHES_PER_CREATE = 40;
 const WORKER_BATCH_PAUSE_MS = 900;
 const MAX_SPOTIFY_RATE_LIMIT_SECONDS = 90;
 
-// Variables globales
-let accessToken = localStorage.getItem("spotify_token") || "";
+/* =========================================
+   ALMACENAMIENTO SEGURO (localStorage)
+   Ninguna lectura/escritura puede abortar
+   la inicialización de la aplicación.
+========================================= */
+
+function safeStorageGet(key) {
+    try {
+        return window.localStorage.getItem(key);
+    } catch (error) {
+        return null;
+    }
+}
+
+function safeStorageSet(key, value) {
+    try {
+        window.localStorage.setItem(key, value);
+    } catch (error) {
+        // La app continúa funcionando solo en memoria.
+    }
+}
+
+function safeStorageRemove(key) {
+    try {
+        window.localStorage.removeItem(key);
+    } catch (error) {
+        // La app continúa funcionando solo en memoria.
+    }
+}
+
+function warnNonFatal(message, error) {
+    try {
+        console.warn(message, error || "");
+    } catch (e) {
+        // El logging nunca debe romper el arranque.
+    }
+}
+
+function readSelectedTrackCache() {
+    let rawValue = null;
+
+    try {
+        rawValue = safeStorageGet(SELECTED_TRACK_CACHE_KEY);
+    } catch (error) {
+        rawValue = null;
+    }
+
+    if (!rawValue) {
+        return new Map();
+    }
+
+    try {
+        const parsed = JSON.parse(rawValue);
+
+        if (!Array.isArray(parsed)) {
+            throw new Error("El cache no es un array");
+        }
+
+        const map = new Map(parsed);
+
+        let validStructure = true;
+
+        map.forEach((value, key) => {
+            if (
+                typeof key !== "string" ||
+                typeof value !== "string"
+            ) {
+                validStructure = false;
+            }
+        });
+
+        if (!validStructure) {
+            throw new Error("Estructura de cache inválida");
+        }
+
+        return map;
+    } catch (error) {
+        safeStorageRemove(SELECTED_TRACK_CACHE_KEY);
+        warnNonFatal(
+            "Spotify AI: cache de tracks corrupto, se reinició.",
+            error
+        );
+        return new Map();
+    }
+}
+
+/* =========================================
+   VARIABLES GLOBALES
+========================================= */
+
+let accessToken = safeStorageGet("spotify_token") || "";
 
 /* =========================================
    ELEMENTOS DOM
@@ -34,22 +123,13 @@ let playlistName;
 let songs;
 let log;
 let spotifySearchCache = new Map();
-let selectedTrackCache =
-    new Map(
-        JSON.parse(
-            localStorage.getItem(
-                SELECTED_TRACK_CACHE_KEY
-            ) || "[]"
-        )
-    );
+let selectedTrackCache = readSelectedTrackCache();
 let activeJobId = 0;
 let searchWorkerStatusCache = null;
 let workerCredentialWarningShown = false;
 let spotifyRateLimitedUntil =
     parseInt(
-        localStorage.getItem(
-            SPOTIFY_RATE_LIMIT_KEY
-        ) || "0",
+        safeStorageGet(SPOTIFY_RATE_LIMIT_KEY) || "0",
         10
     );
 
@@ -58,20 +138,16 @@ if (
     MAX_SPOTIFY_RATE_LIMIT_SECONDS * 1000
 ) {
     spotifyRateLimitedUntil = 0;
-    localStorage.removeItem(
-        SPOTIFY_RATE_LIMIT_KEY
-    );
+    safeStorageRemove(SPOTIFY_RATE_LIMIT_KEY);
 }
 
 if (
-    localStorage.getItem(RESOLVER_CACHE_VERSION_KEY) !==
+    safeStorageGet(RESOLVER_CACHE_VERSION_KEY) !==
     RESOLVER_CACHE_VERSION
 ) {
     selectedTrackCache.clear();
-    localStorage.removeItem(
-        SELECTED_TRACK_CACHE_KEY
-    );
-    localStorage.setItem(
+    safeStorageRemove(SELECTED_TRACK_CACHE_KEY);
+    safeStorageSet(
         RESOLVER_CACHE_VERSION_KEY,
         RESOLVER_CACHE_VERSION
     );
@@ -241,7 +317,7 @@ console.log(
             accessToken =
                 tokenData.access_token;
 
-            localStorage.setItem(
+            safeStorageSet(
                 "spotify_token",
                 accessToken
             );
@@ -277,7 +353,7 @@ console.log(
     }
 
     const savedToken =
-        localStorage.getItem(
+        safeStorageGet(
             "spotify_token"
         );
 
@@ -306,7 +382,7 @@ console.log(
 
 function changeUser() {
 
-    localStorage.removeItem(
+    safeStorageRemove(
         "spotify_token"
     );
 
@@ -328,7 +404,7 @@ function changeUser() {
 async function generateGemini(moreTracks = false) {
 
     accessToken =
-        localStorage.getItem(
+        safeStorageGet(
             "spotify_token"
         ) || "";
 
@@ -601,7 +677,7 @@ function setSpotifyRateLimit(seconds) {
     spotifyRateLimitedUntil =
         Date.now() + safeSeconds * 1000;
 
-    localStorage.setItem(
+    safeStorageSet(
         SPOTIFY_RATE_LIMIT_KEY,
         String(spotifyRateLimitedUntil)
     );
@@ -610,13 +686,13 @@ function setSpotifyRateLimit(seconds) {
 function clearSpotifyRateLimit() {
     spotifyRateLimitedUntil = 0;
 
-    localStorage.removeItem(
+    safeStorageRemove(
         SPOTIFY_RATE_LIMIT_KEY
     );
 }
 
 function saveSelectedTrackCache() {
-    localStorage.setItem(
+    safeStorageSet(
         SELECTED_TRACK_CACHE_KEY,
         JSON.stringify(
             [...selectedTrackCache.entries()]
@@ -861,7 +937,7 @@ async function fetchSpotifySearch(query, jobId) {
             );
 
         if (response.status === 401) {
-            localStorage.removeItem("spotify_token");
+            safeStorageRemove("spotify_token");
             accessToken = "";
             updateStatus();
             msg("🔴 Token expirado. Conecta nuevamente.");
@@ -1172,7 +1248,7 @@ async function fetchSpotifyCollectionTracks(collection) {
             );
 
         if (response.status === 401) {
-            localStorage.removeItem("spotify_token");
+            safeStorageRemove("spotify_token");
             accessToken = "";
             updateStatus();
             msg("🔴 Token expirado. Conecta Spotify otra vez.");
@@ -1308,7 +1384,7 @@ async function resolveTracksWithWorker(lines, jobId) {
         }
 
         if (response.status === 401) {
-            localStorage.removeItem("spotify_token");
+            safeStorageRemove("spotify_token");
             accessToken = "";
             updateStatus();
             msg("🔴 Token expirado. Conecta Spotify otra vez.");
@@ -2068,7 +2144,7 @@ function refreshApp() {
     workerCredentialWarningShown = false;
     clearSpotifyRateLimit();
 
-    localStorage.removeItem(
+    safeStorageRemove(
         SELECTED_TRACK_CACHE_KEY
     );
 

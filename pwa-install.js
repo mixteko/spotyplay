@@ -32,7 +32,14 @@
 
   function registerServiceWorker() {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/spotyplay/sw.js");
+      navigator.serviceWorker
+        .register("/spotyplay/sw.js")
+        .catch(error => {
+          console.error(
+            "Spotify AI: no se pudo registrar el Service Worker. La app seguirá funcionando como sitio web.",
+            error
+          );
+        });
     }
   }
 
